@@ -1,0 +1,4 @@
+Fichier LiveEventsSection.tsx supprimé sur demande utilisateur - Section "Événements en direct" retirée de la plateforme Feeti.
+
+Date de suppression: 20/09/2024
+Raison: Suppression complète de la fonctionnalité streaming live de la page d'accueil.

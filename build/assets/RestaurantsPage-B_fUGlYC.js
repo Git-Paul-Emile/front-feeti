@@ -1,0 +1,1 @@
+import{j as t}from"./index-CoxX_Rkq.js";import{L as r}from"./LeisureCategoryPage-t8Uccr00.js";function o(e){return t.jsx(r,{categorySlug:"restaurants",pageTitle:"Restaurants",heroBg:"https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop"})}export{o as RestaurantsPage};

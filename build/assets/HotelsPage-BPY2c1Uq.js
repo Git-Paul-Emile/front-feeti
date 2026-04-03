@@ -1,0 +1,1 @@
+import{j as o}from"./index-CoxX_Rkq.js";import{L as t}from"./LeisureCategoryPage-t8Uccr00.js";function p(e){return o.jsx(t,{categorySlug:"hotels",pageTitle:"Hôtels",heroBg:"https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&h=800&fit=crop"})}export{p as HotelsPage};

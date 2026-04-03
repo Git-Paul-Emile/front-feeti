@@ -1,0 +1,2 @@
+Ce fichier a été supprimé car la section "événements en direct" a été retirée de l'application.
+Si besoin de la restaurer, voir l'historique Git.

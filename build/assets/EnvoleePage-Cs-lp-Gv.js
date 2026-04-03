@@ -1,0 +1,1 @@
+import{j as e}from"./index-CoxX_Rkq.js";import{L as o}from"./LeisureCategoryPage-t8Uccr00.js";function s(r){return e.jsx(o,{categorySlug:"envolee",pageTitle:"Évasion",heroBg:"https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=1200&h=800&fit=crop"})}export{s as EnvoleePage};

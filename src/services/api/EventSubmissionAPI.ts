@@ -1,6 +1,7 @@
 // Service API pour la soumission d'événements
 
 import BaseAPIService, { APIResponse } from './BaseAPI';
+import { fetchWithBackendFallback } from '../../utils/backendConfig';
 
 export interface EventSubmissionData {
   // Organisateur
@@ -77,10 +78,6 @@ export interface EventSubmission {
 }
 
 class EventSubmissionAPIService extends BaseAPIService {
-  private backendUrl = typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL 
-    ? import.meta.env.VITE_BACKEND_URL 
-    : 'http://localhost:3001';
-
   /**
    * Soumettre un nouvel événement
    */
@@ -150,7 +147,7 @@ class EventSubmissionAPIService extends BaseAPIService {
           });
         }
 
-        const response = await fetch(`${this.backendUrl}/api/event-submissions`, {
+        const response = await fetchWithBackendFallback('/api/event-submissions', {
           method: 'POST',
           body: formData
         });
@@ -175,7 +172,7 @@ class EventSubmissionAPIService extends BaseAPIService {
     return this.request(
       `event-submission:user:${userId}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/event-submissions?userId=${userId}`);
+        const response = await fetchWithBackendFallback(`/api/event-submissions?userId=${userId}`);
 
         if (!response.ok) {
           const error = await response.json();
@@ -195,11 +192,11 @@ class EventSubmissionAPIService extends BaseAPIService {
     return this.request(
       `event-submission:all:${status || 'all'}`,
       async () => {
-        const url = status 
-          ? `${this.backendUrl}/api/event-submissions?status=${status}`
-          : `${this.backendUrl}/api/event-submissions`;
+        const path = status
+          ? `/api/event-submissions?status=${status}`
+          : '/api/event-submissions';
 
-        const response = await fetch(url);
+        const response = await fetchWithBackendFallback(path);
 
         if (!response.ok) {
           const error = await response.json();
@@ -223,7 +220,7 @@ class EventSubmissionAPIService extends BaseAPIService {
     return this.request(
       `event-submission:approve:${submissionId}:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/event-submissions/${submissionId}/approve`, {
+        const response = await fetchWithBackendFallback(`/api/event-submissions/${submissionId}/approve`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ adminId, adminName })
@@ -254,7 +251,7 @@ class EventSubmissionAPIService extends BaseAPIService {
     return this.request(
       `event-submission:reject:${submissionId}:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/event-submissions/${submissionId}/reject`, {
+        const response = await fetchWithBackendFallback(`/api/event-submissions/${submissionId}/reject`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ adminId, adminName, reason })

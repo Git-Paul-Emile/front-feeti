@@ -2,6 +2,7 @@
 // Intégration avec le backend pour Email, SMS et Push notifications
 
 import BaseAPIService, { APIResponse } from './BaseAPI';
+import { fetchWithBackendFallback } from '../../utils/backendConfig';
 
 export interface EmailData {
   to: string;
@@ -35,10 +36,6 @@ export interface PushNotificationData {
 }
 
 class NotificationsAPIService extends BaseAPIService {
-  private backendUrl = typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL 
-    ? import.meta.env.VITE_BACKEND_URL 
-    : 'http://localhost:3001';
-
   /**
    * Envoyer un email générique
    */
@@ -46,7 +43,7 @@ class NotificationsAPIService extends BaseAPIService {
     return this.request(
       `notifications:email:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/notifications/email/send`, {
+        const response = await fetchWithBackendFallback('/api/notifications/email/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(emailData)
@@ -70,7 +67,7 @@ class NotificationsAPIService extends BaseAPIService {
     return this.request(
       `notifications:ticket-email:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/notifications/email/ticket-confirmation`, {
+        const response = await fetchWithBackendFallback('/api/notifications/email/ticket-confirmation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -96,7 +93,7 @@ class NotificationsAPIService extends BaseAPIService {
     return this.request(
       `notifications:sms:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/notifications/sms/send`, {
+        const response = await fetchWithBackendFallback('/api/notifications/sms/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(smsData)
@@ -122,7 +119,7 @@ class NotificationsAPIService extends BaseAPIService {
     return this.request(
       `notifications:ticket-sms:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/notifications/sms/ticket-confirmation`, {
+        const response = await fetchWithBackendFallback('/api/notifications/sms/ticket-confirmation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ to, eventTitle, eventDate, ticketUrl })
@@ -146,7 +143,7 @@ class NotificationsAPIService extends BaseAPIService {
     return this.request(
       `notifications:push:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/notifications/push/send`, {
+        const response = await fetchWithBackendFallback('/api/notifications/push/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -177,7 +174,7 @@ class NotificationsAPIService extends BaseAPIService {
     return this.request(
       `notifications:push-multiple:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/notifications/push/send-multiple`, {
+        const response = await fetchWithBackendFallback('/api/notifications/push/send-multiple', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tokens, title, body, data })
@@ -203,7 +200,7 @@ class NotificationsAPIService extends BaseAPIService {
     return this.request(
       `notifications:subscribe:${topic}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/notifications/push/subscribe`, {
+        const response = await fetchWithBackendFallback('/api/notifications/push/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token, topic })
@@ -227,7 +224,7 @@ class NotificationsAPIService extends BaseAPIService {
     return this.request(
       `notifications:unsubscribe:${topic}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/notifications/push/unsubscribe`, {
+        const response = await fetchWithBackendFallback('/api/notifications/push/unsubscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token, topic })
@@ -256,7 +253,7 @@ class NotificationsAPIService extends BaseAPIService {
     return this.request(
       `notifications:topic:${topic}:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/notifications/push/send-to-topic`, {
+        const response = await fetchWithBackendFallback('/api/notifications/push/send-to-topic', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ topic, title, body, data })

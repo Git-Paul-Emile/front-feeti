@@ -1,10 +1,36 @@
 // Events API Service
-// Gestion complète des événements avec cache et optimisations
+// Gestion complète des événements via Express backend
 
 import BaseAPIService, { APIResponse } from './BaseAPI';
-import FirebaseService, { Event as FirebaseEvent } from '../FirebaseService';
+import api from '../../routes/axiosConfig';
 
-export interface Event extends FirebaseEvent {}
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  image?: string;
+  price: number;
+  vipPrice?: number;
+  ticketTypes?: string;
+  currency: string;
+  category: string;
+  maxAttendees: number;
+  attendees: number;
+  isLive: boolean;
+  streamUrl?: string;
+  videoUrl?: string;
+  countryCode?: string;
+  organizerId: string;
+  organizer?: { name: string };
+  status: 'draft' | 'published' | 'cancelled' | 'completed';
+  isFeatured?: boolean;
+  salesBlocked?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface EventFilters {
   category?: string;
@@ -16,6 +42,8 @@ export interface EventFilters {
   maxPrice?: number;
   location?: string;
   organizerId?: string;
+  country?: string;
+  featured?: boolean;
 }
 
 export interface EventStats {
@@ -30,6 +58,7 @@ export interface EventStats {
 class EventsAPIService extends BaseAPIService {
   /**
    * Récupérer tous les événements avec filtres
+   * Le backend retourne toujours les événements publiés, le filtrage fin se fait côté client.
    */
   async getAllEvents(filters?: EventFilters): Promise<APIResponse<Event[]>> {
     const cacheKey = `events:all:${JSON.stringify(filters || {})}`;
@@ -37,14 +66,40 @@ class EventsAPIService extends BaseAPIService {
     return this.request(
       cacheKey,
       async () => {
-        const events = await FirebaseService.Event.getAllEvents(filters);
-        
-        // Trier par date
-        return events.sort((a, b) => {
-          const dateA = new Date(a.date);
-          const dateB = new Date(b.date);
-          return dateB.getTime() - dateA.getTime();
-        });
+        const params: Record<string, string> = {};
+        if (filters?.country) params.country = filters.country;
+        if (filters?.featured) params.featured = 'true';
+
+        const query = new URLSearchParams(params).toString();
+        const res = await api.get<{ data: Event[] }>(`/api/events${query ? `?${query}` : ''}`);
+        let events: Event[] = res.data.data ?? [];
+
+        // Filtrage client-side
+        if (filters?.category) {
+          events = events.filter(e => e.category === filters.category);
+        }
+        if (filters?.isLive !== undefined) {
+          events = events.filter(e => e.isLive === filters.isLive);
+        }
+        if (filters?.minPrice !== undefined) {
+          events = events.filter(e => e.price >= filters.minPrice!);
+        }
+        if (filters?.maxPrice !== undefined) {
+          events = events.filter(e => e.price <= filters.maxPrice!);
+        }
+        if (filters?.location) {
+          events = events.filter(e =>
+            e.location.toLowerCase().includes(filters.location!.toLowerCase())
+          );
+        }
+        if (filters?.startDate) {
+          events = events.filter(e => new Date(e.date) >= new Date(filters.startDate!));
+        }
+        if (filters?.endDate) {
+          events = events.filter(e => new Date(e.date) <= new Date(filters.endDate!));
+        }
+
+        return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       },
       { cache: true }
     );
@@ -59,8 +114,9 @@ class EventsAPIService extends BaseAPIService {
     return this.request(
       cacheKey,
       async () => {
-        const event = await FirebaseService.Event.getEventById(eventId);
-        
+        const res = await api.get<{ data: Event }>(`/api/events/${eventId}`);
+        const event = res.data.data;
+
         if (!event) {
           throw new Error('Événement introuvable');
         }
@@ -74,21 +130,20 @@ class EventsAPIService extends BaseAPIService {
   /**
    * Créer un nouvel événement
    */
-  async createEvent(eventData: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>): Promise<APIResponse<string>> {
+  async createEvent(eventData: Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'attendees' | 'organizer'>): Promise<APIResponse<string>> {
     return this.request(
       'events:create',
       async () => {
-        const result = await FirebaseService.Event.createEvent(eventData);
-        
-        if (!result.success || !result.id) {
-          throw new Error(result.error || 'Erreur lors de la création');
+        const res = await api.post<{ data: Event }>('/api/events', eventData);
+        const created = res.data.data;
+
+        if (!created?.id) {
+          throw new Error('Erreur lors de la création');
         }
 
-        // Invalider le cache
         this.invalidateCache('events:');
-
         this.showToast('success', 'Événement créé avec succès');
-        return result.id;
+        return created.id;
       },
       { cache: false, deduplicate: false }
     );
@@ -101,15 +156,8 @@ class EventsAPIService extends BaseAPIService {
     return this.request(
       `events:update:${eventId}`,
       async () => {
-        const result = await FirebaseService.Event.updateEvent(eventId, updates);
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Erreur lors de la mise à jour');
-        }
-
-        // Invalider le cache
+        await api.put(`/api/events/${eventId}`, updates);
         this.invalidateCache('events:');
-
         this.showToast('success', 'Événement mis à jour avec succès');
       },
       { cache: false, deduplicate: false }
@@ -123,15 +171,8 @@ class EventsAPIService extends BaseAPIService {
     return this.request(
       `events:delete:${eventId}`,
       async () => {
-        const result = await FirebaseService.Event.deleteEvent(eventId);
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Erreur lors de la suppression');
-        }
-
-        // Invalider le cache
+        await api.delete(`/api/events/${eventId}`);
         this.invalidateCache('events:');
-
         this.showToast('success', 'Événement supprimé avec succès');
       },
       { cache: false, deduplicate: false }
@@ -139,15 +180,16 @@ class EventsAPIService extends BaseAPIService {
   }
 
   /**
-   * Récupérer les événements d'un organisateur
+   * Récupérer les événements de l'organisateur connecté
    */
-  async getOrganizerEvents(organizerId: string): Promise<APIResponse<Event[]>> {
-    const cacheKey = `events:organizer:${organizerId}`;
+  async getOrganizerEvents(_organizerId?: string): Promise<APIResponse<Event[]>> {
+    const cacheKey = 'events:organizer:my';
 
     return this.request(
       cacheKey,
       async () => {
-        return await FirebaseService.Event.getEventsByOrganizer(organizerId);
+        const res = await api.get<{ data: Event[] }>('/api/events/my');
+        return res.data.data ?? [];
       },
       { cache: true }
     );
@@ -157,7 +199,7 @@ class EventsAPIService extends BaseAPIService {
    * Récupérer les événements live
    */
   async getLiveEvents(): Promise<APIResponse<Event[]>> {
-    return this.getAllEvents({ isLive: true, status: 'published' });
+    return this.getAllEvents({ isLive: true });
   }
 
   /**
@@ -169,11 +211,12 @@ class EventsAPIService extends BaseAPIService {
     return this.request(
       cacheKey,
       async () => {
-        const events = await FirebaseService.Event.getAllEvents({ status: 'published' });
+        const res = await api.get<{ data: Event[] }>('/api/events');
+        const events: Event[] = res.data.data ?? [];
         const now = new Date();
 
         return events
-          .filter(event => new Date(event.date) >= now)
+          .filter(e => new Date(e.date) >= now)
           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
           .slice(0, limit);
       },
@@ -190,15 +233,15 @@ class EventsAPIService extends BaseAPIService {
     return this.request(
       cacheKey,
       async () => {
-        const events = await FirebaseService.Event.getAllEvents({ status: 'published' });
-        const searchQuery = query.toLowerCase();
+        const res = await api.get<{ data: Event[] }>('/api/events');
+        const events: Event[] = res.data.data ?? [];
+        const q = query.toLowerCase();
 
-        return events.filter(event =>
-          event.title.toLowerCase().includes(searchQuery) ||
-          event.description?.toLowerCase().includes(searchQuery) ||
-          event.location.toLowerCase().includes(searchQuery) ||
-          event.category.toLowerCase().includes(searchQuery) ||
-          event.tags.some(tag => tag.toLowerCase().includes(searchQuery))
+        return events.filter(e =>
+          e.title.toLowerCase().includes(q) ||
+          e.description?.toLowerCase().includes(q) ||
+          e.location.toLowerCase().includes(q) ||
+          e.category.toLowerCase().includes(q)
         );
       },
       { cache: true }
@@ -214,18 +257,12 @@ class EventsAPIService extends BaseAPIService {
     return this.request(
       cacheKey,
       async () => {
-        const stats = await FirebaseService.Analytics.getEventStats();
-        
-        if (!stats) {
-          throw new Error('Impossible de récupérer les statistiques');
-        }
+        const res = await api.get<{ data: Event[] }>('/api/events');
+        const events: Event[] = res.data.data ?? [];
 
-        const events = await FirebaseService.Event.getAllEvents();
-        
-        // Calculer les catégories populaires
         const categoryCounts: Record<string, number> = {};
-        events.forEach(event => {
-          categoryCounts[event.category] = (categoryCounts[event.category] || 0) + 1;
+        events.forEach(e => {
+          categoryCounts[e.category] = (categoryCounts[e.category] || 0) + 1;
         });
 
         const popularCategories = Object.entries(categoryCounts)
@@ -233,72 +270,50 @@ class EventsAPIService extends BaseAPIService {
           .sort((a, b) => b.count - a.count)
           .slice(0, 5);
 
-        // Calculer le prix moyen
-        const totalPrice = events.reduce((sum, event) => sum + event.price, 0);
+        const totalPrice = events.reduce((sum, e) => sum + e.price, 0);
         const averagePrice = events.length > 0 ? totalPrice / events.length : 0;
+        const totalAttendees = events.reduce((sum, e) => sum + (e.attendees || 0), 0);
 
         return {
-          ...stats,
+          totalEvents: events.length,
+          liveEvents: events.filter(e => e.isLive).length,
+          publishedEvents: events.filter(e => e.status === 'published').length,
+          totalAttendees,
           averagePrice,
-          popularCategories
+          popularCategories,
         };
-      },
-      { cache: true, cacheDuration: 10 * 60 * 1000 } // 10 minutes
-    );
-  }
-
-  /**
-   * Incrémenter le nombre de participants
-   */
-  async incrementAttendees(eventId: string, count: number = 1): Promise<APIResponse<void>> {
-    return this.request(
-      `events:increment:${eventId}`,
-      async () => {
-        const result = await FirebaseService.Event.incrementAttendees(eventId, count);
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Erreur lors de la mise à jour');
-        }
-
-        // Invalider le cache pour cet événement
-        this.invalidateCache(`events:${eventId}`);
-        this.invalidateCache('events:all');
-      },
-      { cache: false, deduplicate: false }
-    );
-  }
-
-  /**
-   * Récupérer les événements par catégorie
-   */
-  async getEventsByCategory(category: string): Promise<APIResponse<Event[]>> {
-    return this.getAllEvents({ category, status: 'published' });
-  }
-
-  /**
-   * Récupérer les événements dans une plage de prix
-   */
-  async getEventsByPriceRange(minPrice: number, maxPrice: number): Promise<APIResponse<Event[]>> {
-    const cacheKey = `events:price:${minPrice}-${maxPrice}`;
-
-    return this.request(
-      cacheKey,
-      async () => {
-        const events = await FirebaseService.Event.getAllEvents({ status: 'published' });
-        
-        return events.filter(event =>
-          event.price >= minPrice && event.price <= maxPrice
-        );
       },
       { cache: true }
     );
   }
 
   /**
+   * Incrémenter le nombre de participants (géré automatiquement par l'achat de billets)
+   */
+  async incrementAttendees(_eventId: string, _count: number = 1): Promise<APIResponse<void>> {
+    // Les participants sont mis à jour côté backend lors de l'achat de billets
+    return { success: true };
+  }
+
+  /**
+   * Récupérer les événements par catégorie
+   */
+  async getEventsByCategory(category: string): Promise<APIResponse<Event[]>> {
+    return this.getAllEvents({ category });
+  }
+
+  /**
+   * Récupérer les événements dans une plage de prix
+   */
+  async getEventsByPriceRange(minPrice: number, maxPrice: number): Promise<APIResponse<Event[]>> {
+    return this.getAllEvents({ minPrice, maxPrice });
+  }
+
+  /**
    * Récupérer les événements gratuits
    */
   async getFreeEvents(): Promise<APIResponse<Event[]>> {
-    return this.getEventsByPriceRange(0, 0);
+    return this.getAllEvents({ minPrice: 0, maxPrice: 0 });
   }
 
   /**
@@ -312,22 +327,25 @@ class EventsAPIService extends BaseAPIService {
     return this.request(
       `events:availability:${eventId}`,
       async () => {
-        const event = await FirebaseService.Event.getEventById(eventId);
-        
+        const res = await api.get<{ data: Event }>(`/api/events/${eventId}`);
+        const event = res.data.data;
+
         if (!event) {
           throw new Error('Événement introuvable');
         }
 
-        const remainingSeats = event.maxAttendees - event.attendees;
-        const percentage = (event.attendees / event.maxAttendees) * 100;
+        const remainingSeats = event.maxAttendees - (event.attendees || 0);
+        const percentage = event.maxAttendees > 0
+          ? ((event.attendees || 0) / event.maxAttendees) * 100
+          : 0;
 
         return {
           available: remainingSeats > 0,
           remainingSeats,
-          percentage
+          percentage,
         };
       },
-      { cache: true, cacheDuration: 1 * 60 * 1000 } // 1 minute
+      { cache: true }
     );
   }
 }

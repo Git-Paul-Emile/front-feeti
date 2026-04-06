@@ -82,7 +82,7 @@ function DrapeauCongo() {
               </div>
               <div className="absolute contents inset-[-0.5%_-0.5%_-0.51%_-0.5%]">
                 <div className="absolute contents inset-[-1.87%_-17.93%_-8.73%_-27.15%]">
-                  <div className="absolute inset-[-1.87%_-12.1%_-8.73%_-8.87%] mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[2.007px_0.329px] mask-size-[24.241px_24.241px]" style={{ maskImage: `url('${imgGroup}')` }}>
+                  <div className="absolute inset-[-1.87%_-12.1%_-8.73%_-8.87%] mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-[2.007px_0.329px] mask-size-[24.241px_24.241px]" style={{ maskImage: `url('${imgGroup}')` }}>
                     <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 30 27">
                       <g>
                         <path d={svgPaths.p33924880} fill="#FF0000" />
@@ -92,7 +92,7 @@ function DrapeauCongo() {
                     </svg>
                   </div>
                   <div className="absolute contents inset-[5.42%_-17.93%_5.77%_-27.15%]">
-                    <div className="absolute inset-[-14.34%_-17.86%_-13.7%_-25.05%] mask-position-[5.891px,_-0.504px_3.322px,_4.742px] mask-size-[24.241px_24.241px,_34.819px_21.314px]" style={{ maskImage: `url('${imgGroup}'), url('${imgGroup1}')` }}>
+                    <div className="absolute inset-[-14.34%_-17.86%_-13.7%_-25.05%] mask-position-[5.891px,-0.504px_3.322px,4.742px] mask-[24.241px_24.241px,34.819px_21.314px]" style={{ maskImage: `url('${imgGroup}'), url('${imgGroup1}')` }}>
                       <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 35 31">
                         <g>
                           <path d={svgPaths.pfe1eb00} fill="#FBDE4A" />
@@ -114,7 +114,7 @@ function DrapeauCongo() {
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="mt-1 text-[13px] text-red-400 font-['Inter',_sans-serif] pl-1">
+    <p className="mt-1 text-[13px] text-red-400 font-['Inter',sans-serif] pl-1">
       {message}
     </p>
   );
@@ -143,13 +143,13 @@ function PasswordInput({
         type={visible ? 'text' : 'password'}
         placeholder={placeholder}
         autoComplete={autoComplete}
-        className="flex-1 bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',_sans-serif]"
+        className="flex-1 bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',sans-serif]"
         {...registration}
       />
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
-        className="text-[#adb3bc] hover:text-white transition-colors flex-shrink-0"
+        className="text-[#adb3bc] hover:text-white transition-colors shrink-0"
         tabIndex={-1}
         aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
       >
@@ -204,7 +204,7 @@ function LoginForm({ onLogin, onSwitchToRegister }: {
             type="email"
             placeholder="Votre email"
             autoComplete="email"
-            className="w-full bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',_sans-serif]"
+            className="w-full bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',sans-serif]"
             {...register('email', {
               required: "L'email est requis",
               validate: (v) =>
@@ -230,7 +230,7 @@ function LoginForm({ onLogin, onSwitchToRegister }: {
 
       {/* Erreur serveur globale */}
       {serverError && (
-        <p className="text-red-400 text-[14px] font-['Inter',_sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2">
+        <p className="text-red-400 text-[14px] font-['Inter',sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2">
           {serverError}
         </p>
       )}
@@ -244,7 +244,7 @@ function LoginForm({ onLogin, onSwitchToRegister }: {
         {isSubmitting ? (
           <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
         ) : (
-          <span className="text-black text-[18px] font-semibold tracking-[-0.72px] font-['Inter',_sans-serif] group-hover:scale-105 transition-transform">
+          <span className="text-black text-[18px] font-semibold tracking-[-0.72px] font-['Inter',sans-serif] group-hover:scale-105 transition-transform">
             Se connecter
           </span>
         )}
@@ -252,7 +252,7 @@ function LoginForm({ onLogin, onSwitchToRegister }: {
 
       {/* Ou */}
       <div className="flex items-center justify-center py-2">
-        <span className="text-white text-[14px] font-medium font-['Poppins',_sans-serif]">ou</span>
+        <span className="text-white text-[14px] font-medium font-['Poppins',sans-serif]">ou</span>
       </div>
 
       {/* Bouton Google (UI uniquement) */}
@@ -262,7 +262,7 @@ function LoginForm({ onLogin, onSwitchToRegister }: {
         className="w-full bg-[#f4f6f4] rounded-[12px] px-[10px] py-[20px] h-[62px] flex items-center justify-center gap-[10px] hover:bg-white hover:shadow-lg transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <div className="w-[28px] h-[28px] bg-center bg-cover bg-no-repeat group-hover:scale-110 transition-transform" style={{ backgroundImage: `url('${imgImage7}')` }} />
-        <span className="text-black text-[14px] text-center font-['Poppins',_sans-serif]">
+        <span className="text-black text-[14px] text-center font-['Poppins',sans-serif]">
           Se connecter avec Google
         </span>
       </button>
@@ -297,7 +297,7 @@ function InterestsStep({
 }) {
   return (
     <div className="mt-6">
-      <p className="text-white/70 text-[14px] font-['Inter',_sans-serif] mb-4">
+      <p className="text-white/70 text-[14px] font-['Inter',sans-serif] mb-4">
         Choisis tes centres d'intérêts pour voir les événements qui te correspondent
         <span className="text-white/40 ml-1">(optionnel)</span>
       </p>
@@ -315,13 +315,13 @@ function InterestsStep({
       </div>
 
       {selected.length > 0 && (
-        <p className="text-[#c0a9ed] text-[13px] font-['Inter',_sans-serif] mb-4">
+        <p className="text-[#c0a9ed] text-[13px] font-['Inter',sans-serif] mb-4">
           {selected.length} centre{selected.length > 1 ? 's' : ''} d'intérêt{selected.length > 1 ? 's' : ''} sélectionné{selected.length > 1 ? 's' : ''}
         </p>
       )}
 
       {serverError && (
-        <p className="text-red-400 text-[14px] font-['Inter',_sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2 mb-4">
+        <p className="text-red-400 text-[14px] font-['Inter',sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2 mb-4">
           {serverError}
         </p>
       )}
@@ -333,7 +333,7 @@ function InterestsStep({
           disabled={isSubmitting}
           className="flex-1 border border-[rgba(192,169,237,0.5)] text-white/70 rounded-[12px] h-[62px] flex items-center justify-center hover:border-[rgba(192,169,237,0.8)] hover:text-white transition-all duration-200 disabled:opacity-50"
         >
-          <span className="text-[16px] font-['Inter',_sans-serif]">← Retour</span>
+          <span className="text-[16px] font-['Inter',sans-serif]">← Retour</span>
         </button>
         <button
           type="button"
@@ -344,7 +344,7 @@ function InterestsStep({
           {isSubmitting ? (
             <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
           ) : (
-            <span className="text-black text-[17px] font-semibold font-['Inter',_sans-serif] group-hover:scale-105 transition-transform">
+            <span className="text-black text-[17px] font-semibold font-['Inter',sans-serif] group-hover:scale-105 transition-transform">
               S'inscrire
             </span>
           )}
@@ -456,7 +456,7 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
             type="text"
             placeholder="Prénom(s) et nom"
             autoComplete="name"
-            className="w-full bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',_sans-serif]"
+            className="w-full bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',sans-serif]"
             {...register('name', {
               required: 'Le nom est requis',
               minLength: { value: 2, message: 'Le nom doit contenir au moins 2 caractères' },
@@ -474,7 +474,7 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
             type="email"
             placeholder="Votre email"
             autoComplete="email"
-            className="w-full bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',_sans-serif]"
+            className="w-full bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',sans-serif]"
             {...register('email', {
               required: "L'email est requis",
               validate: (v) =>
@@ -489,13 +489,13 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
       <div>
         <div className={inputClass(!!errors.phone)}>
           <DrapeauCongo />
-          <span className="text-[#adb3bc] text-[18.35px] font-medium tracking-[-0.734px] font-['Inter',_sans-serif] ml-2">+242</span>
-          <div className="h-[34px] w-[1px] bg-[#C0A9ED] opacity-50 mx-2" />
+          <span className="text-[#adb3bc] text-[18.35px] font-medium tracking-[-0.734px] font-['Inter',sans-serif] ml-2">+242</span>
+          <div className="h-[34px] w-px bg-[#C0A9ED] opacity-50 mx-2" />
           <input
             type="tel"
             placeholder="Ton numéro de téléphone"
             autoComplete="tel"
-            className="flex-1 bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',_sans-serif]"
+            className="flex-1 bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',sans-serif]"
             {...register('phone', {
               validate: (v) => {
                 if (!v) return true;
@@ -541,7 +541,7 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
 
       {/* Rôle */}
       <div>
-        <p className="text-white/70 text-[14px] font-['Inter',_sans-serif] mb-2">Je suis :</p>
+        <p className="text-white/70 text-[14px] font-['Inter',sans-serif] mb-2">Je suis :</p>
         <div className="flex gap-3">
           {(['user', 'organizer'] as const).map((r) => {
             const isSelected = roleValue === r;
@@ -560,12 +560,12 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
                   className="sr-only"
                   {...register('role', { required: 'Veuillez sélectionner un rôle' })}
                 />
-                <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-200 ${
                   isSelected ? 'border-[#c0a9ed] bg-[#c0a9ed]' : 'border-white/40'
                 }`}>
                   {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#0e0434]" />}
                 </span>
-                <span className="text-[15px] font-['Inter',_sans-serif]">
+                <span className="text-[15px] font-['Inter',sans-serif]">
                   {r === 'user' ? 'Participant' : 'Organisateur'}
                 </span>
               </label>
@@ -577,7 +577,7 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
 
       {/* Erreur serveur globale */}
       {serverError && (
-        <p className="text-red-400 text-[14px] font-['Inter',_sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2">
+        <p className="text-red-400 text-[14px] font-['Inter',sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2">
           {serverError}
         </p>
       )}
@@ -588,7 +588,7 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
         disabled={!onRegister}
         className="w-full bg-[#f4f6f4] rounded-[12px] px-[10px] py-[20px] h-[62px] flex items-center justify-center hover:bg-white hover:shadow-lg transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <span className="text-black text-[18px] font-semibold tracking-[-0.72px] font-['Inter',_sans-serif] group-hover:scale-105 transition-transform">
+        <span className="text-black text-[18px] font-semibold tracking-[-0.72px] font-['Inter',sans-serif] group-hover:scale-105 transition-transform">
           {roleValue === 'user' ? 'Suivant →' : "S'inscrire"}
         </span>
       </button>
@@ -616,10 +616,10 @@ export function LoginPage({ onLogin, onRegister, onBack }: LoginPageProps) {
           <div className="w-full">
             {/* En-tête */}
             <div className="text-center mb-6">
-              <h1 className="text-white text-[40px] font-['Inter',_sans-serif] font-bold leading-[1.04] tracking-[-1.6px] mb-3">
+              <h1 className="text-white text-[40px] font-['Inter',sans-serif] font-bold leading-[1.04] tracking-[-1.6px] mb-3">
                 {isLogin ? 'Féeter' : 'Devenir Féeteur(se)'}
               </h1>
-              <p className="text-white text-[17.2px] font-['Inter',_sans-serif] leading-[22.933px] tracking-[-0.516px] opacity-80 max-w-[360px] mx-auto">
+              <p className="text-white text-[17.2px] font-['Inter',sans-serif] leading-[22.933px] tracking-[-0.516px] opacity-80 max-w-[360px] mx-auto">
                 {isLogin
                   ? 'Connectez-vous à votre compte Feeti pour accéder à vos billets'
                   : 'Créez votre compte pour découvrir les événements Feeti'}

@@ -421,7 +421,7 @@ export function EventsListPage({
               className="flex overflow-x-auto scrollbar-hide gap-4 sm:gap-6 lg:gap-8 pb-4 px-12"
             >
               {filteredAndSortedEvents.map(event => (
-                <div key={event.id} className="flex-shrink-0 w-72 sm:w-80 lg:w-[350px] xl:w-[380px]">
+                <div key={event.id} className="shrink-0 w-72 sm:w-80 lg:w-[350px] xl:w-[380px]">
                   <LiveEventCard
                     event={event}
                     onSelect={onEventSelect}

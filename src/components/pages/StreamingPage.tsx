@@ -48,6 +48,10 @@ interface Event {
   maxAttendees: number;
   isLive: boolean;
   organizer: string;
+  streamUrl?: string;
+  videoUrl?: string;
+  source?: 'feeti2' | 'feetiplay';
+  isReplay?: boolean;
 }
 
 interface ChatMessage {
@@ -65,8 +69,10 @@ interface StreamingPageProps {
 }
 
 export function StreamingPage({ event, onBack, currentUser }: StreamingPageProps) {
+  const isFeetiPlayEvent = event.source === 'feetiplay';
+  const isReplay = !!event.isReplay || (!event.isLive && !!event.videoUrl);
   // Authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(isFeetiPlayEvent);
   const [accessCode, setAccessCode] = useState('');
   const [accessPin, setAccessPin] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -87,6 +93,12 @@ export function StreamingPage({ event, onBack, currentUser }: StreamingPageProps
   const [likes, setLikes] = useState(234);
   const [hasLiked, setHasLiked] = useState(false);
   const [showEventInfo, setShowEventInfo] = useState(true);
+
+  useEffect(() => {
+    if (isFeetiPlayEvent) {
+      setIsAuthenticated(true);
+    }
+  }, [isFeetiPlayEvent]);
 
   // Mock chat messages
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -265,7 +277,7 @@ export function StreamingPage({ event, onBack, currentUser }: StreamingPageProps
     if (navigator.share) {
       navigator.share({
         title: event.title,
-        text: `Regardez ${event.title} en direct sur Feeti !`,
+        text: isReplay ? `Regardez le replay ${event.title} sur Feeti !` : `Regardez ${event.title} en direct sur Feeti !`,
         url: window.location.href
       }).catch(() => {});
     } else {
@@ -300,8 +312,8 @@ export function StreamingPage({ event, onBack, currentUser }: StreamingPageProps
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                    <Badge className="absolute top-2 right-2 bg-red-600 animate-pulse">
-                      🔴 LIVE
+                    <Badge className={`absolute top-2 right-2 ${isReplay ? 'bg-purple-600' : 'bg-red-600 animate-pulse'}`}>
+                      {isReplay ? 'REPLAY' : '🔴 LIVE'}
                     </Badge>
                   </div>
                   <div className="flex-1">
@@ -313,7 +325,7 @@ export function StreamingPage({ event, onBack, currentUser }: StreamingPageProps
                       </div>
                       <div className="flex items-center gap-1">
                         <Eye className="w-4 h-4" />
-                        <span>En direct</span>
+                          <span>{isReplay ? 'Replay disponible' : 'En direct'}</span>
                       </div>
                     </div>
                     <p className="text-white/70">{event.description}</p>
@@ -331,11 +343,11 @@ export function StreamingPage({ event, onBack, currentUser }: StreamingPageProps
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <Alert className="bg-blue-500/20 border-blue-400/30">
-                  <Info className="w-4 h-4 text-blue-300" />
-                  <AlertDescription className="text-blue-100">
-                    <strong>Accès réservé aux participants.</strong> Entrez le code d'accès et le PIN 
-                    que vous avez reçus par email après votre achat.
+                  <Alert className="bg-blue-500/20 border-blue-400/30">
+                    <Info className="w-4 h-4 text-blue-300" />
+                    <AlertDescription className="text-blue-100">
+                      <strong>Accès réservé aux participants.</strong> Entrez le code d'accès et le PIN 
+                      que vous avez reçus par email après votre achat.
                   </AlertDescription>
                 </Alert>
 
@@ -427,9 +439,9 @@ export function StreamingPage({ event, onBack, currentUser }: StreamingPageProps
             Retour
           </Button>
 
-          <Badge className="bg-red-600 text-white px-4 py-2 animate-pulse">
-            <span className="inline-block w-2 h-2 bg-white rounded-full mr-2 animate-ping"></span>
-            EN DIRECT
+          <Badge className={`text-white px-4 py-2 ${isReplay ? 'bg-purple-600' : 'bg-red-600 animate-pulse'}`}>
+            {!isReplay && <span className="inline-block w-2 h-2 bg-white rounded-full mr-2 animate-ping"></span>}
+            {isReplay ? 'REPLAY' : 'EN DIRECT'}
           </Badge>
         </div>
 
@@ -449,22 +461,27 @@ export function StreamingPage({ event, onBack, currentUser }: StreamingPageProps
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
               >
-                {/* Demo video source - Remplacer par votre vrai stream URL */}
-                <source 
-                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" 
-                  type="video/mp4" 
-                />
+                {event.videoUrl || event.streamUrl ? (
+                  <source src={event.videoUrl || event.streamUrl} type="video/mp4" />
+                ) : (
+                  <source 
+                    src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" 
+                    type="video/mp4" 
+                  />
+                )}
                 Votre navigateur ne supporte pas la lecture vidéo.
               </video>
 
               {/* Live indicator overlay */}
               <div className="absolute top-4 left-4 z-10">
-                <div className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-full">
-                  <span className="flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-white opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
-                  </span>
-                  <span className="font-bold">EN DIRECT</span>
+                <div className={`flex items-center gap-2 text-white px-4 py-2 rounded-full ${isReplay ? 'bg-purple-600' : 'bg-red-600'}`}>
+                  {!isReplay && (
+                    <span className="flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-white opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                    </span>
+                  )}
+                  <span className="font-bold">{isReplay ? 'REPLAY' : 'EN DIRECT'}</span>
                 </div>
               </div>
 

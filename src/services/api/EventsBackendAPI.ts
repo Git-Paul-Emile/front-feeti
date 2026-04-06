@@ -23,6 +23,8 @@ export interface BackendEvent {
   isFeatured: boolean;
   isFavorite: boolean;
   status: string;
+  streamUrl?: string;
+  videoUrl?: string;
   countryCode?: string;
   organizerId: string;
   organizer?: { name: string };
@@ -50,6 +52,8 @@ export interface CreateEventInput {
   maxAttendees: number;
   duration?: string;
   isLive?: boolean;
+  streamUrl?: string;
+  videoUrl?: string;
   status?: string;
   countryCode?: string;
 }

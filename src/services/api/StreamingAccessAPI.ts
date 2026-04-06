@@ -2,6 +2,7 @@
 
 import BaseAPIService, { APIResponse } from './BaseAPI';
 import crypto from 'crypto';
+import { fetchWithBackendFallback } from '../../utils/backendConfig';
 
 export interface StreamingAccess {
   id: string;
@@ -26,10 +27,6 @@ export interface StreamingAccessRequest {
 }
 
 class StreamingAccessAPIService extends BaseAPIService {
-  private backendUrl = typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL 
-    ? import.meta.env.VITE_BACKEND_URL 
-    : 'http://localhost:3001';
-
   /**
    * Générer un code d'accès unique pour un événement en ligne
    */
@@ -41,7 +38,7 @@ class StreamingAccessAPIService extends BaseAPIService {
         const accessCode = this.generateUniqueCode(12);
         const accessPin = this.generateNumericPin(6);
 
-        const response = await fetch(`${this.backendUrl}/api/streaming/generate-access`, {
+        const response = await fetchWithBackendFallback('/api/streaming/generate-access', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -75,7 +72,7 @@ class StreamingAccessAPIService extends BaseAPIService {
     return this.request(
       `streaming-access:verify:${eventId}:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/streaming/verify-access`, {
+        const response = await fetchWithBackendFallback('/api/streaming/verify-access', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -111,7 +108,7 @@ class StreamingAccessAPIService extends BaseAPIService {
     return this.request(
       `streaming-access:user:${userId}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/streaming/user-access/${userId}`);
+        const response = await fetchWithBackendFallback(`/api/streaming/user-access/${userId}`);
 
         if (!response.ok) {
           const error = await response.json();
@@ -131,7 +128,7 @@ class StreamingAccessAPIService extends BaseAPIService {
     return this.request(
       `streaming-access:revoke:${accessId}:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/streaming/revoke-access/${accessId}`, {
+        const response = await fetchWithBackendFallback(`/api/streaming/revoke-access/${accessId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
@@ -156,7 +153,7 @@ class StreamingAccessAPIService extends BaseAPIService {
     return this.request(
       `streaming-access:use:${accessId}:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/streaming/use-access/${accessId}`, {
+        const response = await fetchWithBackendFallback(`/api/streaming/use-access/${accessId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
@@ -233,7 +230,7 @@ class StreamingAccessAPIService extends BaseAPIService {
     eventDate: string
   ): Promise<boolean> {
     try {
-      const response = await fetch(`${this.backendUrl}/api/streaming/send-access-email`, {
+      const response = await fetchWithBackendFallback('/api/streaming/send-access-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

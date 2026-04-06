@@ -11,6 +11,8 @@ import { useCountry } from '../context/CountryContext';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import EventsBackendAPI from '../services/api/EventsBackendAPI';
 import type { BackendEvent } from '../services/api/EventsBackendAPI';
+import FeetiPlayEventsAPI from '../services/api/FeetiPlayEventsAPI';
+import type { FeetiPlayEvent } from '../services/api/FeetiPlayEventsAPI';
 import type { Ticket } from '../context/AppContext';
 import type { RegisterData } from '../services/api/AuthAPI';
 
@@ -40,11 +42,86 @@ function adaptEvent(e: BackendEvent) {
     organizer: e.organizer?.name || 'Organisateur',
     organizerName: e.organizer?.name || 'Organisateur',
     tags: [] as string[],
+    streamUrl: e.streamUrl,
+    videoUrl: e.videoUrl,
     promotionType: e.promotionType ?? null,
     promotionStatus: e.promotionStatus ?? null,
     promotionStartDate: e.promotionStartDate ?? null,
     promotionEndDate: e.promotionEndDate ?? null,
+    source: 'feeti2' as const,
+    isReplay: false,
+    externalUrl: undefined as string | undefined,
   };
+}
+
+const FEETIPLAY_URL = (import.meta as any).env?.VITE_FEETIPLAY_URL ?? 'http://localhost:5173';
+const FEETIPLAY_EVENT_PREFIX = 'feetiplay_';
+
+type AppEvent = ReturnType<typeof adaptEvent>;
+
+function toFeetiPlayRouteId(id: string) {
+  return `${FEETIPLAY_EVENT_PREFIX}${id}`;
+}
+
+function isFeetiPlayRouteId(id: string) {
+  return id.startsWith(FEETIPLAY_EVENT_PREFIX);
+}
+
+function fromFeetiPlayRouteId(id: string) {
+  return id.replace(FEETIPLAY_EVENT_PREFIX, '');
+}
+
+function adaptFeetiPlayEvent(e: FeetiPlayEvent): AppEvent {
+  const viewers = e.viewerCount ?? 0;
+  return {
+    id: toFeetiPlayRouteId(e.id),
+    title: e.title,
+    description: e.description,
+    date: e.date,
+    time: e.time,
+    location: e.location || `En streaming sur ${e.channelName}`,
+    image: e.image || '',
+    price: e.isFree ? 0 : (e.price ?? 0),
+    currency: e.currency || 'FCFA',
+    category: e.category,
+    attendees: viewers,
+    maxAttendees: Math.max(viewers + 1, 1000),
+    duration: e.duration || '',
+    salesBlocked: false,
+    isLive: e.isLive,
+    vipPrice: undefined,
+    countryCode: undefined,
+    isFeatured: e.isFeatured ?? false,
+    isFavorite: false,
+    createdAt: e.createdAt,
+    organizer: e.channelName || 'FeetiPlay',
+    organizerName: e.channelName || 'FeetiPlay',
+    tags: e.tags ?? [],
+    streamUrl: e.streamUrl,
+    videoUrl: e.isReplay ? (e.streamUrl ?? '') : undefined,
+    promotionType: null,
+    promotionStatus: null,
+    promotionStartDate: null,
+    promotionEndDate: null,
+    source: 'feetiplay' as const,
+    isReplay: e.isReplay ?? false,
+    externalUrl: `${FEETIPLAY_URL}/event/${e.id}`,
+  };
+}
+
+function mergeEvents(primary: AppEvent[], secondary: AppEvent[]) {
+  const seen = new Set<string>();
+  return [...primary, ...secondary]
+    .filter((event) => {
+      if (seen.has(event.id)) return false;
+      seen.add(event.id);
+      return true;
+    })
+    .sort((a, b) => {
+      const aTime = new Date(`${a.date}T${a.time || '00:00'}`).getTime();
+      const bTime = new Date(`${b.date}T${b.time || '00:00'}`).getTime();
+      return bTime - aTime;
+    });
 }
 
 
@@ -223,13 +300,17 @@ function EventDetailRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const [event, setEvent] = useState<ReturnType<typeof adaptEvent> | null>(null);
+  const [event, setEvent] = useState<AppEvent | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) { setLoading(false); return; }
-    EventsBackendAPI.getEventById(id)
-      .then(data => setEvent(adaptEvent(data)))
+    const loader = isFeetiPlayRouteId(id)
+      ? FeetiPlayEventsAPI.getEventById(fromFeetiPlayRouteId(id)).then(adaptFeetiPlayEvent)
+      : EventsBackendAPI.getEventById(id).then(adaptEvent);
+
+    loader
+      .then(setEvent)
       .catch(() => setEvent(null))
       .finally(() => setLoading(false));
   }, [id]);
@@ -240,7 +321,13 @@ function EventDetailRoute() {
     <EventDetailPage
       event={event}
       onBack={() => navigate('/events')}
-      onPurchase={(eid: string) => navigate(`/events/${eid}/buy`)}
+      onPurchase={(eid: string) => {
+        if (isFeetiPlayRouteId(eid)) {
+          window.open(`${FEETIPLAY_URL}/event/${fromFeetiPlayRouteId(eid)}`, '_blank', 'noopener,noreferrer');
+          return;
+        }
+        navigate(`/events/${eid}/buy`);
+      }}
       onStreamWatch={(eid: string) => navigate(`/streaming/${eid}`)}
       currentUser={currentUser}
     />
@@ -258,6 +345,11 @@ function PaymentRoute() {
 
   useEffect(() => {
     if (!id) { setLoading(false); return; }
+    if (isFeetiPlayRouteId(id)) {
+      window.open(`${FEETIPLAY_URL}/event/${fromFeetiPlayRouteId(id)}`, '_blank', 'noopener,noreferrer');
+      setLoading(false);
+      return;
+    }
     EventsBackendAPI.getEventById(id)
       .then(data => setEvent(adaptEvent(data)))
       .catch(() => setEvent(null))
@@ -286,13 +378,17 @@ function StreamingRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
-  const [event, setEvent] = useState<ReturnType<typeof adaptEvent> | null>(null);
+  const [event, setEvent] = useState<AppEvent | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) { setLoading(false); return; }
-    EventsBackendAPI.getEventById(id)
-      .then(data => setEvent(adaptEvent(data)))
+    const loader = isFeetiPlayRouteId(id)
+      ? FeetiPlayEventsAPI.getEventById(fromFeetiPlayRouteId(id)).then(adaptFeetiPlayEvent)
+      : EventsBackendAPI.getEventById(id).then(adaptEvent);
+
+    loader
+      .then(setEvent)
       .catch(() => setEvent(null))
       .finally(() => setLoading(false));
   }, [id]);
@@ -426,12 +522,17 @@ function HomeRoute() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { selectedCountry } = useCountry();
-  const [events, setEvents] = useState<ReturnType<typeof adaptEvent>[]>([]);
+  const [events, setEvents] = useState<AppEvent[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    EventsBackendAPI.getAllEvents(selectedCountry?.code)
-      .then(data => setEvents(data.map(adaptEvent)))
+    Promise.all([
+      EventsBackendAPI.getAllEvents(selectedCountry?.code),
+      FeetiPlayEventsAPI.getLive().catch(() => [] as FeetiPlayEvent[]),
+    ])
+      .then(([localEvents, liveFeetiPlayEvents]) => {
+        setEvents(mergeEvents(localEvents.map(adaptEvent), liveFeetiPlayEvents.map(adaptFeetiPlayEvent)));
+      })
       .catch(() => {});
   }, [selectedCountry?.code]);
 
@@ -448,6 +549,7 @@ function HomeRoute() {
   );
 
   const handleWishlist = useCallback(async (eventId: string) => {
+    if (isFeetiPlayRouteId(eventId)) return;
     if (!currentUser) {
       localStorage.setItem('feeti_pending_favorite', JSON.stringify({ eventId, type: 'event' }));
       navigate('/login');
@@ -469,7 +571,13 @@ function HomeRoute() {
       onEventSelect={(id: string) => navigate(`/events/${id}`)}
       onNavigate={(page: string, params?: any) => navigate(PAGE_ROUTES[page] ?? '/', { state: params })}
       onStreamWatch={(id: string) => navigate(`/streaming/${id}`)}
-      onPurchase={(id: string) => navigate(`/events/${id}/buy`)}
+      onPurchase={(id: string) => {
+        if (isFeetiPlayRouteId(id)) {
+          window.open(`${FEETIPLAY_URL}/event/${fromFeetiPlayRouteId(id)}`, '_blank', 'noopener,noreferrer');
+          return;
+        }
+        navigate(`/events/${id}/buy`);
+      }}
       onWishlist={handleWishlist}
     />
   );
@@ -481,12 +589,17 @@ function EventsRoute() {
   const { user: currentUser } = useAuth();
   const { selectedCountry } = useCountry();
   const state = (location.state ?? {}) as Record<string, unknown>;
-  const [events, setEvents] = useState<ReturnType<typeof adaptEvent>[]>([]);
+  const [events, setEvents] = useState<AppEvent[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    EventsBackendAPI.getAllEvents(selectedCountry?.code)
-      .then(data => setEvents(data.map(adaptEvent)))
+    Promise.all([
+      EventsBackendAPI.getAllEvents(selectedCountry?.code),
+      FeetiPlayEventsAPI.getLive().catch(() => [] as FeetiPlayEvent[]),
+    ])
+      .then(([localEvents, liveFeetiPlayEvents]) => {
+        setEvents(mergeEvents(localEvents.map(adaptEvent), liveFeetiPlayEvents.map(adaptFeetiPlayEvent)));
+      })
       .catch(() => {});
   }, [selectedCountry?.code]);
 
@@ -503,6 +616,7 @@ function EventsRoute() {
   );
 
   const handleWishlist = useCallback(async (eventId: string) => {
+    if (isFeetiPlayRouteId(eventId)) return;
     if (!currentUser) {
       localStorage.setItem('feeti_pending_favorite', JSON.stringify({ eventId, type: 'event' }));
       navigate('/login');
@@ -522,7 +636,13 @@ function EventsRoute() {
     <EventsListPage
       events={eventsWithFav}
       onEventSelect={(id: string) => navigate(`/events/${id}`)}
-      onPurchase={(id: string) => navigate(`/events/${id}/buy`)}
+      onPurchase={(id: string) => {
+        if (isFeetiPlayRouteId(id)) {
+          window.open(`${FEETIPLAY_URL}/event/${fromFeetiPlayRouteId(id)}`, '_blank', 'noopener,noreferrer');
+          return;
+        }
+        navigate(`/events/${id}/buy`);
+      }}
       onStreamWatch={(id: string) => navigate(`/streaming/${id}`)}
       onWishlist={handleWishlist}
       initialCategoryFilter={state.categoryFilter as string | undefined}
@@ -537,12 +657,20 @@ function LiveEventsRoute() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { selectedCountry } = useCountry();
-  const [events, setEvents] = useState<ReturnType<typeof adaptEvent>[]>([]);
+  const [events, setEvents] = useState<AppEvent[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    EventsBackendAPI.getAllEvents(selectedCountry?.code)
-      .then(data => setEvents(data.filter(e => e.isLive).map(adaptEvent)))
+    Promise.all([
+      EventsBackendAPI.getAllEvents(selectedCountry?.code),
+      FeetiPlayEventsAPI.getLive().catch(() => [] as FeetiPlayEvent[]),
+    ])
+      .then(([localEvents, liveFeetiPlayEvents]) => {
+        setEvents(mergeEvents(
+          localEvents.filter(e => e.isLive).map(adaptEvent),
+          liveFeetiPlayEvents.map(adaptFeetiPlayEvent),
+        ));
+      })
       .catch(() => {});
   }, [selectedCountry?.code]);
 
@@ -559,6 +687,7 @@ function LiveEventsRoute() {
   );
 
   const handleWishlist = useCallback(async (eventId: string) => {
+    if (isFeetiPlayRouteId(eventId)) return;
     if (!currentUser) {
       localStorage.setItem('feeti_pending_favorite', JSON.stringify({ eventId, type: 'event' }));
       navigate('/login');
@@ -580,7 +709,13 @@ function LiveEventsRoute() {
       onBack={() => navigate('/')}
       onEventSelect={(id: string) => navigate(`/events/${id}`)}
       onStreamWatch={(id: string) => navigate(`/streaming/${id}`)}
-      onPurchase={(id: string) => navigate(`/events/${id}/buy`)}
+      onPurchase={(id: string) => {
+        if (isFeetiPlayRouteId(id)) {
+          window.open(`${FEETIPLAY_URL}/event/${fromFeetiPlayRouteId(id)}`, '_blank', 'noopener,noreferrer');
+          return;
+        }
+        navigate(`/events/${id}/buy`);
+      }}
       onWishlist={handleWishlist}
       currentUser={currentUser}
     />
@@ -792,11 +927,16 @@ function ReplayRoute() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { selectedCountry } = useCountry();
-  const [events, setEvents] = useState<ReturnType<typeof adaptEvent>[]>([]);
+  const [events, setEvents] = useState<AppEvent[]>([]);
 
   useEffect(() => {
-    EventsBackendAPI.getAllEvents(selectedCountry?.code)
-      .then(data => setEvents(data.map(adaptEvent)))
+    Promise.all([
+      EventsBackendAPI.getAllEvents(selectedCountry?.code),
+      FeetiPlayEventsAPI.getReplays().catch(() => [] as FeetiPlayEvent[]),
+    ])
+      .then(([localEvents, replayEvents]) => {
+        setEvents(mergeEvents(localEvents.map(adaptEvent), replayEvents.map(adaptFeetiPlayEvent)));
+      })
       .catch(() => {});
   }, [selectedCountry?.code]);
 
@@ -806,7 +946,13 @@ function ReplayRoute() {
       onBack={() => navigate('/')}
       onEventSelect={(id: string) => navigate(`/events/${id}`)}
       onStreamWatch={(id: string) => navigate(`/streaming/${id}`)}
-      onPurchase={(id: string) => navigate(`/events/${id}/buy`)}
+      onPurchase={(id: string) => {
+        if (isFeetiPlayRouteId(id)) {
+          window.open(`${FEETIPLAY_URL}/event/${fromFeetiPlayRouteId(id)}`, '_blank', 'noopener,noreferrer');
+          return;
+        }
+        navigate(`/events/${id}/buy`);
+      }}
       currentUser={currentUser}
     />
   );

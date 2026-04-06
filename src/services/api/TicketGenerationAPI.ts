@@ -1,6 +1,7 @@
 // Service API Frontend pour la génération de tickets PDF avec QR codes
 
 import BaseAPIService, { APIResponse } from './BaseAPI';
+import { fetchWithBackendFallback, getPreferredBackendBaseUrl } from '../../utils/backendConfig';
 
 export interface TicketGenerationRequest {
   eventId: string;
@@ -49,10 +50,6 @@ export interface TicketStats {
 }
 
 class TicketGenerationAPIService extends BaseAPIService {
-  private backendUrl = typeof import.meta !== 'undefined' && import.meta.env?.VITE_BACKEND_URL 
-    ? import.meta.env.VITE_BACKEND_URL 
-    : 'http://localhost:3001';
-
   /**
    * Générer un ou plusieurs tickets avec QR codes et PDF
    */
@@ -60,7 +57,7 @@ class TicketGenerationAPIService extends BaseAPIService {
     return this.request(
       `ticket-gen:${data.eventId}:${data.userId}:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/ticket-generation/generate`, {
+        const response = await fetchWithBackendFallback('/api/ticket-generation/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -84,7 +81,7 @@ class TicketGenerationAPIService extends BaseAPIService {
    */
   async downloadTicketPDF(ticketId: string): Promise<Blob> {
     try {
-      const response = await fetch(`${this.backendUrl}/api/ticket-generation/download/${ticketId}`);
+      const response = await fetchWithBackendFallback(`/api/ticket-generation/download/${ticketId}`);
 
       if (!response.ok) {
         throw new Error('Erreur lors du téléchargement du billet');
@@ -101,7 +98,7 @@ class TicketGenerationAPIService extends BaseAPIService {
    * Ouvrir le PDF d'un ticket dans un nouvel onglet
    */
   openTicketPDF(ticketId: string): void {
-    const url = `${this.backendUrl}/api/ticket-generation/download/${ticketId}`;
+    const url = `${getPreferredBackendBaseUrl()}/api/ticket-generation/download/${ticketId}`;
     window.open(url, '_blank');
   }
 
@@ -140,7 +137,7 @@ class TicketGenerationAPIService extends BaseAPIService {
     return this.request(
       `ticket-verify:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/ticket-generation/verify`, {
+        const response = await fetchWithBackendFallback('/api/ticket-generation/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ qrCodeData, verifierId })
@@ -170,7 +167,7 @@ class TicketGenerationAPIService extends BaseAPIService {
     return this.request(
       `ticket-regen:${ticketId}:${Date.now()}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/ticket-generation/regenerate-qr/${ticketId}`, {
+        const response = await fetchWithBackendFallback(`/api/ticket-generation/regenerate-qr/${ticketId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
@@ -195,7 +192,7 @@ class TicketGenerationAPIService extends BaseAPIService {
     return this.request(
       `ticket-stats:${eventId}`,
       async () => {
-        const response = await fetch(`${this.backendUrl}/api/ticket-generation/stats/${eventId}`);
+        const response = await fetchWithBackendFallback(`/api/ticket-generation/stats/${eventId}`);
 
         if (!response.ok) {
           const error = await response.json();

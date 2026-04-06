@@ -37,9 +37,16 @@ interface Event {
   maxAttendees: number;
   duration?: string;
   isLive: boolean;
+  streamUrl?: string | null;
+  videoUrl?: string | null;
   organizer: string;
   organizerName?: string;
+  source?: 'feeti2' | 'feetiplay';
+  isReplay?: boolean;
+  externalUrl?: string;
 }
+
+const FEETIPLAY_URL = (import.meta as any).env?.VITE_FEETIPLAY_URL ?? 'http://localhost:5173';
 
 interface EventDetailPageProps {
   event: Event;
@@ -55,16 +62,27 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState(1);
+  const isFeetiPlayEvent = event.source === 'feetiplay';
+  const canWatchNow = event.isLive || !!event.videoUrl || !!event.streamUrl || !!event.isReplay;
+  const externalEventUrl = event.externalUrl ?? `${FEETIPLAY_URL}/event/${event.id}`;
 
   // Charger l'état favori depuis l'API au montage (si connecté)
   useEffect(() => {
+    if (isFeetiPlayEvent) {
+      setIsFavorited(false);
+      return;
+    }
     if (!currentUser?.id) return;
     EventsBackendAPI.checkFavorite(event.id)
       .then(setIsFavorited)
       .catch(() => {});
-  }, [currentUser?.id, event.id]);
+  }, [currentUser?.id, event.id, isFeetiPlayEvent]);
 
   const toggleFavorite = async () => {
+    if (isFeetiPlayEvent) {
+      window.open(externalEventUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
     if (!currentUser) {
       navigate('/login', { state: { from: location } });
       return;
@@ -347,20 +365,37 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
                       </div>
 
                       <Button
-                        onClick={() => onPurchase(event.id)}
+                        onClick={() => {
+                          if (isFeetiPlayEvent && canWatchNow) {
+                            onStreamWatch(event.id);
+                            return;
+                          }
+                          onPurchase(event.id);
+                        }}
                         className="w-full bg-indigo-600 hover:bg-indigo-700"
                         size="lg"
-                        disabled={!currentUser}
+                        disabled={!currentUser && !isFeetiPlayEvent}
                       >
-                        {!currentUser ? 'Connectez-vous pour réserver' : 'Réserver maintenant'}
+                        {isFeetiPlayEvent
+                          ? (event.isReplay ? 'Voir le replay' : 'Regarder maintenant')
+                          : (!currentUser ? 'Connectez-vous pour réserver' : 'Réserver maintenant')}
                       </Button>
 
                       <div className="text-xs text-gray-500 text-center space-y-1">
-                        <p>Paiement sécurisé par Stripe</p>
-                        <p>Billets envoyés reçus instantanément</p>
+                        {isFeetiPlayEvent ? (
+                          <>
+                            <p>Lecture intégrée depuis le catalogue FeetiPlay</p>
+                            <p>L'expérience visuelle reste celle de Feeti</p>
+                          </>
+                        ) : (
+                          <>
+                            <p>Paiement sécurisé par Stripe</p>
+                            <p>Billets envoyés reçus instantanément</p>
+                          </>
+                        )}
                       </div>
 
-                      {event.isLive && (
+                      {canWatchNow && (
                         <Button
                           onClick={() => onStreamWatch(event.id)}
                           variant="outline"
@@ -368,8 +403,26 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
                           size="lg"
                         >
                           <Play className="w-4 h-4 mr-2" />
-                          Voir le Live
+                          {event.isReplay ? 'Voir le replay' : 'Voir le Live'}
                         </Button>
+                      )}
+
+                      {canWatchNow && (
+                        <a
+                          href={externalEventUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <Button
+                            variant="outline"
+                            className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
+                            size="lg"
+                          >
+                            <Play className="w-4 h-4 mr-2" />
+                            {event.isReplay ? 'Ouvrir le replay sur FeetiPlay' : 'Regarder sur FeetiPlay'}
+                          </Button>
+                        </a>
                       )}
                     </div>
                   )}
@@ -392,14 +445,30 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
                       <p className="text-sm text-gray-600">
                         Cet événement a déjà eu lieu.
                       </p>
-                      {event.isLive && (
+                      {canWatchNow && (
+                        <a
+                          href={externalEventUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block mt-4"
+                        >
+                          <Button
+                            variant="outline"
+                            className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
+                          >
+                            <Play className="w-4 h-4 mr-2" />
+                            {event.isReplay ? 'Voir le replay sur FeetiPlay' : 'Voir sur FeetiPlay'}
+                          </Button>
+                        </a>
+                      )}
+                      {canWatchNow && (
                         <Button
                           onClick={() => onStreamWatch(event.id)}
                           variant="outline"
                           className="w-full mt-4 border-red-200 text-red-600 hover:bg-red-50"
                         >
                           <Play className="w-4 h-4 mr-2" />
-                          Voir le Live
+                          {event.isReplay ? 'Voir le replay' : 'Voir le Live'}
                         </Button>
                       )}
                     </div>

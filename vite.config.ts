@@ -3,7 +3,9 @@
   import react from '@vitejs/plugin-react-swc';
   import path from 'path';
 
-  export default defineConfig({
+  const FRONTEND_PORT = 3000;
+
+  export default defineConfig(() => ({
     plugins: [react()],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
@@ -99,7 +101,8 @@
       outDir: 'build',
     },
     server: {
-      port: 3000,
+      port: FRONTEND_PORT,
+      strictPort: true,
       open: true,
     },
-  });
+  }));

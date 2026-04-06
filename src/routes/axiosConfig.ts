@@ -1,28 +1,29 @@
-import axios from 'axios';
+﻿import axios from 'axios';
+import { getPreferredBackendBaseUrl, resolveBackendBaseUrl } from '../utils/backendConfig';
 
 const api = axios.create({
-  baseURL: (import.meta as any).env?.VITE_BACKEND_URL || 'http://localhost:8000',
+  baseURL: getPreferredBackendBaseUrl(),
   withCredentials: true,
   timeout: 30_000,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Ajoute le token JWT à chaque requête
-api.interceptors.request.use((config) => {
+api.interceptors.request.use((config) => Promise.resolve(resolveBackendBaseUrl()).then((baseURL) => {
+  config.baseURL = baseURL;
   const token = localStorage.getItem('feeti_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
-});
+}));
 
-// En cas de 401, nettoie le token local
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       localStorage.removeItem('feeti_token');
     }
+
     return Promise.reject(error);
   }
 );

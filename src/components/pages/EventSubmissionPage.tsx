@@ -43,7 +43,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import EventSubmissionAPI from '../../services/api/EventSubmissionAPI';
-import { EVENT_CATEGORIES } from '../../data/categories';
+import CategoriesAPI from '../../services/api/CategoriesAPI';
 
 interface EventSubmissionPageProps {
   onBack: () => void;
@@ -61,7 +61,7 @@ interface EventSubmissionForm {
 
   // 2. Détails événement
   eventName: string;
-  isLive: boolean;
+  eventType: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
   category: string;
   description: string;
   hashtags: string[];
@@ -105,6 +105,7 @@ interface EventSubmissionForm {
   // 9. Conditions
   acceptTerms: boolean;
   confirmAccuracy: boolean;
+  liveConsentAccepted: boolean;
 }
 
 interface TicketType {
@@ -136,7 +137,7 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
     organizerWebsite: '',
     organizerLogo: null,
     eventName: '',
-    isLive: false,
+    eventType: 'PRESENTIEL',
     category: '',
     description: '',
     hashtags: [],
@@ -170,7 +171,8 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
     socialMediaShare: false,
     pushNotification: false,
     acceptTerms: false,
-    confirmAccuracy: false
+    confirmAccuracy: false,
+    liveConsentAccepted: false
   });
 
   const [currentHashtag, setCurrentHashtag] = useState('');
@@ -178,7 +180,13 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
   const totalSteps = 9;
   const progress = (currentStep / totalSteps) * 100;
 
-  const categories = EVENT_CATEGORIES;
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    CategoriesAPI.getAll()
+      .then(cats => setCategories(cats.map(c => c.name)))
+      .catch(() => setCategories([]));
+  }, []);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -331,6 +339,12 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
       return;
     }
 
+    const isLiveEvent = formData.eventType === 'STREAMING_LIVE' || formData.eventType === 'MIXTE';
+    if (isLiveEvent && !formData.liveConsentAccepted) {
+      toast.error('Le consentement pour la diffusion live est obligatoire');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -357,7 +371,8 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
         city: formData.city,
         countryCode: formData.countryCode,
         googleMapsLink: formData.googleMapsLink,
-        isLive: formData.isLive,
+        eventType: formData.eventType,
+        isLive: formData.eventType !== 'PRESENTIEL',
         hasStreaming: formData.hasStreaming,
         accessType: formData.accessType,
         tickets: formData.tickets,
@@ -542,12 +557,12 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
 
               <div className="space-y-2">
                 <Label>Type d'événement *</Label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <button
                     type="button"
-                    onClick={() => handleInputChange('isLive', false)}
+                    onClick={() => handleInputChange('eventType', 'PRESENTIEL')}
                     className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
-                      !formData.isLive
+                      formData.eventType === 'PRESENTIEL'
                         ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
                         : 'border-gray-200 hover:border-gray-300 text-gray-700'
                     }`}
@@ -560,20 +575,46 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleInputChange('isLive', true)}
+                    onClick={() => handleInputChange('eventType', 'STREAMING_LIVE')}
                     className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
-                      formData.isLive
+                      formData.eventType === 'STREAMING_LIVE'
                         ? 'border-red-500 bg-red-50 text-red-700'
                         : 'border-gray-200 hover:border-gray-300 text-gray-700'
                     }`}
                   >
                     <Video className="w-5 h-5 flex-shrink-0" />
                     <div className="text-left">
-                      <p className="font-semibold text-sm">🔴 Live streaming</p>
+                      <p className="font-semibold text-sm">🔴 Streaming Live</p>
                       <p className="text-xs opacity-70">Diffusion en direct</p>
                     </div>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('eventType', 'MIXTE')}
+                    className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                      formData.eventType === 'MIXTE'
+                        ? 'border-purple-600 bg-purple-50 text-purple-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    <div className="flex gap-1 flex-shrink-0">
+                      <Building2 className="w-4 h-4" />
+                      <Video className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-semibold text-sm">🔀 Mixte</p>
+                      <p className="text-xs opacity-70">Présentiel + Live</p>
+                    </div>
+                  </button>
                 </div>
+                {(formData.eventType === 'STREAMING_LIVE' || formData.eventType === 'MIXTE') && (
+                  <Alert className="mt-3 bg-amber-50 border-amber-300">
+                    <Info className="w-4 h-4" />
+                    <AlertDescription>
+                      <strong>Documents requis :</strong> Les événements en live nécessitent des formulaires PDF à remplir. Ils vous seront envoyés par email après validation. Votre consentement sera demandé à l'étape 9.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -586,7 +627,9 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
                     <SelectValue placeholder="Sélectionnez une catégorie" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map(cat => (
+                    {categories.length === 0
+                      ? <SelectItem value="_" disabled>Catégories indisponibles</SelectItem>
+                      : categories.map(cat => (
                       <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                     ))}
                   </SelectContent>
@@ -1291,13 +1334,44 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
                     <p className="font-medium">{formData.accessType === 'free' ? 'Gratuit' : 'Payant'}</p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Streaming</p>
-                    <p className="font-medium">{formData.hasStreaming ? 'Oui' : 'Non'}</p>
+                    <p className="text-gray-500">Type d'événement</p>
+                    <p className="font-medium">
+                      {formData.eventType === 'PRESENTIEL' ? 'En présentiel' :
+                       formData.eventType === 'STREAMING_LIVE' ? '🔴 Streaming Live' :
+                       '🔀 Mixte (Présentiel + Live)'}
+                    </p>
                   </div>
                 </div>
               </div>
 
               <Separator />
+
+              {(formData.eventType === 'STREAMING_LIVE' || formData.eventType === 'MIXTE') && (
+                <div className="space-y-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Video className="w-5 h-5 text-red-600" />
+                    <h4 className="font-semibold text-red-800">
+                      Consentement requis — Événement {formData.eventType === 'MIXTE' ? 'Mixte' : 'Streaming Live'}
+                    </h4>
+                  </div>
+                  <Alert className="bg-white border-red-200">
+                    <Info className="w-4 h-4" />
+                    <AlertDescription className="text-sm">
+                      Les événements en diffusion live sont soumis à des conditions spécifiques. Des <strong>formulaires PDF</strong> vous seront envoyés à <strong>{formData.organizerEmail}</strong> après soumission. Vous devrez les compléter et les retourner avant la publication.
+                    </AlertDescription>
+                  </Alert>
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="liveConsentAccepted"
+                      checked={formData.liveConsentAccepted}
+                      onCheckedChange={(checked: boolean) => handleInputChange('liveConsentAccepted', checked)}
+                    />
+                    <Label htmlFor="liveConsentAccepted" className="cursor-pointer leading-relaxed text-red-800">
+                      <span className="font-semibold">* Obligatoire —</span> Je consens à recevoir, compléter et retourner les formulaires PDF requis pour la diffusion de mon événement en live sur la plateforme Feeti. Je comprends que la non-remise de ces documents peut entraîner le refus ou la suspension de la diffusion.
+                    </Label>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div className="flex items-start gap-3">

@@ -26,6 +26,9 @@ export interface EventSubmissionData {
   recurrence: 'unique' | 'weekly' | 'monthly' | 'other';
   recurrenceDetails?: string;
 
+  // Type d'événement
+  eventType: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
+
   // Lieu
   venueName: string;
   address: string;
@@ -104,6 +107,7 @@ class EventSubmissionAPIService extends BaseAPIService {
           endTime: data.endTime,
           recurrence: data.recurrence,
           recurrenceDetails: data.recurrenceDetails,
+          eventType: data.eventType,
           venueName: data.venueName,
           address: data.address,
           city: data.city,

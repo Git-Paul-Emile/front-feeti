@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import TicketAPI from '../../services/api/TicketAPI';
+import api from '../../routes/axiosConfig';
 import DeliveryAPI, { type DeliveryZone } from '../../services/api/DeliveryAPI';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -29,7 +30,9 @@ import {
   Check,
   Star,
   Crown,
-  Truck
+  Truck,
+  Smartphone,
+  Wallet
 } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { QRCodeGenerator } from '../QRCodeGenerator';
@@ -175,6 +178,10 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
     cvv: '',
     cardholderName: defaultFullName
   });
+  // Méthode de paiement sélectionnée par l'utilisateur
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'mobile_money' | 'paystack'>('card');
+  const [mobilePhone, setMobilePhone] = useState(currentUser?.phone || '');
+  const [mobileOperator, setMobileOperator] = useState<'mtn' | 'orange' | 'airtel'>('mtn');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [newsletter, setNewsletter] = useState(false);
 
@@ -302,9 +309,6 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
     setIsProcessing(true);
 
     try {
-      // Simuler un délai de traitement bancaire (2s)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
       // Construire les items à partir des billets sélectionnés
       const items = Object.entries(selectedTickets)
         .filter(([, qty]) => qty > 0)
@@ -313,11 +317,38 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
           return { category: cat.name, quantity, price: cat.price };
         });
 
-      // Appel au backend pour enregistrer l'achat
-      const result = await TicketAPI.purchase({
+      // Obtenir un paymentId selon la méthode choisie (simulation)
+      let paymentId = `sim_${Date.now()}`;
+      const provider: 'stripe' | 'mobile_money' | 'paystack' =
+        paymentMethod === 'card' ? 'stripe' : paymentMethod;
+
+      if (paymentMethod === 'mobile_money' && mobilePhone) {
+        try {
+          const mmRes = await api.post('/api/payments/mobile-money/initialize', {
+            phone: mobilePhone,
+            provider: mobileOperator,
+            amount: total,
+            currency: event.currency,
+          });
+          paymentId = mmRes.data?.data?.transaction_id || paymentId;
+        } catch { /* simulation : continue même si l'appel échoue */ }
+      } else if (paymentMethod === 'paystack') {
+        try {
+          const psRes = await api.post('/api/payments/paystack/initialize', {
+            email: customerInfo.email,
+            amount: total,
+            currency: event.currency,
+          });
+          paymentId = psRes.data?.data?.reference || paymentId;
+        } catch { /* simulation : continue */ }
+      }
+
+      // Appel au backend : confirme paiement + crée billets + envoie email
+      const result = await TicketAPI.confirmAndPurchase({
         eventId: event.id,
         holderName: `${customerInfo.firstName} ${customerInfo.lastName}`,
         holderEmail: customerInfo.email,
+        holderPhone: customerInfo.phone || undefined,
         items,
         delivery: {
           method: deliveryMethod,
@@ -328,6 +359,8 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
             additionalInfo: deliveryInfo || undefined,
           }),
         },
+        paymentProvider: provider,
+        paymentId,
       });
 
       // Mapper les billets backend vers le format local attendu par TicketPDFGenerator
@@ -345,7 +378,7 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
         currency: t.currency,
         holderName: t.holderName,
         holderEmail: t.holderEmail,
-        qrCode: t.qrData,
+        qrCode: t.qrDataUrl || t.qrData, // Utiliser le PNG généré si disponible
         status: 'valid',
         purchaseDate: t.createdAt || new Date().toISOString(),
         timestamp: Date.now(),
@@ -783,52 +816,144 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <CreditCard className="w-5 h-5" />
-                  <span>Informations de paiement</span>
+                  <span>Mode de paiement</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cardNumber">Numéro de carte *</Label>
-                  <Input
-                    id="cardNumber"
-                    placeholder="1234 5678 9012 3456"
-                    value={paymentInfo.cardNumber}
-                    onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardNumber: e.target.value }))}
-                    required
-                  />
+              <CardContent className="space-y-3">
+                {/* Sélection de la méthode */}
+                <div className="grid gap-3">
+                  {/* Carte bancaire */}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('card')}
+                    className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all text-left ${
+                      paymentMethod === 'card'
+                        ? 'border-indigo-500 bg-indigo-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      paymentMethod === 'card' ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      <CreditCard className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Carte bancaire</p>
+                      <p className="text-sm text-gray-500">Visa, Mastercard</p>
+                    </div>
+                    {paymentMethod === 'card' && <CheckCircle className="w-5 h-5 text-indigo-500 ml-auto" />}
+                  </button>
+
+                  {/* Mobile Money */}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('mobile_money')}
+                    className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all text-left ${
+                      paymentMethod === 'mobile_money'
+                        ? 'border-indigo-500 bg-indigo-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      paymentMethod === 'mobile_money' ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      <Smartphone className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Mobile Money</p>
+                      <p className="text-sm text-gray-500">MTN, Orange, Airtel</p>
+                    </div>
+                    {paymentMethod === 'mobile_money' && <CheckCircle className="w-5 h-5 text-indigo-500 ml-auto" />}
+                  </button>
+
+                  {/* Paystack */}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('paystack')}
+                    className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all text-left ${
+                      paymentMethod === 'paystack'
+                        ? 'border-indigo-500 bg-indigo-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      paymentMethod === 'paystack' ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      <Wallet className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Paystack</p>
+                      <p className="text-sm text-gray-500">Paiement sécurisé Paystack</p>
+                    </div>
+                    {paymentMethod === 'paystack' && <CheckCircle className="w-5 h-5 text-indigo-500 ml-auto" />}
+                  </button>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="expiryDate">Date d'expiration *</Label>
-                    <Input
-                      id="expiryDate"
-                      placeholder="MM/YY"
-                      value={paymentInfo.expiryDate}
-                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, expiryDate: e.target.value }))}
-                      required
-                    />
+
+                {/* Détails Mobile Money */}
+                {paymentMethod === 'mobile_money' && (
+                  <div className="space-y-3 pt-3 border-t border-gray-100">
+                    <div className="space-y-2">
+                      <Label>Opérateur</Label>
+                      <div className="flex gap-2">
+                        {(['mtn', 'orange', 'airtel'] as const).map(op => (
+                          <button
+                            key={op}
+                            type="button"
+                            onClick={() => setMobileOperator(op)}
+                            className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                              mobileOperator === op
+                                ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                                : 'border-gray-200 text-gray-600'
+                            }`}
+                          >
+                            {op === 'mtn' ? 'MTN' : op === 'orange' ? 'Orange' : 'Airtel'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="mobilePhone">Numéro de téléphone *</Label>
+                      <Input
+                        id="mobilePhone"
+                        type="tel"
+                        placeholder="06 XXX XX XX XX"
+                        value={mobilePhone}
+                        onChange={(e) => setMobilePhone(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cvv">CVV *</Label>
-                    <Input
-                      id="cvv"
-                      placeholder="123"
-                      value={paymentInfo.cvv}
-                      onChange={(e) => setPaymentInfo(prev => ({ ...prev, cvv: e.target.value }))}
-                      required
-                    />
+                )}
+
+                {/* Détails Carte */}
+                {paymentMethod === 'card' && (
+                  <div className="space-y-3 pt-3 border-t border-gray-100">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+                      <Shield className="w-4 h-4 inline mr-1" />
+                      Paiement sécurisé — vos données sont chiffrées
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cardNumber">Numéro de carte</Label>
+                      <Input
+                        id="cardNumber"
+                        placeholder="1234 5678 9012 3456"
+                        value={paymentInfo.cardNumber}
+                        onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardNumber: e.target.value }))}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="expiryDate">Expiration</Label>
+                        <Input id="expiryDate" placeholder="MM/YY" value={paymentInfo.expiryDate}
+                          onChange={(e) => setPaymentInfo(prev => ({ ...prev, expiryDate: e.target.value }))} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cvv">CVV</Label>
+                        <Input id="cvv" placeholder="123" value={paymentInfo.cvv}
+                          onChange={(e) => setPaymentInfo(prev => ({ ...prev, cvv: e.target.value }))} />
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cardholderName">Nom du porteur *</Label>
-                  <Input
-                    id="cardholderName"
-                    placeholder="Nom sur la carte"
-                    value={paymentInfo.cardholderName}
-                    onChange={(e) => setPaymentInfo(prev => ({ ...prev, cardholderName: e.target.value }))}
-                    required
-                  />
-                </div>
+                )}
               </CardContent>
             </Card>
 

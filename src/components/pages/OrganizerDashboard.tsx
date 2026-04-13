@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import EventsBackendAPI from '../../services/api/EventsBackendAPI';
-import { EVENT_CATEGORIES } from '../../data/categories';
+import CategoriesAPI from '../../services/api/CategoriesAPI';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -11,6 +11,7 @@ import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../ui/dialog';
 import { ConfirmDialog } from '../ui/confirm-dialog';
+import { Checkbox } from '../ui/checkbox';
 import {
   Plus,
   Eye,
@@ -51,6 +52,7 @@ interface Event {
   attendees: number;
   maxAttendees: number;
   isLive: boolean;
+  eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
   isFeatured?: boolean;
   organizer?: string;
   status?: string;
@@ -95,8 +97,9 @@ export function OrganizerDashboard({
     category: '',
     maxAttendees: 100,
     duration: '',
-    isLive: false,
+    eventType: 'PRESENTIEL' as 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE',
   });
+  const [createLiveConsentAccepted, setCreateLiveConsentAccepted] = useState(false);
   const [createTicketTypes, setCreateTicketTypes] = useState<TicketTypeEntry[]>(DEFAULT_TICKET_TYPES);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
@@ -127,19 +130,17 @@ export function OrganizerDashboard({
     category: '',
     maxAttendees: 100,
     duration: '',
-    isLive: false,
+    eventType: 'PRESENTIEL' as 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE',
   });
+  const [editLiveConsentAccepted, setEditLiveConsentAccepted] = useState(false);
   const [editTicketTypes, setEditTicketTypes] = useState<TicketTypeEntry[]>(DEFAULT_TICKET_TYPES);
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string>('');
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('feeti_categories');
-      setCategories(stored ? JSON.parse(stored) : [...EVENT_CATEGORIES]);
-    } catch {
-      setCategories([...EVENT_CATEGORIES]);
-    }
+    CategoriesAPI.getAll()
+      .then(cats => setCategories(cats.map(c => c.name)))
+      .catch(() => setCategories([]));
     FeaturedRequestAPI.getMyRequests()
       .then(requests => {
         // Vérifier les changements de statut pour afficher des notifications
@@ -236,8 +237,14 @@ export function OrganizerDashboard({
 
   const handleCreateEvent = (e: React.FormEvent) => {
     e.preventDefault();
+    const isLiveEvent = newEvent.eventType === 'STREAMING_LIVE' || newEvent.eventType === 'MIXTE';
+    if (isLiveEvent && !createLiveConsentAccepted) {
+      toast.error('Le consentement pour la diffusion live est obligatoire');
+      return;
+    }
     onEventCreate({
       ...newEvent,
+      isLive: isLiveEvent,
       ticketTypes: createTicketTypes,
       price: createTicketTypes[0]?.price ?? 0,
       imageFile,
@@ -245,7 +252,8 @@ export function OrganizerDashboard({
       attendees: 0,
     });
     setIsCreateModalOpen(false);
-    setNewEvent({ title: '', description: '', date: '', time: '', location: '', category: '', maxAttendees: 100, duration: '', isLive: false });
+    setNewEvent({ title: '', description: '', date: '', time: '', location: '', category: '', maxAttendees: 100, duration: '', eventType: 'PRESENTIEL' });
+    setCreateLiveConsentAccepted(false);
     setCreateTicketTypes(DEFAULT_TICKET_TYPES);
     setImageFile(null);
     setImagePreview('');
@@ -262,8 +270,9 @@ export function OrganizerDashboard({
       category: event.category,
       maxAttendees: event.maxAttendees,
       duration: (event as any).duration || '',
-      isLive: event.isLive,
+      eventType: event.eventType ?? (event.isLive ? 'STREAMING_LIVE' : 'PRESENTIEL'),
     });
+    setEditLiveConsentAccepted(false);
     const existing = (event as any).ticketTypes;
     if (Array.isArray(existing) && existing.length > 0) {
       setEditTicketTypes(existing);
@@ -282,8 +291,14 @@ export function OrganizerDashboard({
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEvent) return;
+    const isLiveEvent = editForm.eventType === 'STREAMING_LIVE' || editForm.eventType === 'MIXTE';
+    if (isLiveEvent && !editLiveConsentAccepted) {
+      toast.error('Le consentement pour la diffusion live est obligatoire');
+      return;
+    }
     onEventEdit(editingEvent.id, {
       ...editForm,
+      isLive: isLiveEvent,
       ticketTypes: editTicketTypes,
       price: editTicketTypes[0]?.price ?? 0,
       imageFile: editImageFile,
@@ -453,9 +468,12 @@ export function OrganizerDashboard({
                         <SelectValue placeholder="Choisir une catégorie" />
                       </SelectTrigger>
                       <SelectContent>
-                        {categories.map(cat => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                        ))}
+                        {categories.length === 0
+                          ? <SelectItem value="_" disabled>Catégories indisponibles</SelectItem>
+                          : categories.map(cat => (
+                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            ))
+                        }
                       </SelectContent>
                     </Select>
                   </div>
@@ -524,78 +542,63 @@ export function OrganizerDashboard({
                     </Button>
                   </div>
 
-                  {/* Type d'événement : En salle ou Streaming Live */}
+                  {/* Type d'événement */}
                   <div className="md:col-span-2 space-y-3">
                     <Label className="text-base font-semibold">Type d'événement *</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Option En Salle */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                      {/* En Salle */}
                       <button
                         type="button"
-                        onClick={() => setNewEvent({...newEvent, isLive: false})}
-                        className={`
-                          relative p-5 rounded-xl border-2 transition-all duration-300
-                          ${!newEvent.isLive
+                        onClick={() => setNewEvent({...newEvent, eventType: 'PRESENTIEL'})}
+                        className={`relative p-5 rounded-xl border-2 transition-all duration-300 ${
+                          newEvent.eventType === 'PRESENTIEL'
                             ? 'border-indigo-600 bg-indigo-50 shadow-lg shadow-indigo-100'
                             : 'border-gray-200 hover:border-indigo-300 bg-white'
-                          }
-                        `}
+                        }`}
                       >
                         <div className="flex flex-col items-center text-center space-y-3">
-                          <div className={`
-                            w-14 h-14 rounded-full flex items-center justify-center
-                            ${!newEvent.isLive
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-gray-100 text-gray-600'
-                            }
-                          `}>
+                          <div className={`w-14 h-14 rounded-full flex items-center justify-center ${
+                            newEvent.eventType === 'PRESENTIEL' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'
+                          }`}>
                             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
                           </div>
                           <div>
-                            <h4 className={`font-bold ${!newEvent.isLive ? 'text-indigo-600' : 'text-gray-900'}`}>
+                            <h4 className={`font-bold ${newEvent.eventType === 'PRESENTIEL' ? 'text-indigo-600' : 'text-gray-900'}`}>
                               En Salle
                             </h4>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Événement en présentiel avec lieu physique
-                            </p>
+                            <p className="text-sm text-gray-600 mt-1">Événement physique uniquement</p>
                           </div>
                         </div>
-                        {!newEvent.isLive && (
-                          <div className="absolute top-3 right-3">
-                            <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center">
-                              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </div>
+                        {newEvent.eventType === 'PRESENTIEL' && (
+                          <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
                           </div>
                         )}
                       </button>
 
-                      {/* Option Streaming Live */}
+                      {/* Streaming Live */}
                       <button
                         type="button"
-                        onClick={() => setNewEvent({...newEvent, isLive: true})}
-                        className={`
-                          relative p-5 rounded-xl border-2 transition-all duration-300
-                          ${newEvent.isLive
+                        onClick={() => setNewEvent({...newEvent, eventType: 'STREAMING_LIVE'})}
+                        className={`relative p-5 rounded-xl border-2 transition-all duration-300 ${
+                          newEvent.eventType === 'STREAMING_LIVE'
                             ? 'border-red-600 bg-red-50 shadow-lg shadow-red-100'
                             : 'border-gray-200 hover:border-red-300 bg-white'
-                          }
-                        `}
+                        }`}
                       >
                         <div className="flex flex-col items-center text-center space-y-3">
-                          <div className={`
-                            w-14 h-14 rounded-full flex items-center justify-center relative
-                            ${newEvent.isLive
-                              ? 'bg-red-600 text-white'
-                              : 'bg-gray-100 text-gray-600'
-                            }
-                          `}>
+                          <div className={`w-14 h-14 rounded-full flex items-center justify-center relative ${
+                            newEvent.eventType === 'STREAMING_LIVE' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600'
+                          }`}>
                             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
-                            {newEvent.isLive && (
+                            {newEvent.eventType === 'STREAMING_LIVE' && (
                               <span className="absolute -top-1 -right-1 flex h-3 w-3">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
@@ -603,61 +606,111 @@ export function OrganizerDashboard({
                             )}
                           </div>
                           <div>
-                            <h4 className={`font-bold ${newEvent.isLive ? 'text-red-600' : 'text-gray-900'}`}>
+                            <h4 className={`font-bold ${newEvent.eventType === 'STREAMING_LIVE' ? 'text-red-600' : 'text-gray-900'}`}>
                               Streaming Live
                             </h4>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Événement diffusé en direct en ligne
-                            </p>
+                            <p className="text-sm text-gray-600 mt-1">Diffusion en direct en ligne</p>
                           </div>
                         </div>
-                        {newEvent.isLive && (
-                          <div className="absolute top-3 right-3">
-                            <div className="w-6 h-6 rounded-full bg-red-600 flex items-center justify-center">
-                              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </div>
+                        {newEvent.eventType === 'STREAMING_LIVE' && (
+                          <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-red-600 flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+
+                      {/* Mixte */}
+                      <button
+                        type="button"
+                        onClick={() => setNewEvent({...newEvent, eventType: 'MIXTE'})}
+                        className={`relative p-5 rounded-xl border-2 transition-all duration-300 ${
+                          newEvent.eventType === 'MIXTE'
+                            ? 'border-purple-600 bg-purple-50 shadow-lg shadow-purple-100'
+                            : 'border-gray-200 hover:border-purple-300 bg-white'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center text-center space-y-3">
+                          <div className={`w-14 h-14 rounded-full flex items-center justify-center ${
+                            newEvent.eventType === 'MIXTE' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h4 className={`font-bold ${newEvent.eventType === 'MIXTE' ? 'text-purple-600' : 'text-gray-900'}`}>
+                              Mixte
+                            </h4>
+                            <p className="text-sm text-gray-600 mt-1">Présentiel + Diffusion live</p>
+                          </div>
+                        </div>
+                        {newEvent.eventType === 'MIXTE' && (
+                          <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
                           </div>
                         )}
                       </button>
                     </div>
 
-                    {/* Info contextuelle selon le type */}
+                    {/* Info contextuelle */}
                     <div className={`p-4 rounded-lg border-2 ${
-                      newEvent.isLive 
-                        ? 'bg-red-50 border-red-200' 
-                        : 'bg-indigo-50 border-indigo-200'
+                      newEvent.eventType === 'STREAMING_LIVE' ? 'bg-red-50 border-red-200' :
+                      newEvent.eventType === 'MIXTE' ? 'bg-purple-50 border-purple-200' :
+                      'bg-indigo-50 border-indigo-200'
                     }`}>
                       <div className="flex items-start gap-3">
-                        <div className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                          newEvent.isLive ? 'text-red-600' : 'text-indigo-600'
-                        }`}>
-                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
+                        <svg className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                          newEvent.eventType === 'STREAMING_LIVE' ? 'text-red-600' :
+                          newEvent.eventType === 'MIXTE' ? 'text-purple-600' : 'text-indigo-600'
+                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                         <div className="text-sm">
-                          {newEvent.isLive ? (
+                          {newEvent.eventType === 'STREAMING_LIVE' ? (
                             <>
                               <strong className="text-red-800">Streaming Live :</strong>
-                              <p className="text-red-700 mt-1">
-                                Les participants recevront un code d'accès unique pour rejoindre l'événement en ligne. 
-                                Vous pourrez gérer le stream depuis votre dashboard.
-                              </p>
+                              <p className="text-red-700 mt-1">Les participants recevront un code d'accès unique pour rejoindre l'événement en ligne.</p>
+                            </>
+                          ) : newEvent.eventType === 'MIXTE' ? (
+                            <>
+                              <strong className="text-purple-800">Mixte :</strong>
+                              <p className="text-purple-700 mt-1">Votre événement se déroule en présentiel ET est diffusé en direct en ligne simultanément.</p>
                             </>
                           ) : (
                             <>
                               <strong className="text-indigo-800">En Salle :</strong>
-                              <p className="text-indigo-700 mt-1">
-                                Les participants pourront choisir entre billet digital (email) ou billet physique (livraison). 
-                                Vous pourrez scanner les QR codes à l'entrée.
-                              </p>
+                              <p className="text-indigo-700 mt-1">Les participants pourront choisir entre billet digital (email) ou billet physique (livraison). Vous pourrez scanner les QR codes à l'entrée.</p>
                             </>
                           )}
                         </div>
                       </div>
                     </div>
+
+                    {/* Consentement obligatoire pour les événements live */}
+                    {(newEvent.eventType === 'STREAMING_LIVE' || newEvent.eventType === 'MIXTE') && (
+                      <div className="p-4 rounded-lg border-2 bg-amber-50 border-amber-300">
+                        <p className="text-sm font-semibold text-amber-800 mb-3">
+                          Documents requis — Événement {newEvent.eventType === 'MIXTE' ? 'Mixte' : 'Streaming Live'}
+                        </p>
+                        <p className="text-xs text-amber-700 mb-3">
+                          Des formulaires PDF vous seront envoyés par email après création de l'événement. Vous devrez les compléter et les retourner avant la publication.
+                        </p>
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            id="createLiveConsent"
+                            checked={createLiveConsentAccepted}
+                            onCheckedChange={(checked: boolean) => setCreateLiveConsentAccepted(checked)}
+                          />
+                          <label htmlFor="createLiveConsent" className="text-sm text-amber-900 cursor-pointer leading-relaxed">
+                            <span className="font-semibold">* Obligatoire —</span> Je consens à recevoir, compléter et retourner les formulaires PDF requis pour la diffusion live sur Feeti. Je comprends que la non-remise de ces documents peut entraîner le refus de la diffusion.
+                          </label>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -795,9 +848,12 @@ export function OrganizerDashboard({
                   <Select value={editForm.category} onValueChange={(value: string) => setEditForm({...editForm, category: value})}>
                     <SelectTrigger><SelectValue placeholder="Choisir une catégorie" /></SelectTrigger>
                     <SelectContent>
-                      {categories.map(cat => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                      ))}
+                      {categories.length === 0
+                        ? <SelectItem value="_" disabled>Catégories indisponibles</SelectItem>
+                        : categories.map(cat => (
+                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          ))
+                      }
                     </SelectContent>
                   </Select>
                 </div>
@@ -868,36 +924,72 @@ export function OrganizerDashboard({
 
                 <div className="md:col-span-2 space-y-3">
                   <Label className="text-base font-semibold">Type d'événement</Label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-3">
                     <button
                       type="button"
-                      onClick={() => setEditForm({...editForm, isLive: false})}
-                      className={`p-4 rounded-xl border-2 transition-all ${!editForm.isLive ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 bg-white'}`}
+                      onClick={() => setEditForm({...editForm, eventType: 'PRESENTIEL'})}
+                      className={`p-4 rounded-xl border-2 transition-all ${editForm.eventType === 'PRESENTIEL' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 bg-white hover:border-indigo-300'}`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${!editForm.isLive ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                      <div className="flex flex-col items-center gap-2 text-center">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${editForm.eventType === 'PRESENTIEL' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                           </svg>
                         </div>
-                        <span className={`font-semibold ${!editForm.isLive ? 'text-indigo-600' : 'text-gray-700'}`}>En Salle</span>
+                        <span className={`font-semibold text-sm ${editForm.eventType === 'PRESENTIEL' ? 'text-indigo-600' : 'text-gray-700'}`}>En Salle</span>
                       </div>
                     </button>
                     <button
                       type="button"
-                      onClick={() => setEditForm({...editForm, isLive: true})}
-                      className={`p-4 rounded-xl border-2 transition-all ${editForm.isLive ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white'}`}
+                      onClick={() => setEditForm({...editForm, eventType: 'STREAMING_LIVE'})}
+                      className={`p-4 rounded-xl border-2 transition-all ${editForm.eventType === 'STREAMING_LIVE' ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white hover:border-red-300'}`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${editForm.isLive ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                      <div className="flex flex-col items-center gap-2 text-center">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${editForm.eventType === 'STREAMING_LIVE' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
                         </div>
-                        <span className={`font-semibold ${editForm.isLive ? 'text-red-600' : 'text-gray-700'}`}>Streaming Live</span>
+                        <span className={`font-semibold text-sm ${editForm.eventType === 'STREAMING_LIVE' ? 'text-red-600' : 'text-gray-700'}`}>Streaming Live</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditForm({...editForm, eventType: 'MIXTE'})}
+                      className={`p-4 rounded-xl border-2 transition-all ${editForm.eventType === 'MIXTE' ? 'border-purple-600 bg-purple-50' : 'border-gray-200 bg-white hover:border-purple-300'}`}
+                    >
+                      <div className="flex flex-col items-center gap-2 text-center">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${editForm.eventType === 'MIXTE' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <span className={`font-semibold text-sm ${editForm.eventType === 'MIXTE' ? 'text-purple-600' : 'text-gray-700'}`}>Mixte</span>
                       </div>
                     </button>
                   </div>
+
+                  {/* Consentement obligatoire si live/mixte */}
+                  {(editForm.eventType === 'STREAMING_LIVE' || editForm.eventType === 'MIXTE') && (
+                    <div className="p-4 rounded-lg border-2 bg-amber-50 border-amber-300">
+                      <p className="text-sm font-semibold text-amber-800 mb-2">
+                        Documents requis — Événement {editForm.eventType === 'MIXTE' ? 'Mixte' : 'Streaming Live'}
+                      </p>
+                      <p className="text-xs text-amber-700 mb-3">
+                        Des formulaires PDF vous seront envoyés par email. Vous devrez les compléter avant la publication.
+                      </p>
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          id="editLiveConsent"
+                          checked={editLiveConsentAccepted}
+                          onCheckedChange={(checked: boolean) => setEditLiveConsentAccepted(checked)}
+                        />
+                        <label htmlFor="editLiveConsent" className="text-sm text-amber-900 cursor-pointer leading-relaxed">
+                          <span className="font-semibold">* Obligatoire —</span> Je consens à recevoir et retourner les formulaires PDF requis pour la diffusion live sur Feeti.
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

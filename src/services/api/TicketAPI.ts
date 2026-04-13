@@ -37,6 +37,17 @@ export interface PurchaseResult {
   tickets: BackendTicket[];
 }
 
+export interface ConfirmedTicket extends BackendTicket {
+  qrDataUrl?: string; // PNG base64 généré par le backend
+}
+
+export interface ConfirmPaymentResult {
+  orderId: string;
+  tickets: ConfirmedTicket[];
+  deliveryFee?: number;
+  emailSent: boolean;
+}
+
 export interface VerifyResult {
   id: string;
   status: string;
@@ -83,6 +94,30 @@ const TicketAPI = {
 
   async getEventTickets(eventId: string): Promise<BackendTicket[]> {
     const res = await api.get(`/api/tickets/event/${eventId}`);
+    return res.data.data;
+  },
+
+  /**
+   * Confirme le paiement + crée les billets + envoie l'email de confirmation.
+   * Remplace l'appel séparé à purchase() — tout se passe en une seule requête.
+   */
+  async confirmAndPurchase(data: {
+    eventId: string;
+    holderName: string;
+    holderEmail: string;
+    holderPhone?: string;
+    items: PurchaseItem[];
+    delivery?: {
+      method: 'email' | 'physical';
+      zoneId?: string;
+      recipientName?: string;
+      recipientPhone?: string;
+      additionalInfo?: string;
+    };
+    paymentProvider: 'stripe' | 'mobile_money' | 'paystack';
+    paymentId: string;
+  }): Promise<ConfirmPaymentResult> {
+    const res = await api.post('/api/payments/confirm', data);
     return res.data.data;
   },
 };

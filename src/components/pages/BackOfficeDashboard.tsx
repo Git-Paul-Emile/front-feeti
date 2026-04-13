@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { EVENT_CATEGORIES } from '../../data/categories';
+import CategoriesAPI from '../../services/api/CategoriesAPI';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
@@ -91,11 +91,15 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
     countryCode: '',
   });
   const [countries, setCountries] = useState<Country[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
 
   // Charger les données au montage
   useEffect(() => {
     loadDashboardData();
     CountryAPI.getAll().then(data => setCountries(data.filter(c => c.isActive))).catch(() => {});
+    CategoriesAPI.getAll()
+      .then(cats => setCategories(cats.map(c => c.name)))
+      .catch(() => setCategories([]));
   }, []);
 
   // Toggle featured / favorite
@@ -772,9 +776,12 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {EVENT_CATEGORIES.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
+                    {categories.length === 0
+                      ? <SelectItem value="_" disabled>Catégories indisponibles</SelectItem>
+                      : categories.map(cat => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))
+                    }
                   </SelectContent>
                 </Select>
               </div>

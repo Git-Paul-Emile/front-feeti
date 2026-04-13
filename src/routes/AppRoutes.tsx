@@ -177,6 +177,7 @@ const OrganizerFinancialDashboard = lazy(() => import('../components/pages/Organ
 const AdminFinancialDashboard     = lazy(() => import('../components/pages/AdminFinancialDashboard'));
 const FeetiNaFeetiPage            = lazy(() => import('../components/pages/FeetiNaFeetiPage').then(m => ({ default: m.FeetiNaFeetiPage })));
 const FeetiNaFeetiAdminPage       = lazy(() => import('../components/pages/FeetiNaFeetiAdminPage').then(m => ({ default: m.FeetiNaFeetiAdminPage })));
+const UserProfilePage             = lazy(() => import('../components/pages/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
 
 // ── Correspondance page-name → route ─────────────────────────────────────────
 const PAGE_ROUTES: Record<string, string> = {
@@ -198,6 +199,7 @@ const PAGE_ROUTES: Record<string, string> = {
   'financial-dashboard': '/organizer/finance',
   'admin-financial': '/admin/finance',
   'feeti-na-feeti': '/feeti-na-feeti',
+  'user-profile': '/profile',
 };
 
 // ── Loader ────────────────────────────────────────────────────────────────────
@@ -376,32 +378,15 @@ function PaymentRoute() {
 
 function StreamingRoute() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
-  const [event, setEvent] = useState<AppEvent | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) { setLoading(false); return; }
-    const loader = isFeetiPlayRouteId(id)
-      ? FeetiPlayEventsAPI.getEventById(fromFeetiPlayRouteId(id)).then(adaptFeetiPlayEvent)
-      : EventsBackendAPI.getEventById(id).then(adaptEvent);
-
-    loader
-      .then(setEvent)
-      .catch(() => setEvent(null))
-      .finally(() => setLoading(false));
+    if (!id) return;
+    // Le streaming se passe sur FeetiPlay — redirection immédiate
+    const eventId = isFeetiPlayRouteId(id) ? fromFeetiPlayRouteId(id) : id;
+    window.location.href = `${FEETIPLAY_URL}/event/${eventId}`;
   }, [id]);
 
-  if (loading) return <PageLoader />;
-  if (!event) return <Navigate to="/events" replace />;
-  return (
-    <StreamingPage
-      event={event}
-      onBack={() => navigate('/events')}
-      currentUser={currentUser}
-    />
-  );
+  return <PageLoader />;
 }
 
 function BlogRoute() {
@@ -996,6 +981,7 @@ export function AppRoutes() {
         {/* Routes protégées — utilisateur connecté */}
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard"        element={<UserDashboard />} />
+          <Route path="/profile"          element={<UserProfilePage />} />
           <Route path="/events/:id/buy"   element={<PaymentRoute />} />
           <Route path="/favorites"        element={<MyFavoritesRoute />} />
           <Route path="/feeti-na-feeti"   element={<FeetiNaFeetiRoute />} />

@@ -477,14 +477,6 @@ export function getCategoryIcon(slug: string): React.ReactNode {
   return map[slug] ?? <BrushIcon />;
 }
 
-// Catégories de secours si l'API n'est pas disponible
-import { EVENT_CATEGORIES } from '../data/categories';
-
-const FALLBACK_CATEGORIES = EVENT_CATEGORIES.map((name) => ({
-  name,
-  slug: name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-  icon: undefined,
-}));
 
 // Main Category Selector Component with Single Row
 interface CategorySelectorProps {
@@ -495,15 +487,14 @@ interface CategorySelectorProps {
 export function CategorySelector({ onCategorySelect, onSearch }: CategorySelectorProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [dbCategories, setDbCategories] = useState<{ name: string; slug: string; icon?: string }[]>([]);
+  const [categories, setCategories] = useState<{ name: string; slug: string; icon?: string }[]>([]);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     CategoriesAPI.getAll()
-      .then((cats) => setDbCategories(cats))
-      .catch(() => setDbCategories(FALLBACK_CATEGORIES));
+      .then((cats) => { setCategories(cats); setError(false); })
+      .catch(() => { setCategories([]); setError(true); });
   }, []);
-
-  const categories = dbCategories.length > 0 ? dbCategories : FALLBACK_CATEGORIES;
 
   const handleCategoryClick = useCallback((categoryName: string) => {
     if (selectedCategory === categoryName) {
@@ -545,7 +536,11 @@ export function CategorySelector({ onCategorySelect, onSearch }: CategorySelecto
         <div className="bg-[#000441] px-4 py-6 rounded-[32px]" data-name="Categories Container">
           <div className="overflow-x-auto category-slider scrollbar-hide">
             <div className="flex gap-3 min-w-max">
-              {categories.map((category, index) => (
+              {error || categories.length === 0 ? (
+                <p className="text-white/50 text-sm py-2 px-4">
+                  {error ? 'Impossible de charger les catégories.' : 'Aucune catégorie disponible.'}
+                </p>
+              ) : categories.map((category: { name: string; slug: string; icon?: string }, index: number) => (
                 <CategoryTab
                   key={`${category.slug}-${index}`}
                   icon={getCategoryIcon(category.slug)}

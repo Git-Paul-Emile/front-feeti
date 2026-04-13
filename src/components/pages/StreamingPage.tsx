@@ -454,23 +454,25 @@ export function StreamingPage({ event, onBack, currentUser }: StreamingPageProps
               style={{ aspectRatio: '16/9' }}
             >
               {/* Video Element */}
-              <video
-                ref={videoRef}
-                className="w-full h-full object-contain"
-                poster={event.image}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-              >
-                {event.videoUrl || event.streamUrl ? (
+              {event.videoUrl || event.streamUrl ? (
+                <video
+                  ref={videoRef}
+                  className="w-full h-full object-contain"
+                  poster={event.image}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                >
                   <source src={event.videoUrl || event.streamUrl} type="video/mp4" />
-                ) : (
-                  <source 
-                    src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" 
-                    type="video/mp4" 
-                  />
-                )}
-                Votre navigateur ne supporte pas la lecture vidéo.
-              </video>
+                  Votre navigateur ne supporte pas la lecture vidéo.
+                </video>
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-black/80 text-white gap-3">
+                  <svg className="w-12 h-12 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                  </svg>
+                  <p className="text-sm opacity-60">Flux non disponible pour cet événement</p>
+                </div>
+              )}
 
               {/* Live indicator overlay */}
               <div className="absolute top-4 left-4 z-10">

@@ -1,156 +1,91 @@
-import api from '../../routes/axiosConfig';
+import { backendGateway } from "../backend";
+import type {
+  BackendEvent,
+  CreateBackendEventInput as CreateEventInput,
+  PromotionSlots,
+  PromotionStatus,
+  PromotionType,
+} from "../backend";
 
-export type PromotionType = 'OR' | 'ARGENT' | 'BRONZE' | 'LITE';
-export type PromotionStatus = 'active' | 'inactive' | 'expired';
-
-export interface BackendEvent {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  image: string;
-  price: number;
-  vipPrice?: number;
-  currency: string;
-  category: string;
-  maxAttendees: number;
-  attendees: number;
-  duration?: string;
-  salesBlocked: boolean;
-  isLive: boolean;
-  isFeatured: boolean;
-  isFavorite: boolean;
-  status: string;
-  streamUrl?: string;
-  videoUrl?: string;
-  countryCode?: string;
-  organizerId: string;
-  organizer?: { name: string };
-  createdAt: string;
-  updatedAt: string;
-  // Système de mise en avant
-  promotionType?: PromotionType | null;
-  promotionStatus?: PromotionStatus | null;
-  promotionStartDate?: string | null;
-  promotionEndDate?: string | null;
-}
-
-export interface CreateEventInput {
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  image?: string;
-  price?: number;
-  vipPrice?: number;
-  ticketTypes?: string;
-  currency?: string;
-  category: string;
-  maxAttendees: number;
-  duration?: string;
-  isLive?: boolean;
-  streamUrl?: string;
-  videoUrl?: string;
-  status?: string;
-  countryCode?: string;
-}
+export type {
+  BackendEvent,
+  CreateEventInput,
+  PromotionSlots,
+  PromotionStatus,
+  PromotionType,
+};
 
 const EventsBackendAPI = {
-  async uploadImage(file: File): Promise<string> {
-    const formData = new FormData();
-    formData.append('image', file);
-    const res = await api.post('/api/upload/image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return res.data.data.url;
+  uploadImage(file: File): Promise<string> {
+    return backendGateway.catalogEvents.uploadImage(file);
   },
 
-
-  async getMyEvents(): Promise<BackendEvent[]> {
-    const res = await api.get('/api/events/my');
-    return res.data.data;
+  getMyEvents(): Promise<BackendEvent[]> {
+    return backendGateway.catalogEvents.getMyEvents();
   },
 
-  async getAllEvents(countryCode?: string): Promise<BackendEvent[]> {
-    const params = countryCode ? { country: countryCode } : {};
-    const res = await api.get('/api/events', { params });
-    return res.data.data;
+  getAllEvents(countryCode?: string): Promise<BackendEvent[]> {
+    return backendGateway.catalogEvents.getAllEvents(countryCode);
   },
 
-  async getFeaturedEvents(countryCode?: string): Promise<BackendEvent[]> {
-    const params: Record<string, string> = { featured: 'true' };
-    if (countryCode) params.country = countryCode;
-    const res = await api.get('/api/events', { params });
-    return res.data.data;
+  getFeaturedEvents(countryCode?: string): Promise<BackendEvent[]> {
+    return backendGateway.catalogEvents.getFeaturedEvents(countryCode);
   },
 
-  async getEventById(id: string): Promise<BackendEvent> {
-    const res = await api.get(`/api/events/${id}`);
-    return res.data.data;
+  getEventById(id: string): Promise<BackendEvent> {
+    return backendGateway.catalogEvents.getEventById(id);
   },
 
-  // ── Admin endpoints ───────────────────────────────────────────────────────
-  async getAllEventsAdmin(): Promise<BackendEvent[]> {
-    const res = await api.get('/api/admin/events');
-    return res.data.data;
+  getAllEventsAdmin(): Promise<BackendEvent[]> {
+    return backendGateway.catalogEvents.getAllEventsAdmin();
   },
 
-  async toggleHighlight(id: string, data: { isFeatured?: boolean; isFavorite?: boolean }): Promise<BackendEvent> {
-    const res = await api.patch(`/api/admin/events/${id}/highlight`, data);
-    return res.data.data;
+  toggleHighlight(id: string, data: { isFeatured?: boolean; isFavorite?: boolean }): Promise<BackendEvent> {
+    return backendGateway.catalogEvents.toggleHighlight(id, data);
   },
 
-  async createEvent(data: CreateEventInput): Promise<BackendEvent> {
-    const res = await api.post('/api/events', data);
-    return res.data.data;
+  createEvent(data: CreateEventInput): Promise<BackendEvent> {
+    return backendGateway.catalogEvents.createEvent(data);
   },
 
-  async deleteEvent(id: string): Promise<void> {
-    await api.delete(`/api/events/${id}`);
+  deleteEvent(id: string): Promise<void> {
+    return backendGateway.catalogEvents.deleteEvent(id);
   },
 
-  async updateEvent(id: string, data: Partial<CreateEventInput>): Promise<BackendEvent> {
-    const res = await api.put(`/api/events/${id}`, data);
-    return res.data.data;
+  updateEvent(id: string, data: Partial<CreateEventInput>): Promise<BackendEvent> {
+    return backendGateway.catalogEvents.updateEvent(id, data);
   },
 
-  async toggleFavorite(id: string): Promise<{ isFavorited: boolean }> {
-    const res = await api.post(`/api/events/${id}/favorite`);
-    return res.data.data;
+  toggleFavorite(id: string): Promise<{ isFavorited: boolean }> {
+    return backendGateway.catalogEvents.toggleFavorite(id);
   },
 
-  async checkFavorite(id: string): Promise<boolean> {
-    const res = await api.get(`/api/events/${id}/favorite`);
-    return res.data.data.isFavorited;
+  checkFavorite(id: string): Promise<boolean> {
+    return backendGateway.catalogEvents.checkFavorite(id);
   },
 
-  async getMyFavorites(): Promise<BackendEvent[]> {
-    const res = await api.get('/api/events/favorites');
-    return res.data.data;
+  getMyFavorites(): Promise<BackendEvent[]> {
+    return backendGateway.catalogEvents.getMyFavorites();
   },
 
-  async toggleSalesBlocked(id: string): Promise<{ salesBlocked: boolean }> {
-    const res = await api.patch(`/api/events/${id}/toggle-sales-block`);
-    return res.data.data;
+  toggleSalesBlocked(id: string): Promise<{ salesBlocked: boolean }> {
+    return backendGateway.catalogEvents.toggleSalesBlocked(id);
   },
 
-  // ── Promotion ─────────────────────────────────────────────────────────────
-  async updatePromotion(id: string, data: {
-    promotionType?: PromotionType | null;
-    promotionStatus?: PromotionStatus;
-    promotionStartDate?: string | null;
-    promotionEndDate?: string | null;
-  }): Promise<BackendEvent> {
-    const res = await api.patch(`/api/admin/events/${id}/promotion`, data);
-    return res.data.data;
+  updatePromotion(
+    id: string,
+    data: {
+      promotionType?: PromotionType | null;
+      promotionStatus?: PromotionStatus;
+      promotionStartDate?: string | null;
+      promotionEndDate?: string | null;
+    }
+  ): Promise<BackendEvent> {
+    return backendGateway.catalogEvents.updatePromotion(id, data);
   },
 
-  async getPromotionSlots(): Promise<Array<{ type: string; limit: number; used: number; available: number }>> {
-    const res = await api.get('/api/admin/promotion-slots');
-    return res.data.data;
+  getPromotionSlots(): Promise<PromotionSlots[]> {
+    return backendGateway.catalogEvents.getPromotionSlots();
   },
 };
 

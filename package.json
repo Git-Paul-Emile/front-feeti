@@ -31,6 +31,7 @@
             "@radix-ui/react-tooltip": "^1.1.8",
             "@stripe/react-stripe-js": "*",
             "@stripe/stripe-js": "*",
+            "@zxing/browser": "^0.1.5",
             "axios": "^1.13.6",
             "class-variance-authority": "^0.7.1",
             "clsx": "*",
@@ -43,6 +44,7 @@
             "lucide-react": "^0.487.0",
             "motion": "*",
             "next-themes": "^0.4.6",
+            "qrcode.react": "^4.2.0",
             "react": "^18.3.1",
             "react-day-picker": "^8.10.1",
             "react-dom": "^18.3.1",
@@ -50,6 +52,7 @@
             "react-resizable-panels": "^2.1.7",
             "react-router-dom": "^6.30.3",
             "recharts": "^2.15.2",
+            "socket.io-client": "^4.8.3",
             "sonner": "^2.0.3",
             "tailwind-merge": "*",
             "vaul": "^1.1.2"

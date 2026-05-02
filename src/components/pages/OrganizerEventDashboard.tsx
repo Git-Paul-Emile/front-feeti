@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Alert, AlertDescription } from '../ui/alert';
 import {
   ArrowLeft,
+  Shield,
   Users,
   Ticket,
   DollarSign,
@@ -57,6 +58,7 @@ interface OrganizerEventDashboardProps {
   event: Event;
   onBack: () => void;
   initialTab?: string;
+  onAccessDashboard?: () => void;
 }
 
 interface EventStats {
@@ -67,7 +69,7 @@ interface EventStats {
   ticketsCancelled: number;
 }
 
-export function OrganizerEventDashboard({ event, onBack, initialTab }: OrganizerEventDashboardProps) {
+export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDashboard }: OrganizerEventDashboardProps) {
   const [activeTab, setActiveTab] = useState(initialTab ?? 'overview');
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -222,10 +224,18 @@ export function OrganizerEventDashboard({ event, onBack, initialTab }: Organizer
                 </div>
               </div>
             </div>
-            <Button onClick={loadTickets} variant="outline" disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Actualiser
-            </Button>
+            <div className="flex items-center gap-2">
+              {onAccessDashboard && (
+                <Button onClick={onAccessDashboard} variant="outline">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Feeti Access
+                </Button>
+              )}
+              <Button onClick={loadTickets} variant="outline" disabled={loading}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Actualiser
+              </Button>
+            </div>
           </div>
         </div>
 

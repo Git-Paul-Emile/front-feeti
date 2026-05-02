@@ -20,6 +20,7 @@ export interface Event {
   maxAttendees: number;
   attendees: number;
   isLive: boolean;
+  eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
   streamUrl?: string;
   videoUrl?: string;
   countryCode?: string;

@@ -1,6 +1,7 @@
 // Composant Scanner QR Code pour vérifier les billets à l'entrée
 
 import { useState, useEffect, useRef } from 'react';
+import jsQR from 'jsqr';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
 import { Card, CardContent } from './ui/card';
@@ -40,10 +41,18 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       setError(null);
       setScanning(true);
 
-      // Demander l'accès à la caméra
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' } // Caméra arrière sur mobile
-      });
+      let stream: MediaStream;
+      try {
+        // Demander l'accès à la caméra arrière en priorité (mobile)
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+      } catch (err) {
+        // Fallback: si pas de caméra arrière (ex: PC), prendre la caméra par défaut
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true
+        });
+      }
 
       streamRef.current = stream;
       setHasPermission(true);
@@ -94,20 +103,17 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       try {
-        // Essayer de détecter un QR code
-        // Note: Ici on utilise une simulation. En production, utilisez une vraie librairie QR
-        // comme jsQR: npm install jsqr
-        
-        // Exemple avec jsQR (à décommenter si installé):
-        // const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-        // const code = jsQR(imageData.data, imageData.width, imageData.height);
-        // if (code) {
-        //   onScan(code.data);
-        //   stopCamera();
-        //   return;
-        // }
+        // Essayer de détecter un QR code avec jsQR
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert",
+        });
 
-        // Pour la démo, on simule avec un bouton manuel
+        if (code) {
+          onScan(code.data);
+          stopCamera();
+          return;
+        }
       } catch (err) {
         console.error('QR detection error:', err);
       }
@@ -155,23 +161,32 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
               </div>
             )}
 
+            <video
+              ref={videoRef}
+              className={`w-full h-full object-cover ${hasPermission === true ? 'block' : 'hidden'}`}
+              playsInline
+              autoPlay
+              muted
+            />
+            <canvas
+              ref={canvasRef}
+              className="hidden"
+            />
+
             {hasPermission === true && (
               <>
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-cover"
-                  playsInline
-                  muted
-                />
-                <canvas
-                  ref={canvasRef}
-                  className="hidden"
-                />
 
-                {/* Overlay de ciblage */}
+                {/* Overlay de ciblage avec assombrissement autour */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="relative">
-                    <div className="w-64 h-64 border-4 border-white rounded-lg opacity-50"></div>
+                  <div className="relative w-64 h-64">
+                    {/* L'ombre géante qui assombrit tout ce qui est autour du cadre */}
+                    <div 
+                      className="absolute inset-0 rounded-lg" 
+                      style={{ boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.85)' }}
+                    ></div>
+                    
+                    {/* Le cadre lui-même */}
+                    <div className="absolute inset-0 border-2 border-white opacity-30 rounded-lg"></div>
                     <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-green-500 rounded-tl-lg"></div>
                     <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-green-500 rounded-tr-lg"></div>
                     <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-green-500 rounded-bl-lg"></div>
@@ -197,12 +212,11 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         </CardContent>
       </Card>
 
-      {/* Saisie manuelle pour démo */}
+      {/* Saisie manuelle pour fallback */}
       <Alert>
         <AlertTriangle className="w-4 h-4" />
         <AlertDescription>
-          <strong>Mode Démo :</strong> En production, installez jsQR pour scanner automatiquement. 
-          Pour tester maintenant, entrez manuellement un ID de billet ci-dessous.
+          <strong>Saisie manuelle :</strong> Si le QR code est illisible, vous pouvez entrer manuellement l'ID du billet ci-dessous.
         </AlertDescription>
       </Alert>
 

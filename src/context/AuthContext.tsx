@@ -1,23 +1,27 @@
 import {
   createContext,
-  useContext,
-  useState,
-  useEffect,
   useCallback,
+  useContext,
+  useEffect,
+  useState,
   type ReactNode,
 } from "react";
-import AuthAPI, { type AuthUser, type RegisterData, type UpdateProfileData, type ChangePasswordData } from "../services/api/AuthAPI";
+import {
+  type AuthUser,
+  type ChangePasswordData,
+  type RegisterData,
+  type UpdateProfileData,
+} from "../services/api/AuthAPI";
+import { backendGateway } from "../services/backend";
 
-// Forme du user dans l'app (compatible avec App.tsx)
 export interface AppUser {
   id: string;
   name: string;
   email: string;
-  phone?: string;
-  avatar?: string;
+  phone?: string | null;
   role: "user" | "organizer" | "controller";
   adminRole?: "super_admin" | "admin" | "moderator" | "support" | "organizer" | "controller" | "user";
-  interests: string[]; // slugs des catégories d'événements
+  interests: string[];
 }
 
 interface AuthContextType {
@@ -31,7 +35,6 @@ interface AuthContextType {
   deleteAccount: (password: string) => Promise<void>;
 }
 
-// Mappe le rôle backend vers la structure User de l'app
 function mapToAppUser(authUser: AuthUser): AppUser {
   const adminRoles = ["admin", "super_admin", "moderator", "support"] as const;
   const isAdminLike = (adminRoles as readonly string[]).includes(authUser.role);
@@ -42,20 +45,14 @@ function mapToAppUser(authUser: AuthUser): AppUser {
   if (isController) role = "controller";
   else if (isOrganizerLike) role = "organizer";
 
-  let interests: string[] = [];
-  try {
-    const parsed = JSON.parse(authUser.interests ?? "[]");
-    if (Array.isArray(parsed)) interests = parsed;
-  } catch { /* malformed JSON */ }
-
   return {
-    id: authUser.id,
+    id: authUser.uid,
     name: authUser.name,
     email: authUser.email,
     phone: authUser.phone,
     role,
     adminRole: authUser.role as AppUser["adminRole"],
-    interests,
+    interests: authUser.interests ?? [],
   };
 }
 
@@ -65,60 +62,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restaure la session au montage via le token stocké
   useEffect(() => {
-    const token = localStorage.getItem("feeti_token");
-    if (!token) {
+    const unsubscribe = backendGateway.auth.subscribe((authUser) => {
+      setUser(authUser ? mapToAppUser(authUser) : null);
       setIsLoading(false);
-      return;
-    }
-    AuthAPI.getMe()
-      .then((authUser) => setUser(mapToAppUser(authUser)))
-      .catch(() => localStorage.removeItem("feeti_token"))
-      .finally(() => setIsLoading(false));
+    });
+
+    return unsubscribe;
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<AppUser> => {
-    const { user: authUser, accessToken } = await AuthAPI.login(email, password);
-    localStorage.setItem("feeti_token", accessToken);
+    const authUser = await backendGateway.auth.login(email, password);
     const appUser = mapToAppUser(authUser);
     setUser(appUser);
     return appUser;
   }, []);
 
   const register = useCallback(async (data: RegisterData): Promise<AppUser> => {
-    const { user: authUser, accessToken } = await AuthAPI.register(data);
-    localStorage.setItem("feeti_token", accessToken);
+    const authUser = await backendGateway.auth.register(data);
     const appUser = mapToAppUser(authUser);
     setUser(appUser);
     return appUser;
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
-    try { await AuthAPI.logout(); } catch { /* ignore */ }
-    localStorage.removeItem("feeti_token");
+    await backendGateway.auth.logout();
     setUser(null);
   }, []);
 
   const updateProfile = useCallback(async (data: UpdateProfileData): Promise<AppUser> => {
-    const authUser = await AuthAPI.updateProfile(data);
+    const authUser = await backendGateway.auth.updateProfile(data);
     const appUser = mapToAppUser(authUser);
     setUser(appUser);
     return appUser;
   }, []);
 
   const changePassword = useCallback(async (data: ChangePasswordData): Promise<void> => {
-    await AuthAPI.changePassword(data);
+    await backendGateway.auth.changePassword(data);
   }, []);
 
   const deleteAccount = useCallback(async (password: string): Promise<void> => {
-    await AuthAPI.deleteAccount(password);
-    localStorage.removeItem("feeti_token");
+    await backendGateway.auth.deleteAccount(password);
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateProfile, changePassword, deleteAccount }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, login, register, logout, updateProfile, changePassword, deleteAccount }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -126,6 +117,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth(): AuthContextType {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth doit être utilisé dans un AuthProvider");
+  if (!ctx) throw new Error("useAuth doit etre utilise dans un AuthProvider");
   return ctx;
 }

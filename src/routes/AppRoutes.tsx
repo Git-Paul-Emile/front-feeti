@@ -176,6 +176,8 @@ const QRScannerPage          = lazy(() => import('../components/pages/QRScannerP
 const OrganizerFinancialDashboard = lazy(() => import('../components/pages/OrganizerFinancialDashboard'));
 const AdminFinancialDashboard     = lazy(() => import('../components/pages/AdminFinancialDashboard'));
 const FeetiNaFeetiPage            = lazy(() => import('../components/pages/FeetiNaFeetiPage').then(m => ({ default: m.FeetiNaFeetiPage })));
+const FeetiAccessDashboard        = lazy(() => import('../components/pages/FeetiAccessDashboard').then(m => ({ default: m.FeetiAccessDashboard })));
+const WebScannerPage              = lazy(() => import('../components/pages/WebScannerPage').then(m => ({ default: m.WebScannerPage })));
 const FeetiNaFeetiAdminPage       = lazy(() => import('../components/pages/FeetiNaFeetiAdminPage').then(m => ({ default: m.FeetiNaFeetiAdminPage })));
 const UserProfilePage             = lazy(() => import('../components/pages/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
 
@@ -441,6 +443,29 @@ function OrganizerEventRoute() {
       event={event as any}
       onBack={() => navigate('/organizer')}
       initialTab={initialTab}
+      onAccessDashboard={() => navigate(`/organizer/event/${eventId}/access`)}
+    />
+  );
+}
+
+function FeetiAccessRoute() {
+  const { eventId } = useParams<{ eventId: string }>();
+  const navigate = useNavigate();
+  const [eventTitle, setEventTitle] = useState('');
+
+  useEffect(() => {
+    if (!eventId) return;
+    EventsBackendAPI.getEventById(eventId)
+      .then(e => setEventTitle(e.title))
+      .catch(() => {});
+  }, [eventId]);
+
+  if (!eventId) return <Navigate to="/organizer" replace />;
+  return (
+    <FeetiAccessDashboard
+      eventId={eventId}
+      eventTitle={eventTitle}
+      onBack={() => navigate(`/organizer/event/${eventId}`)}
     />
   );
 }
@@ -991,15 +1016,18 @@ export function AppRoutes() {
         <Route element={<ProtectedRoute requiredRole="organizer" />}>
           <Route path="/organizer"        element={<OrganizerRoute />} />
           <Route path="/organizer/event/:eventId" element={<OrganizerEventRoute />} />
+          <Route path="/organizer/event/:eventId/access" element={<FeetiAccessRoute />} />
+          <Route path="/scan/access/:eventId" element={<WebScannerPage />} />
           <Route path="/organizer/finance" element={<OrganizerFinancialDashboard />} />
           <Route path="/verify"           element={<TicketVerificationPage onBack={() => {}} />} />
           <Route path="/scan"             element={<QRScannerRoute />} />
           <Route path="/blog/admin"       element={<BlogAdminPage onBack={() => {}} currentUser={null} />} />
         </Route>
 
-        {/* Routes protégées — contrôleur */}
+        {/* Routes protégées — contrôleur (et au-dessus) */}
         <Route element={<ProtectedRoute requiredRole="controller" />}>
           <Route path="/controller"       element={<ControllerRoute />} />
+          <Route path="/scan/access/:eventId" element={<WebScannerPage />} />
         </Route>
 
         {/* Routes protégées — admin */}

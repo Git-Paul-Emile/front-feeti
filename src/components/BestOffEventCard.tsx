@@ -19,6 +19,7 @@ interface Event {
   attendees: number;
   maxAttendees: number;
   isLive: boolean;
+  eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
   organizer: string;
   promotionType?: string | null;
   promotionStatus?: string | null;
@@ -80,7 +81,7 @@ function EventImage({ event }: { event: Event }) {
         </div>
         
         {/* Live streaming badge - premium style */}
-        {event.isLive && (
+        {(event.eventType === 'STREAMING_LIVE' || event.eventType === 'MIXTE' || (!event.eventType && event.isLive)) && (
           <div className="flex items-center bg-gradient-to-r from-[#de0035] to-[#ff1744] text-white px-4 py-2 rounded-full best-off-badge-enhanced shadow-lg backdrop-blur-sm bg-opacity-95 text-[11px]">
             <div className="w-2.5 h-2.5 bg-white rounded-full mr-2 animate-pulse" />
             EN LIVE

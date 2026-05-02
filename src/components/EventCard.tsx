@@ -29,6 +29,7 @@ interface Event {
   promotionStatus?: string | null;
   promotionStartDate?: string | null;
   promotionEndDate?: string | null;
+  eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
 }
 
 interface EventCardProps {
@@ -78,7 +79,7 @@ function EventImage({ event }: { event: Event }) {
         </div>
 
         {/* Live streaming badge */}
-        {event.isLive && (
+        {(event.eventType === 'STREAMING_LIVE' || event.eventType === 'MIXTE' || (!event.eventType && event.isLive)) && (
           <div className="flex items-center bg-red-600 text-white px-3 py-1.5 rounded-full text-sm font-medium">
             <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse" />
             EN LIVE
@@ -281,7 +282,7 @@ export function EventCard({ event, onSelect, onPurchase, onWishlist, onStreamWat
           alt={event.title}
           className="w-full h-48 object-cover rounded-t-lg"
         />
-        {event.isLive && (
+        {(event.eventType === 'STREAMING_LIVE' || event.eventType === 'MIXTE' || (!event.eventType && event.isLive)) && (
           <Badge className="absolute top-3 left-3 bg-red-600 text-white">
             <Eye className="w-3 h-3 mr-1" />
             LIVE

@@ -17,8 +17,8 @@ interface Event {
   category: string;
   tags?: string[];
   attendees: number;
-  maxAttendees: number;
   isLive: boolean;
+  eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
   organizer: string;
 }
 
@@ -89,11 +89,13 @@ export function LiveEventCard({ event, onSelect, onPurchase, onStreamWatch, onWi
         </div>
         
         {/* Live badge */}
-        <div className="flex items-center bg-[#de0035] text-white px-3 py-1.5 rounded-full text-sm font-semibold">
-          <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse" />
-          <Play className="w-3 h-3 mr-1 fill-white" />
-          EN LIVE
-        </div>
+        {(event.eventType === 'STREAMING_LIVE' || event.eventType === 'MIXTE' || (!event.eventType && event.isLive)) && (
+          <div className="flex items-center bg-[#de0035] text-white px-3 py-1.5 rounded-full text-sm font-semibold">
+            <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse" />
+            <Play className="w-3 h-3 mr-1 fill-white" />
+            EN LIVE
+          </div>
+        )}
       </div>
 
       {/* Date Information */}

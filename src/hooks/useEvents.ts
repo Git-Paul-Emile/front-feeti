@@ -1,123 +1,86 @@
-// Hooks spécifiques pour la gestion des événements
-
 import { useCallback, useMemo } from 'react';
 import { useAPI, useMutation, useDependentAPI } from './useAPI';
-import EventsAPI, { Event, EventFilters } from '../services/api/EventsAPI';
+import { backendGateway } from '../services/backend';
+import type { Event, EventFilters } from '../services/api/EventsAPI';
 
-/**
- * Hook pour récupérer tous les événements avec filtres
- */
 export function useEvents(filters?: EventFilters) {
   return useAPI(
-    () => EventsAPI.getAllEvents(filters),
+    () => backendGateway.events.getAllEvents(filters),
     { immediate: true }
   );
 }
 
-/**
- * Hook pour récupérer un événement par ID
- */
 export function useEvent(eventId: string | null) {
   return useDependentAPI(
-    (id: string) => EventsAPI.getEventById(id),
+    (id: string) => backendGateway.events.getEventById(id),
     [eventId!],
     { enabled: !!eventId }
   );
 }
 
-/**
- * Hook pour créer un événement
- */
 export function useCreateEvent() {
   return useMutation<string, Omit<Event, 'id' | 'createdAt' | 'updatedAt'>>(
-    (eventData) => EventsAPI.createEvent(eventData)
+    (eventData) => backendGateway.events.createEvent(eventData)
   );
 }
 
-/**
- * Hook pour mettre à jour un événement
- */
 export function useUpdateEvent() {
   return useMutation<void, { eventId: string; updates: Partial<Event> }>(
-    ({ eventId, updates }) => EventsAPI.updateEvent(eventId, updates)
+    ({ eventId, updates }) => backendGateway.events.updateEvent(eventId, updates)
   );
 }
 
-/**
- * Hook pour supprimer un événement
- */
 export function useDeleteEvent() {
   return useMutation<void, string>(
-    (eventId) => EventsAPI.deleteEvent(eventId)
+    (eventId) => backendGateway.events.deleteEvent(eventId)
   );
 }
 
-/**
- * Hook pour récupérer les événements live
- */
 export function useLiveEvents() {
   return useAPI(
-    () => EventsAPI.getLiveEvents(),
+    () => backendGateway.events.getLiveEvents(),
     { immediate: true }
   );
 }
 
-/**
- * Hook pour récupérer les événements à venir
- */
 export function useUpcomingEvents(limit?: number) {
   return useAPI(
-    () => EventsAPI.getUpcomingEvents(limit),
+    () => backendGateway.events.getUpcomingEvents(limit),
     { immediate: true }
   );
 }
 
-/**
- * Hook pour rechercher des événements
- */
 export function useSearchEvents(query: string) {
   return useDependentAPI(
-    (searchQuery: string) => EventsAPI.searchEvents(searchQuery),
+    (searchQuery: string) => backendGateway.events.searchEvents(searchQuery),
     [query],
     { enabled: query.length >= 2 }
   );
 }
 
-/**
- * Hook pour récupérer les statistiques des événements
- */
 export function useEventStats() {
   return useAPI(
-    () => EventsAPI.getEventStats(),
+    () => backendGateway.events.getEventStats(),
     { immediate: true }
   );
 }
 
-/**
- * Hook pour récupérer les événements d'un organisateur
- */
 export function useOrganizerEvents(organizerId: string | null) {
   return useDependentAPI(
-    (id: string) => EventsAPI.getOrganizerEvents(id),
+    (id: string) => backendGateway.events.getOrganizerEvents(id),
     [organizerId!],
     { enabled: !!organizerId }
   );
 }
 
-/**
- * Hook pour vérifier la disponibilité d'un événement
- */
 export function useEventAvailability(eventId: string | null) {
   return useDependentAPI(
-    (id: string) => EventsAPI.checkAvailability(id),
+    (id: string) => backendGateway.events.checkAvailability(id),
     [eventId!],
     { enabled: !!eventId }
   );
 }
 
-/**
- * Hook personnalisé avec filtres et tri combinés
- */
 export function useEventsWithFilters(filters?: EventFilters, sortBy?: 'date' | 'price' | 'popularity') {
   const { data, loading, error, refetch } = useEvents(filters);
 
@@ -146,9 +109,6 @@ export function useEventsWithFilters(filters?: EventFilters, sortBy?: 'date' | '
   };
 }
 
-/**
- * Hook pour gérer les favoris (avec localStorage)
- */
 export function useFavoriteEvents() {
   const getFavorites = useCallback((): string[] => {
     try {

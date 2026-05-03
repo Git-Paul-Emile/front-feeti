@@ -6,6 +6,7 @@ import imgImage7 from "figma:asset/f40f6ee4358ef1906247ba6b8ed47d57619337b1.png"
 import { imgGroup, imgGroup1 } from "../../imports/svg-g8yi2";
 import type { RegisterData } from '../../services/api/AuthAPI';
 import { ApiError } from '../../services/api/AuthAPI';
+import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 import { CategoryTab, getCategoryIcon } from '../CategorySelector';
 
 const EVENT_CATEGORIES = [
@@ -190,7 +191,7 @@ function LoginForm({ onLogin, onSwitchToRegister }: {
           setError(field as keyof LoginFields, { message: msg });
         });
       } else {
-        setServerError(err instanceof Error ? err.message : 'Erreur de connexion');
+        setServerError(firebaseClientErrorToUserMessage(err, 'Erreur de connexion'));
       }
     }
   };
@@ -412,7 +413,7 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
         });
         setStep(1);
       } else {
-        setServerError(err instanceof Error ? err.message : "Erreur lors de l'inscription");
+        setServerError(firebaseClientErrorToUserMessage(err, "Erreur lors de l'inscription"));
       }
     } finally {
       setIsSubmitting(false);

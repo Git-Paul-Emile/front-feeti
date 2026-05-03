@@ -24,6 +24,7 @@ import {
   updateProfile as updateFirebaseProfile,
 } from "firebase/auth";
 import { auth, db } from "../../../config/firebase";
+import { firebaseClientErrorToUserMessage } from "../../../utils/firebaseUserFacingError";
 import type {
   AuthUser,
   ChangePasswordData,
@@ -49,6 +50,10 @@ function toIsoString(value: Timestamp | string | null | undefined): string {
   return value.toDate().toISOString();
 }
 
+function rethrowUserFacing(e: unknown): never {
+  throw new Error(firebaseClientErrorToUserMessage(e));
+}
+
 export class FirebaseAuthProvider implements AuthProvider {
   readonly mode = "firebase" as const;
 
@@ -69,30 +74,38 @@ export class FirebaseAuthProvider implements AuthProvider {
   }
 
   async login(email: string, password: string): Promise<AuthUser> {
-    await signInWithEmailAndPassword(auth, email, password);
-    return this.requireProfile();
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      return await this.requireProfile();
+    } catch (e) {
+      rethrowUserFacing(e);
+    }
   }
 
   async register(data: RegisterData): Promise<AuthUser> {
-    const { user: firebaseUser } = await createUserWithEmailAndPassword(
-      auth,
-      data.email,
-      data.password
-    );
+    try {
+      const { user: firebaseUser } = await createUserWithEmailAndPassword(
+        auth,
+        data.email,
+        data.password
+      );
 
-    await updateFirebaseProfile(firebaseUser, { displayName: data.name });
-    await addDoc(collection(db, "users"), {
-      uid: firebaseUser.uid,
-      name: data.name,
-      email: data.email,
-      phone: data.phone ?? null,
-      role: data.role ?? "user",
-      interests: data.interests ?? [],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+      await updateFirebaseProfile(firebaseUser, { displayName: data.name });
+      await addDoc(collection(db, "users"), {
+        uid: firebaseUser.uid,
+        name: data.name,
+        email: data.email,
+        phone: data.phone ?? null,
+        role: data.role ?? "user",
+        interests: data.interests ?? [],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
 
-    return this.requireProfile();
+      return await this.requireProfile();
+    } catch (e) {
+      rethrowUserFacing(e);
+    }
   }
 
   async logout(): Promise<void> {
@@ -105,23 +118,27 @@ export class FirebaseAuthProvider implements AuthProvider {
     const profileDoc = await this.getUserProfileDocument(auth.currentUser.uid);
     if (!profileDoc) throw new Error("Profil utilisateur introuvable");
 
-    if (data.name) {
-      await updateFirebaseProfile(auth.currentUser, { displayName: data.name });
+    try {
+      if (data.name) {
+        await updateFirebaseProfile(auth.currentUser, { displayName: data.name });
+      }
+
+      if (data.email && data.email !== auth.currentUser.email) {
+        await updateEmail(auth.currentUser, data.email);
+      }
+
+      await updateDoc(doc(db, "users", profileDoc.id), {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.email !== undefined && { email: data.email }),
+        ...(data.phone !== undefined && { phone: data.phone }),
+        ...(data.interests !== undefined && { interests: data.interests }),
+        updatedAt: serverTimestamp(),
+      });
+
+      return await this.requireProfile();
+    } catch (e) {
+      rethrowUserFacing(e);
     }
-
-    if (data.email && data.email !== auth.currentUser.email) {
-      await updateEmail(auth.currentUser, data.email);
-    }
-
-    await updateDoc(doc(db, "users", profileDoc.id), {
-      ...(data.name !== undefined && { name: data.name }),
-      ...(data.email !== undefined && { email: data.email }),
-      ...(data.phone !== undefined && { phone: data.phone }),
-      ...(data.interests !== undefined && { interests: data.interests }),
-      updatedAt: serverTimestamp(),
-    });
-
-    return this.requireProfile();
   }
 
   async changePassword(data: ChangePasswordData): Promise<void> {
@@ -132,8 +149,12 @@ export class FirebaseAuthProvider implements AuthProvider {
       data.currentPassword
     );
 
-    await reauthenticateWithCredential(auth.currentUser, credential);
-    await updatePassword(auth.currentUser, data.newPassword);
+    try {
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updatePassword(auth.currentUser, data.newPassword);
+    } catch (e) {
+      rethrowUserFacing(e);
+    }
   }
 
   async deleteAccount(password: string): Promise<void> {
@@ -144,14 +165,18 @@ export class FirebaseAuthProvider implements AuthProvider {
       password
     );
 
-    await reauthenticateWithCredential(auth.currentUser, credential);
+    try {
+      await reauthenticateWithCredential(auth.currentUser, credential);
 
-    const profileDoc = await this.getUserProfileDocument(auth.currentUser.uid);
-    if (profileDoc) {
-      await deleteDoc(doc(db, "users", profileDoc.id));
+      const profileDoc = await this.getUserProfileDocument(auth.currentUser.uid);
+      if (profileDoc) {
+        await deleteDoc(doc(db, "users", profileDoc.id));
+      }
+
+      await deleteUser(auth.currentUser);
+    } catch (e) {
+      rethrowUserFacing(e);
     }
-
-    await deleteUser(auth.currentUser);
   }
 
   async getCurrentProfile(): Promise<AuthUser | null> {

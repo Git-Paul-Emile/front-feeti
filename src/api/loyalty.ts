@@ -1,4 +1,4 @@
-import axiosInstance from "./axiosConfig.js";
+import api from "../routes/axiosConfig";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -218,144 +218,144 @@ export interface PaginatedResult<T> {
 
 export const loyaltyApi = {
   getMyProfile: async (): Promise<LoyaltyProfile> => {
-    const res = await axiosInstance.get("/loyalty/me");
+    const res = await api.get("/api/loyalty/me");
     return res.data.data;
   },
 
   getMyLedger: async (page = 1, limit = 20): Promise<PaginatedResult<PointsLedgerEntry>> => {
-    const res = await axiosInstance.get("/loyalty/me/ledger", { params: { page, limit } });
+    const res = await api.get("/api/loyalty/me/ledger", { params: { page, limit } });
     return res.data.data;
   },
 
   getMyBadges: async (): Promise<AmbassadorBadge[]> => {
-    const res = await axiosInstance.get("/loyalty/me/badges");
+    const res = await api.get("/api/loyalty/me/badges");
     return res.data.data;
   },
 
   getMyVipAccess: async (): Promise<PaginatedResult<VipAccessLog>> => {
-    const res = await axiosInstance.get("/loyalty/me/vip");
+    const res = await api.get("/api/loyalty/me/vip");
     return res.data.data;
   },
 
   getLeaderboard: async (): Promise<LeaderboardEntry[]> => {
-    const res = await axiosInstance.get("/loyalty/leaderboard");
+    const res = await api.get("/api/loyalty/leaderboard");
     return res.data.data;
   },
 
   getRewards: async (): Promise<LoyaltyReward[]> => {
-    const res = await axiosInstance.get("/loyalty/rewards");
+    const res = await api.get("/api/loyalty/rewards");
     return res.data.data;
   },
 
   redeemReward: async (rewardId: string) => {
-    const res = await axiosInstance.post("/loyalty/rewards/redeem", { rewardId });
+    const res = await api.post("/api/loyalty/rewards/redeem", { rewardId });
     return res.data;
   },
 
   getMissions: async (): Promise<LoyaltyMission[]> => {
-    const res = await axiosInstance.get("/loyalty/missions");
+    const res = await api.get("/api/loyalty/missions");
     return res.data.data;
   },
 
   shareEvent: async (eventId: string) => {
-    const res = await axiosInstance.post("/loyalty/actions/share", { eventId });
+    const res = await api.post("/api/loyalty/actions/share", { eventId });
     return res.data;
   },
 
   applyReferralCode: async (referralCode: string) => {
-    const res = await axiosInstance.post("/loyalty/referral/apply", { referralCode });
+    const res = await api.post("/api/loyalty/referral/apply", { referralCode });
     return res.data;
   },
 
   // Partenaires
   getPartners: async (): Promise<LoyaltyPartner[]> => {
-    const res = await axiosInstance.get("/loyalty/partners");
+    const res = await api.get("/api/loyalty/partners");
     return res.data.data;
   },
 
   getPartnerDiscount: async (partnerId: string): Promise<PartnerDiscount> => {
-    const res = await axiosInstance.get(`/loyalty/partners/${partnerId}/discount`);
+    const res = await api.get(`/api/loyalty/partners/${partnerId}/discount`);
     return res.data.data;
   },
 
   recordPartnerSpending: async (partnerId: string, amountFCFA: number, description?: string) => {
-    const res = await axiosInstance.post("/loyalty/partners/spending", { partnerId, amountFCFA, description });
+    const res = await api.post("/api/loyalty/partners/spending", { partnerId, amountFCFA, description });
     return res.data;
   },
 
   // Communauté
   getCommunityPosts: async (page = 1, limit = 20): Promise<PaginatedResult<CommunityPost>> => {
-    const res = await axiosInstance.get("/loyalty/community/posts", { params: { page, limit } });
+    const res = await api.get("/api/loyalty/community/posts", { params: { page, limit } });
     return res.data.data;
   },
 
   createCommunityPost: async (data: { title: string; content: string; image?: string; eventId?: string }) => {
-    const res = await axiosInstance.post("/loyalty/community/posts", data);
+    const res = await api.post("/api/loyalty/community/posts", data);
     return res.data;
   },
 
   engageCommunityPost: async (postId: string, type: "like" | "comment", content?: string) => {
-    const res = await axiosInstance.post(`/loyalty/community/posts/${postId}/engage`, { type, content });
+    const res = await api.post(`/api/loyalty/community/posts/${postId}/engage`, { type, content });
     return res.data;
   },
 
   // Paiement partiel avec points
   simulatePointsPayment: async (amountFCFA: number): Promise<PointsPaymentSimulation> => {
-    const res = await axiosInstance.get("/loyalty/points/simulate-payment", { params: { amount: amountFCFA } });
+    const res = await api.get("/api/loyalty/points/simulate-payment", { params: { amount: amountFCFA } });
     return res.data.data;
   },
 
   applyPointsPayment: async (pointsToUse: number, ticketId: string, amountFCFA: number): Promise<PointsPaymentResult> => {
-    const res = await axiosInstance.post("/loyalty/points/apply-payment", { pointsToUse, ticketId, amountFCFA });
+    const res = await api.post("/api/loyalty/points/apply-payment", { pointsToUse, ticketId, amountFCFA });
     return res.data.data;
   },
 
   // Avantages VIP + ambassadeur
   getVipBenefits: async (): Promise<VipBenefits> => {
-    const res = await axiosInstance.get("/loyalty/me/vip-benefits");
+    const res = await api.get("/api/loyalty/me/vip-benefits");
     return res.data.data;
   },
 
   getAmbassadorStatus: async (): Promise<AmbassadorStatus> => {
-    const res = await axiosInstance.get("/loyalty/me/ambassador");
+    const res = await api.get("/api/loyalty/me/ambassador");
     return res.data.data;
   },
 
   // Bonus actifs
   getActiveBonuses: async (): Promise<LoyaltyBonus[]> => {
-    const res = await axiosInstance.get("/loyalty/bonuses/active");
+    const res = await api.get("/api/loyalty/bonuses/active");
     return res.data.data;
   },
 
   // ─── Administration ────────────────────────────────────────────────────────
 
   getAdminStats: async (): Promise<AdminStats> => {
-    const res = await axiosInstance.get("/loyalty/admin/stats");
+    const res = await api.get("/api/loyalty/admin/stats");
     return res.data.data;
   },
 
   getFraudAlerts: async (): Promise<FraudAlerts> => {
-    const res = await axiosInstance.get("/loyalty/admin/fraud-alerts");
+    const res = await api.get("/api/loyalty/admin/fraud-alerts");
     return res.data.data;
   },
 
   getAllUsers: async (params: { search?: string; level?: string; page?: number; limit?: number } = {}) => {
-    const res = await axiosInstance.get("/loyalty/admin/users", { params });
+    const res = await api.get("/api/loyalty/admin/users", { params });
     return res.data as { items: LoyaltyProfile[]; total: number; page: number; totalPages: number };
   },
 
   getAllLedger: async (params: { page?: number; limit?: number; action?: string } = {}) => {
-    const res = await axiosInstance.get("/loyalty/admin/ledger", { params });
+    const res = await api.get("/api/loyalty/admin/ledger", { params });
     return res.data as { items: any[]; total: number; page: number; totalPages: number };
   },
 
   manualAdjustPoints: async (profileId: string, delta: number, description: string) => {
-    const res = await axiosInstance.post("/loyalty/admin/adjust", { profileId, delta, description });
+    const res = await api.post("/api/loyalty/admin/adjust", { profileId, delta, description });
     return res.data;
   },
 
   exportLedgerCSV: async (action?: string) => {
-    const res = await axiosInstance.get("/loyalty/admin/export/ledger", {
+    const res = await api.get("/api/loyalty/admin/export/ledger", {
       params: action ? { action } : {},
       responseType: "blob",
     });
@@ -363,119 +363,119 @@ export const loyaltyApi = {
   },
 
   exportPartnerSpendingCSV: async () => {
-    const res = await axiosInstance.get("/loyalty/admin/export/partner-spendings", { responseType: "blob" });
+    const res = await api.get("/api/loyalty/admin/export/partner-spendings", { responseType: "blob" });
     return res.data as Blob;
   },
 
   // Admin Rewards
   getAdminRewards: async (): Promise<LoyaltyReward[]> => {
-    const res = await axiosInstance.get("/loyalty/admin/rewards");
+    const res = await api.get("/api/loyalty/admin/rewards");
     return res.data.data;
   },
 
   createReward: async (data: Omit<LoyaltyReward, "id" | "isActive">) => {
-    const res = await axiosInstance.post("/loyalty/admin/rewards", data);
+    const res = await api.post("/api/loyalty/admin/rewards", data);
     return res.data.data as LoyaltyReward;
   },
 
   updateReward: async (id: string, data: Partial<LoyaltyReward>) => {
-    const res = await axiosInstance.put(`/loyalty/admin/rewards/${id}`, data);
+    const res = await api.put(`/api/loyalty/admin/rewards/${id}`, data);
     return res.data.data as LoyaltyReward;
   },
 
   deleteReward: async (id: string) => {
-    await axiosInstance.delete(`/loyalty/admin/rewards/${id}`);
+    await api.delete(`/api/loyalty/admin/rewards/${id}`);
   },
 
   // Admin Partners
   getAdminPartners: async (): Promise<LoyaltyPartner[]> => {
-    const res = await axiosInstance.get("/loyalty/admin/partners");
+    const res = await api.get("/api/loyalty/admin/partners");
     return res.data.data;
   },
 
   createPartner: async (data: Omit<LoyaltyPartner, "id" | "isActive">) => {
-    const res = await axiosInstance.post("/loyalty/admin/partners", data);
+    const res = await api.post("/api/loyalty/admin/partners", data);
     return res.data.data as LoyaltyPartner;
   },
 
   updatePartner: async (id: string, data: Partial<LoyaltyPartner>) => {
-    const res = await axiosInstance.put(`/loyalty/admin/partners/${id}`, data);
+    const res = await api.put(`/api/loyalty/admin/partners/${id}`, data);
     return res.data.data as LoyaltyPartner;
   },
 
   deletePartner: async (id: string) => {
-    await axiosInstance.delete(`/loyalty/admin/partners/${id}`);
+    await api.delete(`/api/loyalty/admin/partners/${id}`);
   },
 
   getAdminPartnerSpendings: async (params: { page?: number; limit?: number; partnerId?: string } = {}) => {
-    const res = await axiosInstance.get("/loyalty/admin/partners/spendings", { params });
+    const res = await api.get("/api/loyalty/admin/partners/spendings", { params });
     return res.data.data as PaginatedResult<PartnerSpending> & { totals: { amountFCFA: number; pointsEarned: number } };
   },
 
   // Admin Missions
   getAdminMissions: async (): Promise<LoyaltyMission[]> => {
-    const res = await axiosInstance.get("/loyalty/admin/missions");
+    const res = await api.get("/api/loyalty/admin/missions");
     return res.data.data;
   },
 
   createMission: async (data: Omit<LoyaltyMission, "id" | "isActive" | "progress" | "completed" | "rewardPaid">) => {
-    const res = await axiosInstance.post("/loyalty/admin/missions", data);
+    const res = await api.post("/api/loyalty/admin/missions", data);
     return res.data.data as LoyaltyMission;
   },
 
   updateMission: async (id: string, data: Partial<LoyaltyMission>) => {
-    const res = await axiosInstance.put(`/loyalty/admin/missions/${id}`, data);
+    const res = await api.put(`/api/loyalty/admin/missions/${id}`, data);
     return res.data.data as LoyaltyMission;
   },
 
   deleteMission: async (id: string) => {
-    await axiosInstance.delete(`/loyalty/admin/missions/${id}`);
+    await api.delete(`/api/loyalty/admin/missions/${id}`);
   },
 
   // Admin Bonus / campagnes
   getAllBonuses: async (): Promise<LoyaltyBonus[]> => {
-    const res = await axiosInstance.get("/loyalty/admin/bonuses");
+    const res = await api.get("/api/loyalty/admin/bonuses");
     return res.data.data;
   },
 
   createBonus: async (data: Omit<LoyaltyBonus, "id">) => {
-    const res = await axiosInstance.post("/loyalty/admin/bonuses", data);
+    const res = await api.post("/api/loyalty/admin/bonuses", data);
     return res.data.data as LoyaltyBonus;
   },
 
   updateBonus: async (id: string, data: Partial<LoyaltyBonus>) => {
-    const res = await axiosInstance.put(`/loyalty/admin/bonuses/${id}`, data);
+    const res = await api.put(`/api/loyalty/admin/bonuses/${id}`, data);
     return res.data.data as LoyaltyBonus;
   },
 
   deleteBonus: async (id: string) => {
-    await axiosInstance.delete(`/loyalty/admin/bonuses/${id}`);
+    await api.delete(`/api/loyalty/admin/bonuses/${id}`);
   },
 
   // Admin Communauté
   getAdminCommunityPosts: async (params: { page?: number; limit?: number; status?: string } = {}) => {
-    const res = await axiosInstance.get("/loyalty/admin/community/posts", { params });
+    const res = await api.get("/api/loyalty/admin/community/posts", { params });
     return res.data.data as PaginatedResult<CommunityPost>;
   },
 
   moderateCommunityPost: async (id: string, status: "approved" | "rejected") => {
-    const res = await axiosInstance.put(`/loyalty/admin/community/posts/${id}/moderate`, { status });
+    const res = await api.put(`/api/loyalty/admin/community/posts/${id}/moderate`, { status });
     return res.data.data as CommunityPost;
   },
 
   adminDeleteCommunityPost: async (id: string) => {
-    await axiosInstance.delete(`/loyalty/admin/community/posts/${id}`);
+    await api.delete(`/api/loyalty/admin/community/posts/${id}`);
   },
 
   // Admin Badges
   getAdminBadges: async (params: { page?: number; limit?: number } = {}) => {
-    const res = await axiosInstance.get("/loyalty/admin/badges", { params });
+    const res = await api.get("/api/loyalty/admin/badges", { params });
     return res.data.data as PaginatedResult<AmbassadorBadge>;
   },
 
   // Admin VIP
   getAdminVipLogs: async (params: { page?: number; limit?: number; eventId?: string } = {}) => {
-    const res = await axiosInstance.get("/loyalty/admin/vip-logs", { params });
+    const res = await api.get("/api/loyalty/admin/vip-logs", { params });
     return res.data.data as PaginatedResult<VipAccessLog>;
   },
 };

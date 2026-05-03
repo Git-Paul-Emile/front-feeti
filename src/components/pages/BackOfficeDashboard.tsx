@@ -48,6 +48,7 @@ import {
   Heart
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import EventsBackendAPI, { type BackendEvent } from '../../services/api/EventsBackendAPI';
 import CountryAPI, { type Country } from '../../services/api/CountryAPI';
@@ -184,7 +185,7 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
       resetEventForm();
     } catch (error: any) {
       console.error('Erreur sauvegarde événement:', error);
-      toast.error(error.message || 'Erreur lors de la sauvegarde');
+      toast.error(firebaseClientErrorToUserMessage(error, 'Erreur lors de la sauvegarde'));
     } finally {
       setLoading(false);
     }
@@ -199,7 +200,7 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
       toast.success('Événement supprimé avec succès');
     } catch (error: any) {
       console.error('Erreur suppression événement:', error);
-      toast.error(error.message || 'Erreur lors de la suppression');
+      toast.error(firebaseClientErrorToUserMessage(error, 'Erreur lors de la suppression'));
     } finally {
       setLoading(false);
     }

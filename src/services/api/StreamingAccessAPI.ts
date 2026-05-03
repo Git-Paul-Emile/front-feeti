@@ -3,6 +3,7 @@
 import BaseAPIService, { APIResponse } from './BaseAPI';
 import crypto from 'crypto';
 import { fetchWithBackendFallback } from '../../utils/backendConfig';
+import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 
 export interface StreamingAccess {
   id: string;
@@ -92,7 +93,7 @@ class StreamingAccessAPIService extends BaseAPIService {
         if (result.valid) {
           this.showToast('success', 'Accès autorisé ! Bienvenue 🎉');
         } else {
-          this.showToast('error', result.message || 'Code d\'accès invalide');
+          this.showToast('error', firebaseClientErrorToUserMessage(result.message, 'Code d\'accès invalide'));
         }
 
         return result;

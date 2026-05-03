@@ -22,6 +22,7 @@ import {
   Shield
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 
 export function UserProfilePage() {
   const { user, updateProfile, changePassword, deleteAccount, logout } = useAuth();
@@ -67,8 +68,8 @@ export function UserProfilePage() {
         phone: profileForm.phone || undefined,
       });
       toast.success('Profil mis à jour avec succès');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la mise à jour');
+    } catch (err: unknown) {
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la mise à jour du profil.'));
     } finally {
       setSavingProfile(false);
     }
@@ -95,8 +96,8 @@ export function UserProfilePage() {
       });
       toast.success('Mot de passe modifié avec succès');
       setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Mot de passe actuel incorrect');
+    } catch (err: unknown) {
+      toast.error(firebaseClientErrorToUserMessage(err, 'Mot de passe actuel incorrect ou nouveau mot de passe refusé.'));
     } finally {
       setSavingPw(false);
     }
@@ -113,8 +114,8 @@ export function UserProfilePage() {
       await logout();
       navigate('/');
       toast.success('Compte supprimé');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la suppression');
+    } catch (err: unknown) {
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la suppression du compte.'));
     } finally {
       setDeleting(false);
     }

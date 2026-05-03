@@ -37,6 +37,7 @@ import { Label } from '../ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { QRScanner } from '../QRScanner';
 import { toast } from 'sonner@2.0.3';
+import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 import TicketAPI from '../../services/api/TicketAPI';
 import type { BackendTicket } from '../../services/api/TicketAPI';
 import ControllerAPI from '../../services/api/ControllerAPI';
@@ -70,6 +71,7 @@ interface EventStats {
 }
 
 export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDashboard }: OrganizerEventDashboardProps) {
+  const isSyncedLiveEvent = event.id.startsWith('feeti2_live_');
   const [activeTab, setActiveTab] = useState(initialTab ?? 'overview');
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -151,8 +153,8 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
       setCtrlName(''); setCtrlEmail(''); setCtrlPassword(''); setCtrlPhone('');
       setShowAddController(false);
       toast.success('Contrôleur ajouté avec succès');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de l\'ajout du contrôleur');
+    } catch (err: unknown) {
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de l\'ajout du contrôleur'));
     } finally {
       setCtrlSaving(false);
     }
@@ -176,9 +178,8 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
       setStats(prev => ({ ...prev, ticketsUsed: prev.ticketsUsed + 1 }));
       toast.success(`Billet validé — Bienvenue ${result.holderName} (${result.category})`);
       setShowScanner(false);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Billet invalide ou introuvable';
-      toast.error(msg);
+    } catch (err: unknown) {
+      toast.error(firebaseClientErrorToUserMessage(err, 'Billet invalide ou introuvable'));
     }
   }, []);
 
@@ -225,7 +226,7 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {onAccessDashboard && (
+              {onAccessDashboard && !isSyncedLiveEvent && (
                 <Button onClick={onAccessDashboard} variant="outline">
                   <Shield className="w-4 h-4 mr-2" />
                   Feeti Access

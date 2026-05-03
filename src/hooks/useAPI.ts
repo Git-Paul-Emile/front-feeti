@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { APIResponse } from '../services/api/BaseAPI';
+import { firebaseClientErrorToUserMessage } from '../utils/firebaseUserFacingError';
 
 export interface UseAPIOptions {
   immediate?: boolean;
@@ -54,11 +55,11 @@ export function useAPI<T>(
         });
         return null;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setState({
         data: null,
         loading: false,
-        error: error.message || 'Une erreur inattendue est survenue',
+        error: firebaseClientErrorToUserMessage(error),
         success: false
       });
       return null;
@@ -125,8 +126,8 @@ export function useMutation<TData, TVariables = void>(
           });
           return { success: false, error: response.error };
         }
-      } catch (error: any) {
-        const errorMessage = error.message || 'Une erreur inattendue est survenue';
+      } catch (error: unknown) {
+        const errorMessage = firebaseClientErrorToUserMessage(error);
         setState({
           data: null,
           loading: false,
@@ -190,11 +191,11 @@ export function usePolling<T>(
           error: response.error || 'Une erreur est survenue'
         }));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setState(prev => ({
         ...prev,
         loading: false,
-        error: error.message || 'Une erreur inattendue est survenue'
+        error: firebaseClientErrorToUserMessage(error)
       }));
     }
   }, [apiCall]);
@@ -310,11 +311,11 @@ export function useDependentAPI<T, TDeps extends any[]>(
           success: false
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setState({
         data: null,
         loading: false,
-        error: error.message || 'Une erreur inattendue est survenue',
+        error: firebaseClientErrorToUserMessage(error),
         success: false
       });
     }

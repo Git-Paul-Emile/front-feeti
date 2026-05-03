@@ -39,6 +39,7 @@ import { QRCodeGenerator } from '../QRCodeGenerator';
 import { TicketPDFGenerator } from '../TicketPDFGenerator';
 import { toast } from 'sonner@2.0.3';
 import { loyaltyApi, type PointsPaymentSimulation } from '../../api/loyalty';
+import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 
 interface Event {
   id: string;
@@ -399,10 +400,9 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
         : 'Paiement réussi ! Vos billets vous ont été envoyés par email.');
       onPurchaseComplete(mappedTickets);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erreur lors du paiement:', error);
-      const msg = error?.response?.data?.message || 'Erreur technique lors du paiement.';
-      toast.error(msg);
+      toast.error(firebaseClientErrorToUserMessage(error, 'Erreur technique lors du paiement.'));
     } finally {
       setIsProcessing(false);
     }

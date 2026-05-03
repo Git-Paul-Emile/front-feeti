@@ -180,6 +180,7 @@ const FeetiAccessDashboard        = lazy(() => import('../components/pages/Feeti
 const WebScannerPage              = lazy(() => import('../components/pages/WebScannerPage').then(m => ({ default: m.WebScannerPage })));
 const FeetiNaFeetiAdminPage       = lazy(() => import('../components/pages/FeetiNaFeetiAdminPage').then(m => ({ default: m.FeetiNaFeetiAdminPage })));
 const UserProfilePage             = lazy(() => import('../components/pages/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
+const AdminAuditPage              = lazy(() => import('../components/pages/AdminAuditPage').then(m => ({ default: m.AdminAuditPage })));
 
 // ── Correspondance page-name → route ─────────────────────────────────────────
 const PAGE_ROUTES: Record<string, string> = {
@@ -200,6 +201,7 @@ const PAGE_ROUTES: Record<string, string> = {
   'qr-scanner': '/scan',
   'financial-dashboard': '/organizer/finance',
   'admin-financial': '/admin/finance',
+  'admin-audit': '/admin/audit',
   'feeti-na-feeti': '/feeti-na-feeti',
   'user-profile': '/profile',
 };
@@ -455,10 +457,15 @@ function FeetiAccessRoute() {
 
   useEffect(() => {
     if (!eventId) return;
+    if (eventId.startsWith('feeti2_live_')) {
+      toast.error('Feeti Access est disponible uniquement pour les événements physiques Feeti2.');
+      navigate(`/organizer/event/${eventId}`, { replace: true });
+      return;
+    }
     EventsBackendAPI.getEventById(eventId)
       .then(e => setEventTitle(e.title))
       .catch(() => {});
-  }, [eventId]);
+  }, [eventId, navigate]);
 
   if (!eventId) return <Navigate to="/organizer" replace />;
   return (
@@ -1034,6 +1041,7 @@ export function AppRoutes() {
         <Route element={<ProtectedRoute requiredRole="admin" />}>
           <Route path="/admin"            element={<AdminRoute />} />
           <Route path="/admin/finance"    element={<AdminFinancialDashboard />} />
+          <Route path="/admin/audit"      element={<AdminAuditPage />} />
           <Route path="/admin/feeti-na-feeti" element={<FeetiNaFeetiAdminRoute />} />
           <Route path="/back-office"      element={<BackOfficeRoute />} />
         </Route>

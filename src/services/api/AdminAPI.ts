@@ -32,6 +32,23 @@ export interface AdminTicket {
   user: { id: string; name: string; email: string };
 }
 
+export interface AuditLogEntry {
+  id: string;
+  userId: string;
+  userRole: string;
+  action: string;
+  resource: string;
+  resourceId?: string;
+  ipAddress?: string;
+  createdAt: string;
+}
+
+export interface AuditIntegrity {
+  total: number;
+  corrupted: number;
+  corruptions: Array<{ id: string; expectedChecksum: string; storedChecksum: string }>;
+}
+
 const AdminAPI = {
   async getAllUsers(): Promise<AdminUser[]> {
     const res = await api.get('/api/admin/users');
@@ -58,6 +75,33 @@ const AdminAPI = {
 
   async getTickets(limit = 20): Promise<AdminTicket[]> {
     const res = await api.get(`/api/admin/tickets?limit=${limit}`);
+    return res.data.data;
+  },
+
+  async getAuditLogs(params?: {
+    action?: string;
+    resource?: string;
+    userId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: AuditLogEntry[]; meta: { total: number; page: number; limit: number; pages: number } }> {
+    const query = new URLSearchParams();
+    if (params?.action) query.set('action', params.action);
+    if (params?.resource) query.set('resource', params.resource);
+    if (params?.userId) query.set('userId', params.userId);
+    if (params?.dateFrom) query.set('dateFrom', params.dateFrom);
+    if (params?.dateTo) query.set('dateTo', params.dateTo);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.limit) query.set('limit', String(params.limit));
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    const res = await api.get(`/reporting/audit${suffix}`);
+    return { data: res.data.data, meta: res.data.meta };
+  },
+
+  async getAuditIntegrity(): Promise<AuditIntegrity> {
+    const res = await api.get('/reporting/audit/integrity');
     return res.data.data;
   },
 };

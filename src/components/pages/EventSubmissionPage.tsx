@@ -42,6 +42,7 @@ import {
   Send
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 import EventSubmissionAPI from '../../services/api/EventSubmissionAPI';
 import CategoriesAPI from '../../services/api/CategoriesAPI';
 
@@ -405,7 +406,7 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
       }
     } catch (error: any) {
       console.error('Submission error:', error);
-      toast.error(error.message || 'Erreur lors de la soumission. Veuillez réessayer.');
+      toast.error(firebaseClientErrorToUserMessage(error, 'Erreur lors de la soumission. Veuillez réessayer.'));
     } finally {
       setIsSubmitting(false);
     }

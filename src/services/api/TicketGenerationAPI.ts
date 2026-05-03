@@ -2,6 +2,7 @@
 
 import BaseAPIService, { APIResponse } from './BaseAPI';
 import { fetchWithBackendFallback, getPreferredBackendBaseUrl } from '../../utils/backendConfig';
+import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 
 export interface TicketGenerationRequest {
   eventId: string;
@@ -88,8 +89,8 @@ class TicketGenerationAPIService extends BaseAPIService {
       }
 
       return await response.blob();
-    } catch (error: any) {
-      this.showToast('error', error.message);
+    } catch (error: unknown) {
+      this.showToast('error', firebaseClientErrorToUserMessage(error, 'Erreur lors du téléchargement du billet'));
       throw error;
     }
   }

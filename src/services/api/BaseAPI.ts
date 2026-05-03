@@ -2,6 +2,7 @@
 // Gestion centralisée des appels API avec retry, cache et error handling
 
 import { toast } from 'sonner@2.0.3';
+import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 
 export interface APIResponse<T> {
   success: boolean;
@@ -219,40 +220,19 @@ class BaseAPIService {
   }
 
   /**
-   * Transformation des erreurs en messages lisibles
+   * Transformation des erreurs en messages lisibles (Firebase Auth / Firestore / Storage + réseau)
    */
-  private getErrorMessage(error: any): string {
-    // Erreurs Firebase
-    if (error.code) {
-      const firebaseErrors: Record<string, string> = {
-        'permission-denied': 'Vous n\'avez pas les permissions nécessaires',
-        'unauthenticated': 'Veuillez vous connecter pour continuer',
-        'not-found': 'Ressource introuvable',
-        'already-exists': 'Cette ressource existe déjà',
-        'failed-precondition': 'Opération non autorisée dans l\'état actuel',
-        'cancelled': 'Opération annulée',
-        'data-loss': 'Perte de données détectée',
-        'deadline-exceeded': 'Délai d\'attente dépassé',
-        'resource-exhausted': 'Quota dépassé',
-        'aborted': 'Opération interrompue',
-        'out-of-range': 'Valeur hors limites',
-        'internal': 'Erreur interne du serveur',
-        'unavailable': 'Service temporairement indisponible'
-      };
-
-      return firebaseErrors[error.code] || error.message || 'Une erreur est survenue';
-    }
-
-    // Erreurs réseau
-    if (error.message === 'Request timeout') {
+  private getErrorMessage(error: unknown): string {
+    const e = error as { message?: string };
+    if (e.message === 'Request timeout') {
       return 'La requête a pris trop de temps. Veuillez réessayer.';
     }
 
-    if (error.message?.includes('network')) {
+    if (e.message?.toLowerCase().includes('network')) {
       return 'Erreur de connexion. Vérifiez votre connexion internet.';
     }
 
-    return error.message || 'Une erreur inattendue est survenue';
+    return firebaseClientErrorToUserMessage(error);
   }
 
   /**

@@ -35,6 +35,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import FeaturedRequestAPI, { type FeaturedRequest } from '../../services/api/FeaturedRequestAPI';
 
@@ -199,7 +200,7 @@ export function OrganizerDashboard({
       setFeaturedRequestModal(null);
       setFeaturedMessage('');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de l\'envoi de la demande');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de l\'envoi de la demande'));
     } finally {
       setFeaturedLoading(false);
     }
@@ -1246,15 +1247,17 @@ export function OrganizerDashboard({
                           >
                             {event.salesBlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onManageControllers?.(event.id)}
-                            className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-                            title="Gérer les contrôleurs"
-                          >
-                            <UserCheck className="w-4 h-4" />
-                          </Button>
+                          {event.eventType !== 'STREAMING_LIVE' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onManageControllers?.(event.id)}
+                              className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                              title="Gérer les contrôleurs"
+                            >
+                              <UserCheck className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -1316,15 +1319,17 @@ export function OrganizerDashboard({
                               </p>
                               <p className="text-sm text-gray-600">Revenus</p>
                             </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => onManageControllers?.(event.id)}
-                              className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-                            >
-                              <UserCheck className="w-4 h-4 mr-1" />
-                              Contrôleurs
-                            </Button>
+                            {event.eventType !== 'STREAMING_LIVE' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onManageControllers?.(event.id)}
+                                className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                              >
+                                <UserCheck className="w-4 h-4 mr-1" />
+                                Contrôleurs
+                              </Button>
+                            )}
                             <Button
                               variant="outline"
                               size="sm"

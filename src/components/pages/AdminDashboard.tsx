@@ -56,6 +56,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosConfig.js';
 import EventsBackendAPI, { type BackendEvent } from '../../services/api/EventsBackendAPI';
@@ -126,7 +127,7 @@ function PromotionsTab({ events }: { events: Event[] }) {
       // Refresh slots
       EventsBackendAPI.getPromotionSlots().then(setSlots).catch(() => {});
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Erreur lors de la mise à jour');
+      toast.error(firebaseClientErrorToUserMessage(e, 'Erreur lors de la mise à jour'));
     } finally {
       setSaving(false);
     }
@@ -358,7 +359,7 @@ function LeisurePromotionsTab() {
       LeisureAPI.getAllAdmin().then(setItems).catch(() => {});
       LeisureAPI.getLeisurePromotionSlots().then(setSlots).catch(() => {});
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Erreur lors de la mise à jour');
+      toast.error(firebaseClientErrorToUserMessage(e, 'Erreur lors de la mise à jour'));
     } finally {
       setSaving(false);
     }
@@ -735,7 +736,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       toast.success(`Action "${action}" effectuée`);
       loadFinanceData();
     } catch (err: any) {
-      toast.error(err.response?.data?.message ?? `Erreur lors de l'action ${action}`);
+      toast.error(firebaseClientErrorToUserMessage(err, `Erreur lors de l'action ${action}`));
     }
   };
 
@@ -765,7 +766,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setNewCategory({ name: '', slug: '' });
       toast.success(`Catégorie "${name}" ajoutée`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la création');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la création'));
     } finally { setEventCatLoading(false); }
   };
 
@@ -778,7 +779,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setEditingCategory(null);
       toast.success('Catégorie mise à jour');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la mise à jour');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la mise à jour'));
     } finally { setEventCatLoading(false); }
   };
 
@@ -788,7 +789,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setEventCategories(prev => prev.filter(c => c.id !== cat.id));
       toast.success(`Catégorie "${cat.name}" supprimée`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la suppression');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la suppression'));
     }
   };
 
@@ -836,7 +837,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       loadUsers();
     } catch (err: any) {
       if (err?.errors) setCreateErrors(err.errors);
-      else toast.error(err?.message || 'Erreur lors de la création');
+      else toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la création'));
     } finally {
       setCreateLoading(false);
     }
@@ -868,7 +869,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setNewDealCategory({ name: '', slug: '' });
       toast.success(`Catégorie "${name}" ajoutée`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la création');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la création'));
     } finally {
       setDealCatLoading(false);
     }
@@ -887,7 +888,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setEditingDealCategory(null);
       toast.success('Catégorie mise à jour');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la mise à jour');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la mise à jour'));
     } finally {
       setDealCatLoading(false);
     }
@@ -899,7 +900,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setDealCategories(prev => prev.filter(c => c.id !== cat.id));
       toast.success(`Catégorie "${cat.name}" supprimée`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la suppression');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la suppression'));
     }
   };
 
@@ -980,7 +981,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       }
       setIsDealFormOpen(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la sauvegarde');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la sauvegarde'));
     } finally {
       setDealFormLoading(false);
     }
@@ -992,7 +993,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setDeals(prev => prev.filter(d => d.id !== deal.id));
       toast.success(`Bon plan "${deal.title}" supprimé`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la suppression');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la suppression'));
     }
   };
 
@@ -1072,7 +1073,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       }
       setIsLeisureFormOpen(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la sauvegarde');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la sauvegarde'));
     } finally { setLeisureFormLoading(false); }
   };
 
@@ -1082,7 +1083,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setLeisureItems(prev => prev.filter(i => i.id !== item.id));
       toast.success(`Loisir "${item.name}" supprimé`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la suppression');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la suppression'));
     }
   };
 
@@ -1097,7 +1098,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setNewLeisureCat({ name: '', slug: '' });
       toast.success(`Catégorie "${name}" ajoutée`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la création');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la création'));
     } finally { setLeisureCatLoading(false); }
   };
 
@@ -1110,7 +1111,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setEditingLeisureCat(null);
       toast.success('Catégorie mise à jour');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la mise à jour');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la mise à jour'));
     } finally { setLeisureCatLoading(false); }
   };
 
@@ -1120,7 +1121,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setLeisureCategories(prev => prev.filter(c => c.id !== cat.id));
       toast.success(`Catégorie "${cat.name}" supprimée`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la suppression');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la suppression'));
     }
   };
 
@@ -1191,7 +1192,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setIsBlogPostDialogOpen(false);
       loadBlogPosts();
       loadBlogStats();
-    } catch (err: any) { toast.error(err?.response?.data?.message ?? "Erreur lors de l'enregistrement"); }
+    } catch (err: any) { toast.error(firebaseClientErrorToUserMessage(err, "Erreur lors de l'enregistrement")); }
     finally { setBlogPostSaving(false); }
   };
 
@@ -1214,7 +1215,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setBlogCategories(prev => [...prev, created]);
       setNewBlogCat({ name: '', slug: '' });
       toast.success(`Catégorie "${name}" ajoutée`);
-    } catch (err: any) { toast.error(err?.response?.data?.message || 'Erreur lors de la création'); }
+    } catch (err: any) { toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la création')); }
     finally { setBlogCatLoading(false); }
   };
 
@@ -1226,7 +1227,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setBlogCategories(prev => prev.map(c => c.id === updated.id ? updated : c));
       setEditingBlogCat(null);
       toast.success('Catégorie mise à jour');
-    } catch (err: any) { toast.error(err?.response?.data?.message || 'Erreur lors de la mise à jour'); }
+    } catch (err: any) { toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la mise à jour')); }
     finally { setBlogCatLoading(false); }
   };
 
@@ -1235,7 +1236,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       await BlogAPI.deleteCategory(id);
       setBlogCategories(prev => prev.filter(c => c.id !== id));
       toast.success('Catégorie supprimée');
-    } catch (err: any) { toast.error(err?.response?.data?.message || 'Erreur lors de la suppression'); }
+    } catch (err: any) { toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la suppression')); }
   };
 
   // Featured requests
@@ -1285,7 +1286,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setCountryForm({ code: '', name: '', flag: '' });
       toast.success(`Pays "${name}" ajouté`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la création');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la création'));
     } finally { setCountriesLoading(false); }
   };
 
@@ -1298,7 +1299,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setEditingCountry(null);
       toast.success('Pays mis à jour');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la mise à jour');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la mise à jour'));
     } finally { setCountriesLoading(false); }
   };
 
@@ -1308,7 +1309,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setAllCountries(prev => prev.map(c => c.code === updated.code ? updated : c));
       toast.success(`Pays ${updated.isActive ? 'activé' : 'désactivé'}`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur'));
     }
   };
 
@@ -1318,7 +1319,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setAllCountries(prev => prev.filter(c => c.code !== country.code));
       toast.success(`Pays "${country.name}" supprimé`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de la suppression');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la suppression'));
     }
   };
 
@@ -1350,7 +1351,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setFeaturedAdminNote('');
       toast.success('Demande approuvée — événement mis en avant');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de l\'approbation');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de l\'approbation'));
     } finally {
       setFeaturedProcessingId(null);
     }
@@ -1364,7 +1365,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setFeaturedAdminNote('');
       toast.success('Demande rejetée');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors du rejet');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors du rejet'));
     } finally {
       setFeaturedProcessingId(null);
     }
@@ -1379,7 +1380,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       ));
       toast.success('Mise en avant stoppée');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de l\'arrêt');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de l\'arrêt'));
     } finally {
       setFeaturedProcessingId(null);
     }
@@ -1522,7 +1523,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
           break;
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || `Erreur lors de l'action`);
+      toast.error(firebaseClientErrorToUserMessage(err, `Erreur lors de l'action`));
     }
   };
 
@@ -1535,7 +1536,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       setRoleChangeUser(null);
       setNewRole('');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors du changement de rôle');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors du changement de rôle'));
     }
   };
 
@@ -1571,7 +1572,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
           break;
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de l\'action sur l\'événement');
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de l\'action sur l\'événement'));
     }
   };
 
@@ -2401,6 +2402,9 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                 <Button variant="outline" size="sm" onClick={loadFinanceData} disabled={financeLoading}>
                   <RefreshCw className="h-4 w-4 mr-1" /> Actualiser
                 </Button>
+                <Button variant="outline" size="sm" onClick={() => navigate('/admin/audit')}>
+                  Journal d'audit
+                </Button>
                 <Button size="sm" onClick={() => navigate('/admin/finance')}>
                   Tableau de bord financier complet <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
@@ -2652,9 +2656,14 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                   <p className="font-semibold text-purple-900">Tableau de bord financier complet</p>
                   <p className="text-sm text-purple-700">Tendances, export CSV, gestion avancée des virements, intégrité du journal d'audit</p>
                 </div>
-                <Button onClick={() => navigate('/admin/finance')} className="bg-purple-600 hover:bg-purple-700 shrink-0">
-                  Voir tout <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button variant="outline" onClick={() => navigate('/admin/audit')}>
+                    Audit
+                  </Button>
+                  <Button onClick={() => navigate('/admin/finance')} className="bg-purple-600 hover:bg-purple-700">
+                    Voir tout <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -4151,7 +4160,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                           }
                           setEditingZone(null);
                         } catch (err: any) {
-                          toast.error(err?.response?.data?.message || 'Erreur');
+                          toast.error(firebaseClientErrorToUserMessage(err, 'Erreur'));
                         }
                       }}>Enregistrer</Button>
                     </DialogFooter>
@@ -4201,7 +4210,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                                       setDeliveryZones(prev => prev.filter(z => z.id !== zone.id));
                                       toast.success('Zone supprimée');
                                     } catch (err: any) {
-                                      toast.error(err?.response?.data?.message || 'Erreur');
+                                      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur'));
                                     }
                                   }}>Supprimer</AlertDialogAction>
                                 </AlertDialogFooter>
@@ -4273,7 +4282,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                           }
                           setEditingCity(null);
                         } catch (err: any) {
-                          toast.error(err?.response?.data?.message || 'Erreur');
+                          toast.error(firebaseClientErrorToUserMessage(err, 'Erreur'));
                         }
                       }}>Enregistrer</Button>
                     </DialogFooter>
@@ -4323,7 +4332,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                                       setDeliveryCities(prev => prev.filter(c => c.id !== city.id));
                                       toast.success('Ville supprimée');
                                     } catch (err: any) {
-                                      toast.error(err?.response?.data?.message || 'Erreur');
+                                      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur'));
                                     }
                                   }}>Supprimer</AlertDialogAction>
                                 </AlertDialogFooter>

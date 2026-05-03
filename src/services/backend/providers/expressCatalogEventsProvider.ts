@@ -39,8 +39,19 @@ export class ExpressCatalogEventsProvider implements CatalogEventsProvider {
   }
 
   async getEventById(id: string): Promise<BackendEvent> {
-    const res = await api.get(`/api/events/${id}`);
-    return res.data.data;
+    try {
+      const res = await api.get(`/api/events/${id}`);
+      return res.data.data;
+    } catch (err: any) {
+      const isLiveAlias = id.startsWith("feeti2_live_");
+      const status = err?.response?.status;
+      if (isLiveAlias && status === 404) {
+        const localId = id.replace(/^feeti2_live_/, "");
+        const retry = await api.get(`/api/events/${localId}`);
+        return retry.data.data;
+      }
+      throw err;
+    }
   }
 
   async getAllEventsAdmin(): Promise<BackendEvent[]> {

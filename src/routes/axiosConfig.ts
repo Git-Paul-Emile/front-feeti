@@ -9,15 +9,27 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Injecte le Firebase ID Token (auto-rafraîchi par le SDK)
+// ID token Firebase en priorité (aligné avec api/axiosConfig), puis JWT stocké après authStateReady().
 api.interceptors.request.use(async (config) => {
   const baseURL = await resolveBackendBaseUrl();
   config.baseURL = baseURL;
 
+  if (typeof auth.authStateReady === "function") {
+    await auth.authStateReady();
+  }
+
+  let token: string | null = null;
   if (auth.currentUser) {
-    // getIdToken(false) retourne le token du cache s'il est encore valide,
-    // sinon le rafraîchit automatiquement.
-    const token = await auth.currentUser.getIdToken(false);
+    try {
+      token = await auth.currentUser.getIdToken(false);
+    } catch {
+      token = null;
+    }
+  }
+  if (!token) {
+    token = localStorage.getItem("accessToken") || localStorage.getItem("feeti_token");
+  }
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 

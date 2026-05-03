@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { toast } from 'sonner@2.0.3';
+import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 import StreamingAccessAPI from '../../services/api/StreamingAccessAPI';
 
 interface Event {
@@ -173,10 +174,10 @@ export function StreamingPage({ event, onBack, currentUser }: StreamingPageProps
         setIsAuthenticated(true);
         toast.success('Accès autorisé ! Profitez de l\'événement 🎉');
       } else {
-        toast.error(response.data?.message || 'Code d\'accès invalide');
+        toast.error(firebaseClientErrorToUserMessage(response.data?.message, 'Code d\'accès invalide'));
       }
     } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de la vérification');
+      toast.error(firebaseClientErrorToUserMessage(error, 'Erreur lors de la vérification'));
     } finally {
       setIsVerifying(false);
     }

@@ -9,6 +9,7 @@ import {
   getCurrentUser
 } from "./firebase-auth";
 import api from "../api/axios";
+import { firebaseClientErrorToUserMessage } from "../utils/firebaseUserFacingError";
 
 interface AuthUser {
   id: string;
@@ -47,9 +48,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(backendUser);
         return { success: true };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erreur sync backend:", error);
-      return { success: false, error: error.response?.data?.message || "Erreur de synchronisation" };
+      const backendMsg =
+        typeof (error as { response?: { data?: { message?: string } } })?.response?.data?.message === "string"
+          ? (error as { response: { data: { message: string } } }).response.data.message
+          : undefined;
+      return {
+        success: false,
+        error: firebaseClientErrorToUserMessage(
+          backendMsg ?? error,
+          "Impossible de finaliser votre connexion avec le serveur.",
+        ),
+      };
     }
   };
 
@@ -80,8 +91,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(backendUser);
           return { success: true };
         }
-      } catch (error: any) {
-        return { success: false, error: error.response?.data?.message || "Erreur d'inscription" };
+      } catch (error: unknown) {
+        const backendMsg =
+          typeof (error as { response?: { data?: { message?: string } } })?.response?.data?.message === "string"
+            ? (error as { response: { data: { message: string } } }).response.data.message
+            : undefined;
+        return {
+          success: false,
+          error: firebaseClientErrorToUserMessage(
+            backendMsg ?? error,
+            "Impossible d’enregistrer votre compte sur le serveur après l’inscription.",
+          ),
+        };
       }
     }
     return { success: false, error: result.error };

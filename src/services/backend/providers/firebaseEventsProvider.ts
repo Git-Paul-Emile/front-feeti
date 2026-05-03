@@ -10,6 +10,7 @@ import type {
   EventStats,
 } from "../../api/EventsAPI";
 import type { EventsProvider } from "../types";
+import { firebaseClientErrorToUserMessage } from "../../../utils/firebaseUserFacingError";
 
 function createSuccess<T>(data: T): APIResponse<T> {
   return { success: true, data };
@@ -104,8 +105,8 @@ export class FirebaseEventsProvider implements EventsProvider {
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         )
       );
-    } catch (error) {
-      return createError((error as Error).message || "Impossible de charger les evenements");
+    } catch (error: unknown) {
+      return createError(firebaseClientErrorToUserMessage(error, "Impossible de charger les evenements"));
     }
   }
 
@@ -114,8 +115,8 @@ export class FirebaseEventsProvider implements EventsProvider {
       const event = await EventService.getEventById(eventId);
       if (!event) return createError("Evenement introuvable", "not-found");
       return createSuccess(adaptEvent(event));
-    } catch (error) {
-      return createError((error as Error).message || "Impossible de charger l'evenement");
+    } catch (error: unknown) {
+      return createError(firebaseClientErrorToUserMessage(error, "Impossible de charger l'evenement"));
     }
   }
 
@@ -133,8 +134,8 @@ export class FirebaseEventsProvider implements EventsProvider {
       }
 
       return createSuccess(result.id);
-    } catch (error) {
-      return createError((error as Error).message || "Creation de l'evenement impossible");
+    } catch (error: unknown) {
+      return createError(firebaseClientErrorToUserMessage(error, "Creation de l'evenement impossible"));
     }
   }
 
@@ -143,8 +144,8 @@ export class FirebaseEventsProvider implements EventsProvider {
       const result = await EventService.updateEvent(eventId, updates);
       if (!result.success) return createError(result.error || "Mise a jour impossible");
       return createSuccess(undefined);
-    } catch (error) {
-      return createError((error as Error).message || "Mise a jour impossible");
+    } catch (error: unknown) {
+      return createError(firebaseClientErrorToUserMessage(error, "Mise a jour impossible"));
     }
   }
 
@@ -153,8 +154,8 @@ export class FirebaseEventsProvider implements EventsProvider {
       const result = await EventService.deleteEvent(eventId);
       if (!result.success) return createError(result.error || "Suppression impossible");
       return createSuccess(undefined);
-    } catch (error) {
-      return createError((error as Error).message || "Suppression impossible");
+    } catch (error: unknown) {
+      return createError(firebaseClientErrorToUserMessage(error, "Suppression impossible"));
     }
   }
 
@@ -163,8 +164,8 @@ export class FirebaseEventsProvider implements EventsProvider {
       if (!organizerId) return createSuccess([]);
       const events = await EventService.getEventsByOrganizer(organizerId);
       return createSuccess(events.map(adaptEvent));
-    } catch (error) {
-      return createError((error as Error).message || "Impossible de charger les evenements");
+    } catch (error: unknown) {
+      return createError(firebaseClientErrorToUserMessage(error, "Impossible de charger les evenements"));
     }
   }
 
@@ -224,8 +225,8 @@ export class FirebaseEventsProvider implements EventsProvider {
           : 0,
         popularCategories,
       });
-    } catch (error) {
-      return createError((error as Error).message || "Impossible de calculer les statistiques");
+    } catch (error: unknown) {
+      return createError(firebaseClientErrorToUserMessage(error, "Impossible de calculer les statistiques"));
     }
   }
 

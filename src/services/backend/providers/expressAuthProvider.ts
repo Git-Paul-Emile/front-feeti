@@ -5,10 +5,12 @@ import {
   reauthenticateWithCredential,
   signInWithEmailAndPassword,
   signOut,
+  updateEmail,
   updatePassword,
   updateProfile as updateFirebaseProfile,
 } from "firebase/auth";
 import { auth } from "../../../config/firebase";
+import { firebaseClientErrorToUserMessage } from "../../../utils/firebaseUserFacingError";
 import AuthAPI, {
   type AuthUser,
   type ChangePasswordData,
@@ -16,6 +18,10 @@ import AuthAPI, {
   type UpdateProfileData,
 } from "../../api/AuthAPI";
 import type { AuthProvider, AuthStateListener } from "../types";
+
+function rethrowUserFacing(e: unknown): never {
+  throw new Error(firebaseClientErrorToUserMessage(e));
+}
 
 export class ExpressAuthProvider implements AuthProvider {
   readonly mode = "express" as const;
@@ -37,34 +43,42 @@ export class ExpressAuthProvider implements AuthProvider {
   }
 
   async login(email: string, password: string): Promise<AuthUser> {
-    const { user: firebaseUser } = await signInWithEmailAndPassword(auth, email, password);
-    const idToken = await firebaseUser.getIdToken();
-    const user = await AuthAPI.loginProfile(idToken);
-    if (!user) throw new Error("Erreur lors de la synchronisation du profil");
-    return user;
+    try {
+      const { user: firebaseUser } = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await firebaseUser.getIdToken();
+      const user = await AuthAPI.loginProfile(idToken);
+      if (!user) throw new Error("Erreur lors de la synchronisation du profil");
+      return user;
+    } catch (e) {
+      rethrowUserFacing(e);
+    }
   }
 
   async register(data: RegisterData): Promise<AuthUser> {
-    const { user: firebaseUser } = await createUserWithEmailAndPassword(
-      auth,
-      data.email,
-      data.password
-    );
+    try {
+      const { user: firebaseUser } = await createUserWithEmailAndPassword(
+        auth,
+        data.email,
+        data.password
+      );
 
-    await updateFirebaseProfile(firebaseUser, { displayName: data.name });
-    
-    const idToken = await firebaseUser.getIdToken();
-    
-    const user = await AuthAPI.registerProfile({
-      name: data.name,
-      phone: data.phone,
-      role: data.role,
-      interests: data.interests,
-    }, idToken);
-    
-    if (!user) throw new Error("Erreur lors de la création du profil backend");
+      await updateFirebaseProfile(firebaseUser, { displayName: data.name });
 
-    return user;
+      const idToken = await firebaseUser.getIdToken();
+
+      const user = await AuthAPI.registerProfile({
+        name: data.name,
+        phone: data.phone,
+        role: data.role,
+        interests: data.interests,
+      }, idToken);
+
+      if (!user) throw new Error("Erreur lors de la création du profil backend");
+
+      return user;
+    } catch (e) {
+      rethrowUserFacing(e);
+    }
   }
 
   async logout(): Promise<void> {
@@ -74,18 +88,22 @@ export class ExpressAuthProvider implements AuthProvider {
   async updateProfile(data: UpdateProfileData): Promise<AuthUser> {
     if (!auth.currentUser) throw new Error("Non authentifie");
 
-    if (data.name) {
-      await updateFirebaseProfile(auth.currentUser, { displayName: data.name });
-    }
+    try {
+      if (data.name) {
+        await updateFirebaseProfile(auth.currentUser, { displayName: data.name });
+      }
 
-    if (data.email && data.email !== auth.currentUser.email) {
-      await updateEmail(auth.currentUser, data.email);
-    }
+      if (data.email && data.email !== auth.currentUser.email) {
+        await updateEmail(auth.currentUser, data.email);
+      }
 
-    const user = await AuthAPI.updateProfile(data);
-    if (!user) throw new Error("Erreur lors de la mise à jour du profil backend");
-    
-    return user;
+      const user = await AuthAPI.updateProfile(data);
+      if (!user) throw new Error("Erreur lors de la mise à jour du profil backend");
+
+      return user;
+    } catch (e) {
+      rethrowUserFacing(e);
+    }
   }
 
   async changePassword(data: ChangePasswordData): Promise<void> {
@@ -96,8 +114,12 @@ export class ExpressAuthProvider implements AuthProvider {
       data.currentPassword
     );
 
-    await reauthenticateWithCredential(auth.currentUser, credential);
-    await updatePassword(auth.currentUser, data.newPassword);
+    try {
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updatePassword(auth.currentUser, data.newPassword);
+    } catch (e) {
+      rethrowUserFacing(e);
+    }
   }
 
   async deleteAccount(password: string): Promise<void> {
@@ -108,9 +130,13 @@ export class ExpressAuthProvider implements AuthProvider {
       password
     );
 
-    await reauthenticateWithCredential(auth.currentUser, credential);
-    await AuthAPI.deleteAccount();
-    await signOut(auth);
+    try {
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await AuthAPI.deleteAccount();
+      await signOut(auth);
+    } catch (e) {
+      rethrowUserFacing(e);
+    }
   }
 
   async getCurrentProfile(): Promise<AuthUser | null> {

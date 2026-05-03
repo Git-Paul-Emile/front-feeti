@@ -12,6 +12,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase-config";
+import { firebaseClientErrorToUserMessage } from "../utils/firebaseUserFacingError";
 
 // Configuration Firebase - à remplacer par tes valeurs
 const firebaseConfig = {
@@ -45,11 +46,14 @@ export const signInWithGoogle = async () => {
       user: result.user,
       idToken
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erreur Google signIn:", error);
     return {
       success: false,
-      error: error.message || "Erreur lors de la connexion Google"
+      error: firebaseClientErrorToUserMessage(
+        error,
+        "Impossible de se connecter avec Google pour le moment ; réessayez ou utilisez votre e‑mail."
+      ),
     };
   }
 };
@@ -70,11 +74,11 @@ export const registerWithEmail = async (email: string, password: string, display
       user: result.user,
       idToken
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erreur inscription:", error);
     return {
       success: false,
-      error: error.message || "Erreur lors de l'inscription"
+      error: firebaseClientErrorToUserMessage(error, "Impossible de finaliser l’inscription pour le moment."),
     };
   }
 };
@@ -89,11 +93,14 @@ export const signInWithEmail = async (email: string, password: string) => {
       user: result.user,
       idToken
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erreur connexion:", error);
     return {
       success: false,
-      error: error.message || "Email ou mot de passe incorrect"
+      error: firebaseClientErrorToUserMessage(
+        error,
+        "Connexion impossible pour le moment. Vérifiez votre connexion et réessayez.",
+      ),
     };
   }
 };
@@ -103,9 +110,9 @@ export const logout = async () => {
   try {
     await signOut(auth);
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erreur déconnexion:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: firebaseClientErrorToUserMessage(error, "Impossible de vous déconnecter pour le moment.") };
   }
 };
 
@@ -119,9 +126,9 @@ export const resetPassword = async (email: string) => {
   try {
     await sendPasswordResetEmail(auth, email);
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erreur reset password:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: firebaseClientErrorToUserMessage(error, "Impossible d’envoyer l’e‑mail de réinitialisation.") };
   }
 };
 

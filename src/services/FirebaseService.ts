@@ -33,6 +33,7 @@ import {
   deleteObject
 } from 'firebase/storage';
 import { db, auth, storage } from '../config/firebase';
+import { firebaseClientErrorToUserMessage } from '../utils/firebaseUserFacingError';
 
 // Types
 export interface Event {
@@ -136,7 +137,7 @@ export const AuthService = {
       return { success: true, user: userProfile };
     } catch (error: any) {
       console.error('Erreur inscription:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   },
 
@@ -152,7 +153,7 @@ export const AuthService = {
       return { success: true, user: userProfile };
     } catch (error: any) {
       console.error('Erreur connexion:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   },
 
@@ -163,7 +164,7 @@ export const AuthService = {
       return { success: true };
     } catch (error: any) {
       console.error('Erreur déconnexion:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   },
 
@@ -190,7 +191,7 @@ export const AuthService = {
       return { success: true };
     } catch (error: any) {
       console.error('Erreur réinitialisation:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   },
 
@@ -218,7 +219,7 @@ export const EventService = {
       return { success: true, id: docRef.id };
     } catch (error: any) {
       console.error('Erreur création événement:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   },
 
@@ -277,7 +278,7 @@ export const EventService = {
       return { success: true };
     } catch (error: any) {
       console.error('Erreur mise à jour événement:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   },
 
@@ -290,7 +291,7 @@ export const EventService = {
       return { success: true };
     } catch (error: any) {
       console.error('Erreur suppression événement:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   },
 
@@ -326,7 +327,7 @@ export const EventService = {
       return { success: true };
     } catch (error: any) {
       console.error('Erreur incrémentation participants:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   }
 };
@@ -434,7 +435,7 @@ export const TicketService = {
       return { success: true, ticket };
     } catch (error: any) {
       console.error('Erreur vérification billet:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   },
 
@@ -449,7 +450,7 @@ export const TicketService = {
       return { success: true };
     } catch (error: any) {
       console.error('Erreur annulation billet:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   }
 };
@@ -471,7 +472,7 @@ export const TransactionService = {
       return { success: true, id: docRef.id };
     } catch (error: any) {
       console.error('Erreur création transaction:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   },
 
@@ -493,7 +494,7 @@ export const TransactionService = {
       return { success: true };
     } catch (error: any) {
       console.error('Erreur mise à jour transaction:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   },
 
@@ -568,7 +569,7 @@ export const StorageService = {
       return { success: true };
     } catch (error: any) {
       console.error('Erreur suppression image:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: firebaseClientErrorToUserMessage(error) };
     }
   }
 };

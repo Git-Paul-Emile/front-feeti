@@ -1,1 +1,0 @@
-import{a as o}from"./index-B1n8SbBT.js";import{L as e}from"./LeisureCategoryPage-DXTHOHTy.js";function t(r){return o.jsx(e,{categorySlug:"loisirs",pageTitle:"Loisirs",heroBg:"https://images.unsplash.com/photo-1529494792912-8ae2f7e8e1e5?w=1200&h=800&fit=crop"})}export{t as LoisirsPage};

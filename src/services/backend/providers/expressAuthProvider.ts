@@ -1,8 +1,13 @@
 import {
   createUserWithEmailAndPassword,
   EmailAuthProvider,
+  getAdditionalUserInfo,
+  GoogleAuthProvider,
   onAuthStateChanged,
   reauthenticateWithCredential,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signInWithEmailAndPassword,
   signOut,
   updateEmail,
@@ -22,6 +27,11 @@ import type { AuthProvider, AuthStateListener } from "../types";
 function rethrowUserFacing(e: unknown): never {
   throw new Error(firebaseClientErrorToUserMessage(e));
 }
+
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: "select_account" });
+const PENDING_GOOGLE_TOKEN_KEY = "feeti2_google_pending_token";
+const PENDING_GOOGLE_REDIRECT_KEY = "feeti2_google_redirect_pending";
 
 export class ExpressAuthProvider implements AuthProvider {
   readonly mode = "express" as const;
@@ -81,7 +91,90 @@ export class ExpressAuthProvider implements AuthProvider {
     }
   }
 
+  async startGoogleAuth() {
+    try {
+      // Consommer d'abord un éventuel résultat de redirect précédent
+      const redirectResult = await getRedirectResult(auth);
+      if (redirectResult) {
+        const info = getAdditionalUserInfo(redirectResult);
+        const idToken = await redirectResult.user.getIdToken();
+
+        if (info?.isNewUser) {
+          window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, idToken);
+          window.sessionStorage.removeItem(PENDING_GOOGLE_REDIRECT_KEY);
+          return {
+            requiresCompletion: true,
+            prefill: {
+              name: redirectResult.user.displayName ?? undefined,
+              email: redirectResult.user.email ?? undefined,
+            },
+          };
+        }
+
+        const user = await AuthAPI.loginProfile(idToken);
+        window.sessionStorage.removeItem(PENDING_GOOGLE_REDIRECT_KEY);
+        return { requiresCompletion: false, user };
+      }
+
+      // Essayer d'abord la popup
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const info = getAdditionalUserInfo(result);
+        const idToken = await result.user.getIdToken();
+
+        if (info?.isNewUser) {
+          window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, idToken);
+          return {
+            requiresCompletion: true,
+            prefill: {
+              name: result.user.displayName ?? undefined,
+              email: result.user.email ?? undefined,
+            },
+          };
+        }
+
+        const user = await AuthAPI.loginProfile(idToken);
+        return { requiresCompletion: false, user };
+      } catch (popupError: unknown) {
+        const errorCode = (popupError as { code?: string }).code;
+        
+        // Si la popup est bloquée ou fermée, fallback sur la redirection
+        if (
+          errorCode === "auth/popup-blocked" ||
+          errorCode === "auth/popup-closed-by-user" ||
+          errorCode === "auth/cancelled-popup-request"
+        ) {
+          console.log("Popup bloquée ou fermée, passage à la redirection Google...");
+          window.sessionStorage.setItem(PENDING_GOOGLE_REDIRECT_KEY, "1");
+          await signInWithRedirect(auth, googleProvider);
+          // La redirection va recharger la page, donc ce return n'est pas atteint
+          return { requiresCompletion: false };
+        }
+
+        // Autres erreurs : relancer
+        throw popupError;
+      }
+    } catch (e) {
+      rethrowUserFacing(e);
+    }
+  }
+
+  async completeGoogleRegistration(data: Omit<RegisterData, "email" | "password">): Promise<AuthUser> {
+    const idToken = window.sessionStorage.getItem(PENDING_GOOGLE_TOKEN_KEY);
+    if (!idToken) {
+      throw new Error("Session Google expirée. Relancez l'inscription Google.");
+    }
+    try {
+      const user = await AuthAPI.registerProfile(data, idToken);
+      window.sessionStorage.removeItem(PENDING_GOOGLE_TOKEN_KEY);
+      return user;
+    } catch (e) {
+      rethrowUserFacing(e);
+    }
+  }
+
   async logout(): Promise<void> {
+    localStorage.removeItem("accessToken");
     await signOut(auth);
   }
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { SEO } from '../SEO';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -96,6 +97,14 @@ export function EstablishmentDetailPage({ onBack, establishmentId }: Establishme
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO
+        title={item?.name || 'Établissement'}
+        description={item?.description?.slice(0, 160) || 'Découvrez cet établissement sur Feeti Loisirs.'}
+        url={`https://feeti.io/leisure/establishment/${establishmentId}`}
+        image={item?.image || undefined}
+        type="article"
+        keywords={item?.name ? `${item.name}, ${item.category || 'loisirs'}, afrique, feeti` : 'loisirs afrique feeti'}
+      />
       {/* Hero image */}
       <div className="relative h-[480px] overflow-hidden">
         <ImageWithFallback src={item.image} alt={item.name} className="w-full h-full object-cover" />

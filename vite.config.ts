@@ -1,12 +1,124 @@
 
   import { defineConfig } from 'vite';
   import react from '@vitejs/plugin-react-swc';
+  import sitemap from 'vite-plugin-sitemap';
+  import { VitePWA } from 'vite-plugin-pwa';
   import path from 'path';
+  import { webcrypto } from 'crypto';
+
+  // Polyfill required by serialize-javascript (workbox dep) in some Node 18 CJS contexts
+  if (typeof (globalThis as any).crypto === 'undefined') {
+    (globalThis as any).crypto = webcrypto;
+  }
 
   const FRONTEND_PORT = 3000;
 
   export default defineConfig(() => ({
-    plugins: [react()],
+    plugins: [
+      react(),
+      sitemap({
+        hostname: 'https://feeti.io',
+        outDir: 'build',
+        dynamicRoutes: [
+          '/',
+          '/events',
+          '/live',
+          '/replay',
+          '/blog',
+          '/deals',
+          '/deals/list',
+          '/leisure',
+          '/leisure/hotels',
+          '/leisure/restaurants',
+          '/leisure/sports',
+          '/leisure/envolee',
+          '/leisure/loisirs',
+          '/leisure/bar-night',
+          '/legal/terms',
+          '/legal/privacy',
+          '/legal/cookies',
+          '/legal/notice',
+          '/legal/refund',
+          '/legal/faq',
+          '/login',
+        ],
+        changefreq: 'weekly',
+        priority: 0.7,
+        lastmod: new Date().toISOString().split('T')[0],
+      }),
+      VitePWA({
+        strategies: 'injectManifest', // Vite compile le SW, pas workbox-build (évite bug serialize-javascript)
+        srcDir: 'src',
+        filename: 'sw.ts',
+        registerType: 'prompt',
+        injectRegister: 'auto',
+        includeAssets: ['icons/*.png', 'offline.html'],
+
+        manifest: {
+          name: 'Fééti — Billetterie & Streaming',
+          short_name: 'Fééti',
+          description: 'Achetez vos billets, accédez aux lives et replays d\'événements avec Fééti.',
+          theme_color: '#811AEC',
+          background_color: '#0f0f1a',
+          display: 'standalone',
+          display_override: ['window-controls-overlay', 'standalone'],
+          start_url: '/',
+          scope: '/',
+          lang: 'fr',
+          orientation: 'portrait-primary',
+          categories: ['entertainment', 'lifestyle'],
+          icons: [
+            { src: '/icons/icon-72.png',  sizes: '72x72',   type: 'image/png' },
+            { src: '/icons/icon-96.png',  sizes: '96x96',   type: 'image/png' },
+            { src: '/icons/icon-128.png', sizes: '128x128', type: 'image/png' },
+            { src: '/icons/icon-144.png', sizes: '144x144', type: 'image/png' },
+            { src: '/icons/icon-152.png', sizes: '152x152', type: 'image/png' },
+            { src: '/icons/icon-180.png', sizes: '180x180', type: 'image/png' },
+            { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/icons/icon-384.png', sizes: '384x384', type: 'image/png' },
+            {
+              src: '/icons/icon-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any maskable',
+            },
+          ],
+          shortcuts: [
+            {
+              name: 'Événements',
+              short_name: 'Events',
+              url: '/events',
+              icons: [{ src: '/icons/icon-96.png', sizes: '96x96' }],
+            },
+            {
+              name: 'Live',
+              short_name: 'Live',
+              url: '/live',
+              icons: [{ src: '/icons/icon-96.png', sizes: '96x96' }],
+            },
+            {
+              name: 'Mes billets',
+              short_name: 'Billets',
+              url: '/dashboard/tickets',
+              icons: [{ src: '/icons/icon-96.png', sizes: '96x96' }],
+            },
+          ],
+          screenshots: [],
+        },
+
+        injectManifest: {
+          // Précache tous les assets buildés
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          // Ne pas précacher les assets trop lourds (> 2 MB)
+          maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
+        },
+
+        devOptions: {
+          enabled: true,
+          type: 'module',
+        },
+      }),
+    ],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
@@ -24,6 +136,7 @@
         'figma:asset/f3274229ec54609ce8242bd3168cea0902f3a40f.png': path.resolve(__dirname, './src/assets/f3274229ec54609ce8242bd3168cea0902f3a40f.png'),
         'figma:asset/f223555fb04d576a7a9ff4191817d63db7d110a8.png': path.resolve(__dirname, './src/assets/f223555fb04d576a7a9ff4191817d63db7d110a8.png'),
         'figma:asset/ecdcdfb738ab87207140eebbdf979563289c777e.png': path.resolve(__dirname, './src/assets/ecdcdfb738ab87207140eebbdf979563289c777e.png'),
+        'figma:asset/e96614b65f7e58769d2031b40b9b6a38d0f202d9.png': path.resolve(__dirname, './src/assets/e96614b65f7e58769d2031b40b9b6a38d0f222d9.png'),
         'figma:asset/e96614b65f7e58769d2031b40b9b6a38d0f222d9.png': path.resolve(__dirname, './src/assets/e96614b65f7e58769d2031b40b9b6a38d0f222d9.png'),
         'figma:asset/d364f6cec0d06c49d6f4152f5507453e66032922.png': path.resolve(__dirname, './src/assets/d364f6cec0d06c49d6f4152f5507453e66032922.png'),
         'figma:asset/c4669ce83c7f985ad0438c0f91e33ad2940e8dfb.png': path.resolve(__dirname, './src/assets/c4669ce83c7f985ad0438c0f91e33ad2940e8dfb.png'),

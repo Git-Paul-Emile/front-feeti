@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { SEO } from '../SEO';
 import { ArrowLeft, Calendar, Clock, User, Tag, Eye, MessageCircle, Share2, Heart, BookOpen } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -117,6 +118,14 @@ export function BlogDetailPage({ postId, onBack, onNavigate }: BlogDetailPagePro
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO
+        title={post?.title || 'Article'}
+        description={post?.excerpt?.slice(0, 160) || 'Lisez cet article sur le blog Feeti.'}
+        url={`https://feeti.io/blog/${postId}`}
+        image={post?.image || undefined}
+        type="article"
+        keywords={post?.tags ? parseTags(post.tags).join(', ') : 'blog feeti, actualités'}
+      />
       {/* Hero */}
       <div className="relative h-[400px] md:h-[500px] overflow-hidden">
         <ImageWithFallback src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" />

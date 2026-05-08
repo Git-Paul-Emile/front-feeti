@@ -1,4 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { isEventPromotionActive } from '../PromotionBadge';
+import { SEO } from '../SEO';
 import { Button } from '../ui/button';
 import { ArrowLeft, Play, Pause, Volume2, Settings, Maximize, Share, MapPin, Video, Music, Brush, Star, Users, Clock } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
@@ -24,7 +26,12 @@ interface Event {
   attendees: number;
   maxAttendees: number;
   isLive: boolean;
+  isFeatured?: boolean;
   organizer: string;
+  promotionType?: string | null;
+  promotionStatus?: string | null;
+  promotionStartDate?: string | null;
+  promotionEndDate?: string | null;
 }
 
 interface LiveEventsPageProps {
@@ -214,6 +221,20 @@ export function LiveEventsPage({
     });
   }, [selectedCategory, liveEvents]);
 
+  const featuredFilteredEvents = useMemo(() =>
+    filteredEvents.filter(e =>
+      e.isFeatured || (isEventPromotionActive(e) && e.promotionType === 'OR')
+    ),
+    [filteredEvents]
+  );
+
+  const nonFeaturedFilteredEvents = useMemo(() =>
+    filteredEvents.filter(e =>
+      !e.isFeatured && !(isEventPromotionActive(e) && e.promotionType === 'OR')
+    ),
+    [filteredEvents]
+  );
+
   // Category selection handler avec scroll automatique
   const handleCategoryClick = (categoryLabel: string) => {
     if (selectedCategory === categoryLabel) {
@@ -275,8 +296,8 @@ export function LiveEventsPage({
     const scrollDistance = cardWidth + gap;
 
     const currentIndex = rowSliderIndices[rowIndex] || 0;
-    const maxIndex = Math.max(0, filteredEvents.length - cardsPerView);
-    
+    const maxIndex = Math.max(0, featuredFilteredEvents.length - cardsPerView);
+
     let newIndex;
     if (direction === 'next') {
       newIndex = Math.min(currentIndex + 1, maxIndex);
@@ -304,9 +325,9 @@ export function LiveEventsPage({
   const canScrollNext = useCallback((rowIndex: number) => {
     const currentIndex = rowSliderIndices[rowIndex] || 0;
     const cardsPerView = getCardsPerView();
-    const maxIndex = Math.max(0, filteredEvents.length - cardsPerView);
+    const maxIndex = Math.max(0, featuredFilteredEvents.length - cardsPerView);
     return currentIndex < maxIndex;
-  }, [rowSliderIndices, filteredEvents.length, getCardsPerView]);
+  }, [rowSliderIndices, featuredFilteredEvents.length, getCardsPerView]);
 
   // Réinitialiser les indices lors du redimensionnement
   const handleResize = useCallback(() => {
@@ -372,6 +393,12 @@ export function LiveEventsPage({
 
   return (
     <div className="bg-black min-h-screen text-white live-events-page-spacing live-events-page">
+      <SEO
+        title="Live — Streaming en direct"
+        description="Regardez les événements en streaming live sur Feeti. Concerts, festivals, conférences en direct depuis l'Afrique."
+        url="https://feeti.io/live"
+        keywords="live streaming afrique, concerts en direct, événements live, feeti live"
+      />
       {/* Video Player Section */}
       <div className="px-4 md:px-[6.25%] pt-8 mb-8 md:mb-12">
         <div className="relative w-full max-w-5xl mx-auto">
@@ -598,7 +625,7 @@ export function LiveEventsPage({
             <div className="text-white/60 text-lg mb-4">
               Aucun événement en direct trouvé {selectedCategory && `pour la catégorie "${selectedCategory}"`}
             </div>
-            <button 
+            <button
               onClick={() => setSelectedCategory('')}
               className="bg-[#cdff71] text-[#000441] px-6 py-3 rounded-full font-medium hover:bg-[#cdff71]/90 transition-colors"
             >
@@ -606,148 +633,170 @@ export function LiveEventsPage({
             </button>
           </div>
         ) : (
-        Array.from({ length: 3 }).map((_, rowIndex) => (
-          <div key={rowIndex} className="mb-6 md:mb-8">
-            {/* Row Header with Navigation */}
-            <div className="flex items-center justify-between mb-4 live-events-row-header">
-              <h3 className="text-white text-lg md:text-xl font-semibold live-events-row-title">
-                {rowIndex === 0 ? 'Tendances Live' : rowIndex === 1 ? 'Concerts & Musique' : 'Art & Culture'}
-              </h3>
-              
-              {/* Navigation Buttons - Desktop Only */}
-              <div className="hidden md:flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => scrollToCard(rowIndex, 'prev')}
-                  disabled={!canScrollPrev(rowIndex)}
-                  className="w-10 h-10 rounded-full bg-[#28262d] hover:bg-[#28262d]/80 text-white live-events-row-nav"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => scrollToCard(rowIndex, 'next')}
-                  disabled={!canScrollNext(rowIndex)}
-                  className="w-10 h-10 rounded-full bg-[#28262d] hover:bg-[#28262d]/80 text-white live-events-row-nav"
-                >
-                  <ArrowLeft className="w-5 h-5 rotate-180" />
-                </Button>
-              </div>
-            </div>
+          <>
+            {/* ── Slider : événements à la une ── */}
+            {featuredFilteredEvents.length > 0 && (
+              <div className="mb-8 md:mb-10">
+                <div className="flex items-center justify-between mb-4 live-events-row-header">
+                  <h3 className="text-[#cdff71] text-lg md:text-xl font-semibold live-events-row-title">
+                    À la une
+                  </h3>
+                  <div className="hidden md:flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => scrollToCard(0, 'prev')}
+                      disabled={!canScrollPrev(0)}
+                      className="w-10 h-10 rounded-full bg-[#28262d] hover:bg-[#28262d]/80 text-white live-events-row-nav"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => scrollToCard(0, 'next')}
+                      disabled={!canScrollNext(0)}
+                      className="w-10 h-10 rounded-full bg-[#28262d] hover:bg-[#28262d]/80 text-white live-events-row-nav"
+                    >
+                      <ArrowLeft className="w-5 h-5 rotate-180" />
+                    </Button>
+                  </div>
+                </div>
 
-            {/* Events Slider Container */}
-            <div className="relative">
-              <div 
-                ref={(el) => rowSliderRefs.current[rowIndex] = el}
-                className="flex gap-4 md:gap-6 overflow-x-auto pb-4 scrollbar-hide live-events-scroll live-events-smooth-scroll live-events-row-container live-events-row-optimized"
-                style={{
-                  scrollBehavior: 'smooth',
-                  WebkitOverflowScrolling: 'touch',
-                  scrollSnapType: 'x proximity',
-                  overscrollBehaviorX: 'contain'
-                }}
-              >
-                {filteredEvents.map((event, eventIndex) => (
-                  <div
-                    key={`${rowIndex}-${eventIndex}`}
-                    className="flex-none w-[280px] md:w-[320px] bg-gray-900 rounded-2xl overflow-hidden live-events-row-card cursor-pointer"
-                    style={{ scrollSnapAlign: 'center' }}
-                    onClick={() => onStreamWatch(event.id)}
-                  >
-                    <div className="relative h-[183px] md:h-[200px]">
-                      <ImageWithFallback
-                        src={event.image}
-                        alt={event.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                      
-                      {/* Live Badge */}
-                      <div className="absolute top-3 left-3">
-                        <div className="bg-[#DE0035] text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 live-events-badge-pulse">
-                          <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                          LIVE
+                <div
+                  ref={(el) => { rowSliderRefs.current[0] = el; }}
+                  className="flex gap-4 md:gap-6 overflow-x-auto pb-4 scrollbar-hide live-events-scroll live-events-smooth-scroll live-events-row-container live-events-row-optimized"
+                  style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x proximity', overscrollBehaviorX: 'contain' }}
+                >
+                  {featuredFilteredEvents.map((event, idx) => (
+                    <div
+                      key={`featured-${idx}`}
+                      className="flex-none w-[280px] md:w-[320px] bg-gray-900 rounded-2xl overflow-hidden live-events-row-card cursor-pointer ring-2 ring-[#cdff71]/40"
+                      style={{ scrollSnapAlign: 'center' }}
+                      onClick={() => onStreamWatch(event.id)}
+                    >
+                      <div className="relative h-[183px] md:h-[200px]">
+                        <ImageWithFallback src={event.image} alt={event.title} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                        <div className="absolute top-3 left-3 flex gap-2">
+                          <div className="bg-[#DE0035] text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 live-events-badge-pulse">
+                            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                            LIVE
+                          </div>
+                          <div className="bg-[#cdff71] text-[#000441] px-2 py-1 rounded-full text-xs font-bold">
+                            À LA UNE
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4 md:p-6">
+                        <h3 className="font-bold text-white mb-2 line-clamp-2">{event.title}</h3>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-1">
+                              <Star className="w-4 h-4 text-[#FFCD1A] fill-current" />
+                              <span className="text-white font-semibold">4.6</span>
+                            </div>
+                            <span className="text-[#78828a] text-sm">{event.category}</span>
+                          </div>
+                          <div className="flex items-center space-x-1 text-[#cdff71] text-sm">
+                            <Users className="w-4 h-4" />
+                            <span>{event.attendees}</span>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between">
+                          <div className="flex items-center space-x-1 text-gray-400 text-sm">
+                            <Clock className="w-4 h-4" />
+                            <span>{event.time}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            className="bg-[#DE0035] hover:bg-[#DE0035]/80 text-white px-3 py-1 rounded-full text-xs font-medium live-events-join-btn"
+                            onClick={(e) => { e.stopPropagation(); onStreamWatch(event.id); }}
+                          >
+                            <Play className="w-3 h-3 mr-1" />
+                            Voir le Live
+                          </Button>
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="p-4 md:p-6">
-                      <h3 className="font-bold text-white mb-2 line-clamp-2">
-                        {event.title}
-                      </h3>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                  ))}
+                </div>
+
+                {/* Mobile indicators */}
+                <div className="flex md:hidden justify-center mt-4 gap-1">
+                  {Array.from({ length: Math.ceil(featuredFilteredEvents.length / getCardsPerView()) }).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setRowSliderIndices(prev => ({ ...prev, [0]: i }));
+                        const slider = rowSliderRefs.current[0];
+                        if (slider) slider.scrollTo({ left: i * (280 + 16), behavior: 'smooth' });
+                      }}
+                      className={`w-2 h-2 rounded-full live-events-row-indicator ${(rowSliderIndices[0] || 0) === i ? 'bg-[#cdff71] w-6 active' : 'bg-gray-600 hover:bg-gray-500'}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Grid : autres événements (non à la une) ── */}
+            {nonFeaturedFilteredEvents.length > 0 && (
+              <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <h3 className="text-white text-lg md:text-xl font-semibold">Autres événements live</h3>
+                  <span className="text-white/50 text-sm">({nonFeaturedFilteredEvents.length})</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                  {nonFeaturedFilteredEvents.map((event, idx) => (
+                    <div
+                      key={`nonfeatured-${idx}`}
+                      className="bg-gray-900 rounded-2xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-white/20 transition-all"
+                      onClick={() => onStreamWatch(event.id)}
+                    >
+                      <div className="relative h-[160px]">
+                        <ImageWithFallback src={event.image} alt={event.title} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                        <div className="absolute top-3 left-3">
+                          <div className="bg-[#DE0035] text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 live-events-badge-pulse">
+                            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                            LIVE
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-bold text-white mb-2 line-clamp-2">{event.title}</h3>
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-1">
                             <Star className="w-4 h-4 text-[#FFCD1A] fill-current" />
-                            <span className="text-white font-semibold">4.6</span>
+                            <span className="text-white text-sm font-semibold">4.6</span>
+                            <span className="text-[#78828a] text-sm ml-1">{event.category}</span>
                           </div>
-                          <span className="text-[#78828a] text-sm">{event.category}</span>
+                          <div className="flex items-center space-x-1 text-[#cdff71] text-sm">
+                            <Users className="w-4 h-4" />
+                            <span>{event.attendees}</span>
+                          </div>
                         </div>
-                        
-                        <div className="flex items-center space-x-1 text-[#cdff71] text-sm">
-                          <Users className="w-4 h-4" />
-                          <span>{event.attendees}</span>
+                        <div className="mt-3 flex items-center justify-between">
+                          <div className="flex items-center space-x-1 text-gray-400 text-sm">
+                            <Clock className="w-4 h-4" />
+                            <span>{event.time}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            className="bg-[#DE0035] hover:bg-[#DE0035]/80 text-white px-3 py-1 rounded-full text-xs font-medium"
+                            onClick={(e) => { e.stopPropagation(); onStreamWatch(event.id); }}
+                          >
+                            <Play className="w-3 h-3 mr-1" />
+                            Voir le Live
+                          </Button>
                         </div>
-                      </div>
-                      
-                      <div className="mt-3 flex items-center justify-between">
-                        <div className="flex items-center space-x-1 text-gray-400 text-sm">
-                          <Clock className="w-4 h-4" />
-                          <span>{event.time}</span>
-                        </div>
-                        
-                        <Button
-                          size="sm"
-                          className="bg-[#DE0035] hover:bg-[#DE0035]/80 text-white px-3 py-1 rounded-full text-xs font-medium live-events-join-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onStreamWatch(event.id);
-                          }}
-                        >
-                          <Play className="w-3 h-3 mr-1" />
-                          Voir le Live
-                        </Button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-
-              {/* Mobile Navigation Indicators */}
-              <div className="flex md:hidden justify-center mt-4 gap-1">
-                {Array.from({ length: Math.ceil(filteredEvents.length / getCardsPerView()) }).map((_, indicatorIndex) => (
-                  <button
-                    key={indicatorIndex}
-                    onClick={() => {
-                      setRowSliderIndices(prev => ({
-                        ...prev,
-                        [rowIndex]: indicatorIndex
-                      }));
-                      const slider = rowSliderRefs.current[rowIndex];
-                      if (slider) {
-                        const cardWidth = 280;
-                        const gap = 16;
-                        const scrollDistance = cardWidth + gap;
-                        slider.scrollTo({
-                          left: indicatorIndex * scrollDistance,
-                          behavior: 'smooth'
-                        });
-                      }
-                    }}
-                    className={`w-2 h-2 rounded-full live-events-row-indicator ${
-                      (rowSliderIndices[rowIndex] || 0) === indicatorIndex
-                        ? 'bg-[#cdff71] w-6 active'
-                        : 'bg-gray-600 hover:bg-gray-500'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        ))
+            )}
+          </>
         )}
       </div>
     </div>

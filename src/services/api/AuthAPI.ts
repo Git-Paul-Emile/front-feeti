@@ -76,6 +76,9 @@ const AuthAPI = {
         role: data.role,
         interests: data.interests,
       });
+      if (res.data.data.accessToken) {
+        localStorage.setItem("accessToken", res.data.data.accessToken);
+      }
       const user = res.data.data.user;
       return { ...user, uid: user.uid || user.id || "" };
     } catch (e) {
@@ -91,6 +94,9 @@ const AuthAPI = {
       const res = await api.post<{ data: { user: AuthUser & { id?: string }, accessToken: string } }>("/api/auth/firebase/login", {
         idToken,
       });
+      if (res.data.data.accessToken) {
+        localStorage.setItem("accessToken", res.data.data.accessToken);
+      }
       const user = res.data.data.user;
       return { ...user, uid: user.uid || user.id || "" };
     } catch (e) {

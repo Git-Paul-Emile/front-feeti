@@ -1,4 +1,5 @@
 import { ArrowLeft, Shield, Lock, Eye, Database, Mail, Users, Clock, Globe, Baby } from 'lucide-react';
+import { SEO } from '../SEO';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +9,12 @@ export function PrivacyPolicyPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50">
+      <SEO
+        title="Politique de Confidentialité"
+        description="Découvrez comment Feeti collecte, utilise et protège vos données personnelles conformément au RGPD et aux lois africaines applicables."
+        url="https://feeti.io/legal/privacy"
+        keywords="confidentialité feeti, données personnelles, RGPD, protection données"
+      />
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <Button variant="ghost" onClick={() => navigate(-1)} className="mb-2">

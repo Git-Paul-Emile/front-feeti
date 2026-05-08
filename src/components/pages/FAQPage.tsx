@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SEO } from '../SEO';
 import { ArrowLeft, HelpCircle, Search, ChevronDown, ChevronUp, Ticket, CreditCard, Calendar, Shield, Users, Smartphone } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
@@ -54,6 +55,12 @@ export function FAQPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50">
+      <SEO
+        title="FAQ — Questions Fréquentes"
+        description="Trouvez les réponses à vos questions sur Feeti : achat de billets, remboursements, streaming, contrôle d'accès et gestion de compte."
+        url="https://feeti.io/legal/faq"
+        keywords="FAQ feeti, aide, questions fréquentes, support billetterie"
+      />
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <Button variant="ghost" onClick={() => navigate(-1)} className="mb-2">

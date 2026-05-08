@@ -1,4 +1,5 @@
 import { ArrowLeft, FileText, UserCheck, ShoppingCart, Video, Scale, AlertTriangle, Ban, XCircle, Mail } from 'lucide-react';
+import { SEO } from '../SEO';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +9,12 @@ export function TermsOfServicePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50">
+      <SEO
+        title="Conditions Générales d'Utilisation"
+        description="Consultez les conditions générales d'utilisation de Feeti. Règles d'accès à la plateforme de billetterie, streaming et loisirs en Afrique."
+        url="https://feeti.io/legal/terms"
+        keywords="CGU feeti, conditions utilisation, billetterie afrique"
+      />
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto px-4 py-4">

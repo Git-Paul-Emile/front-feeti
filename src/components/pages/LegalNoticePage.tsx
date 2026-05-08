@@ -1,4 +1,5 @@
 import { ArrowLeft, Building2, Server, User, Copyright, Link as LinkIcon, AlertTriangle, Scale, Mail } from 'lucide-react';
+import { SEO } from '../SEO';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +9,12 @@ export function LegalNoticePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-50">
+      <SEO
+        title="Mentions Légales"
+        description="Mentions légales de Feeti : informations sur l'éditeur, l'hébergeur et les droits de propriété intellectuelle de la plateforme."
+        url="https://feeti.io/legal/notice"
+        keywords="mentions légales feeti, éditeur, hébergeur"
+      />
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <Button variant="ghost" onClick={() => navigate(-1)} className="mb-2">

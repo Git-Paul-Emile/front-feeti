@@ -347,38 +347,12 @@ function Logo({ onNavigate }: { onNavigate: (page: string, params?: any) => void
   return (
     <button
       onClick={() => onNavigate('home')}
-      className="absolute h-[69px] left-[81px] top-[82px] w-[276px] hover:opacity-80 transition-opacity duration-200" 
+      className="absolute h-[28px] left-[81px] top-[108px] w-[112px] hover:opacity-80 transition-opacity duration-200"
       data-name="logo"
     >
-      {/* Logo Icon */}
-      <div className="absolute bottom-0 left-[73.81%] right-0 top-0" data-name="Group">
-        <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 73 69">
-          <g id="Group">
-            <path d={svgPaths.p121ed80} fill="white" id="Vector" />
-            <path d={svgPaths.p3cd33800} fill="#811AEC" id="Vector_2" />
-            <path d={svgPaths.p3cb18100} fill="#F1C519" id="Vector_3" />
-            <path d={svgPaths.p5e42700} fill="#E43962" id="Vector_4" />
-            <path d={svgPaths.p2c04e100} fill="#16BDA0" id="Vector_5" />
-            <path d={svgPaths.p16f13700} fill="#811AEC" id="Vector_6" />
-            <path d={svgPaths.p3276d900} fill="#F1C519" id="Vector_7" />
-            <path d={svgPaths.p381ee072} fill="#E43962" id="Vector_8" />
-            <path d={svgPaths.p1d65a100} fill="#16BDA0" id="Vector_9" />
-          </g>
-        </svg>
-      </div>
-      
-      {/* Logo Text */}
-      <div className="absolute bottom-[8.01%] left-0 right-[28.1%] top-[8.01%]" data-name="Group">
-        <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 199 58">
-          <g id="Group">
-            <path d={svgPaths.p3e0edf00} fill="white" id="Vector" />
-            <path d={svgPaths.pa7c9600} fill="white" id="Vector_2" />
-            <path d={svgPaths.p3e8bf480} fill="white" id="Vector_3" />
-            <path d={svgPaths.p3154e300} fill="white" id="Vector_4" />
-            <path d={svgPaths.p1bf16c00} fill="white" id="Vector_5" />
-          </g>
-        </svg>
-      </div>
+      <span className="inline-flex items-center justify-center bg-white rounded-lg px-2 py-1 h-full">
+        <img src="/logo.png" alt="Feeti" className="h-full w-auto object-contain" />
+      </span>
     </button>
   );
 }
@@ -554,26 +528,9 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
               onClick={() => onNavigate('home')}
               className="hover:opacity-80 transition-opacity duration-200"
             >
-              <svg className="w-[180px] h-[50px]" fill="none" viewBox="0 0 276 69">
-                <g id="Group">
-                  <path d={svgPaths.p121ed80} fill="white" id="Vector" />
-                  <path d={svgPaths.p3cd33800} fill="#811AEC" id="Vector_2" />
-                  <path d={svgPaths.p3cb18100} fill="#F1C519" id="Vector_3" />
-                  <path d={svgPaths.p5e42700} fill="#E43962" id="Vector_4" />
-                  <path d={svgPaths.p2c04e100} fill="#16BDA0" id="Vector_5" />
-                  <path d={svgPaths.p16f13700} fill="#811AEC" id="Vector_6" />
-                  <path d={svgPaths.p3276d900} fill="#F1C519" id="Vector_7" />
-                  <path d={svgPaths.p381ee072} fill="#E43962" id="Vector_8" />
-                  <path d={svgPaths.p1d65a100} fill="#16BDA0" id="Vector_9" />
-                </g>
-                <g id="Group_2">
-                  <path d={svgPaths.p3e0edf00} fill="white" id="Vector_10" />
-                  <path d={svgPaths.pa7c9600} fill="white" id="Vector_11" />
-                  <path d={svgPaths.p3e8bf480} fill="white" id="Vector_12" />
-                  <path d={svgPaths.p3154e300} fill="white" id="Vector_13" />
-                  <path d={svgPaths.p1bf16c00} fill="white" id="Vector_14" />
-                </g>
-              </svg>
+              <span className="inline-flex items-center justify-center bg-white rounded-lg px-3 py-1">
+                <img src="/logo.png" alt="Feeti" className="w-[96px] h-auto object-contain" />
+              </span>
             </button>
 
             {/* Modern Social Media Icons */}

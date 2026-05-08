@@ -64,10 +64,20 @@ interface OrganizerEventDashboardProps {
 
 interface EventStats {
   totalRevenue: number;
+  totalTVA: number;
+  totalCommission: number;
+  netOrganisateur: number;
   ticketsSold: number;
   ticketsRemaining: number;
   ticketsUsed: number;
   ticketsCancelled: number;
+}
+
+function decomposeTicketFinancier(prixTTC: number) {
+  const prixHT = Math.round((prixTTC * 10000) / 11800);
+  const tva = prixTTC - prixHT;
+  const commission = Math.round((prixTTC * 1000) / 10000);
+  return { tva, commission, net: prixTTC - tva - commission };
 }
 
 export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDashboard }: OrganizerEventDashboardProps) {
@@ -93,9 +103,19 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
     const sold = ticketList.length;
     const used = ticketList.filter(t => t.status === 'used').length;
     const cancelled = ticketList.filter(t => t.status === 'expired').length;
-    const revenue = ticketList.reduce((sum, t) => sum + t.price, 0);
+    let revenue = 0, totalTVA = 0, totalCommission = 0, netOrganisateur = 0;
+    for (const t of ticketList) {
+      const { tva, commission, net } = decomposeTicketFinancier(t.price);
+      revenue += t.price;
+      totalTVA += tva;
+      totalCommission += commission;
+      netOrganisateur += net;
+    }
     return {
       totalRevenue: revenue,
+      totalTVA,
+      totalCommission,
+      netOrganisateur,
       ticketsSold: sold,
       ticketsRemaining: event.maxAttendees - event.attendees,
       ticketsUsed: used,
@@ -105,6 +125,9 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
 
   const [stats, setStats] = useState<EventStats>({
     totalRevenue: 0,
+    totalTVA: 0,
+    totalCommission: 0,
+    netOrganisateur: 0,
     ticketsSold: 0,
     ticketsRemaining: event.maxAttendees - event.attendees,
     ticketsUsed: 0,
@@ -244,13 +267,27 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-sm text-gray-500">Revenus Totaux</p>
-                  <p className="text-2xl font-bold text-green-600">{formatPrice(stats.totalRevenue)}</p>
+                  <p className="text-sm text-gray-500">Solde Perçu (SP)</p>
+                  <p className="text-2xl font-bold text-green-600">{formatPrice(stats.netOrganisateur)}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                   <DollarSign className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+              <div className="space-y-1 text-xs text-gray-500 border-t pt-2">
+                <div className="flex justify-between">
+                  <span>Revenus TTC</span>
+                  <span className="font-medium text-gray-700">{formatPrice(stats.totalRevenue)}</span>
+                </div>
+                <div className="flex justify-between text-orange-600">
+                  <span>— TVA (18%)</span>
+                  <span>-{formatPrice(stats.totalTVA)}</span>
+                </div>
+                <div className="flex justify-between text-red-600">
+                  <span>— Commission (10%)</span>
+                  <span>-{formatPrice(stats.totalCommission)}</span>
                 </div>
               </div>
             </CardContent>
@@ -324,20 +361,39 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <Card>
-              <CardHeader><CardTitle>Statistiques de Vente</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Ventilation Financière</CardTitle></CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                      <p className="text-sm text-gray-600">Revenu total</p>
-                      <p className="text-xl font-bold text-green-600">{formatPrice(stats.totalRevenue)}</p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                    <span className="text-gray-700 font-medium">Revenus Totaux TTC</span>
+                    <span className="font-bold text-gray-900">{formatPrice(stats.totalRevenue)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                    <div>
+                      <span className="text-orange-700 font-medium">— TVA (18%)</span>
+                      <p className="text-xs text-orange-500">Impôts collectés</p>
                     </div>
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm text-gray-600">Revenu moyen / billet</p>
-                      <p className="text-xl font-bold text-blue-600">
-                        {stats.ticketsSold > 0 ? formatPrice(Math.round(stats.totalRevenue / stats.ticketsSold)) : '—'}
-                      </p>
+                    <span className="font-bold text-orange-700">-{formatPrice(stats.totalTVA)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                    <div>
+                      <span className="text-red-700 font-medium">— Commission plateforme (10%)</span>
+                      <p className="text-xs text-red-500">Frais Feeti</p>
                     </div>
+                    <span className="font-bold text-red-700">-{formatPrice(stats.totalCommission)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border-2 border-green-400">
+                    <div>
+                      <span className="text-green-800 font-bold text-lg">= Solde Perçu (SP)</span>
+                      <p className="text-xs text-green-600">Net organisateur à percevoir</p>
+                    </div>
+                    <span className="text-2xl font-bold text-green-700">{formatPrice(stats.netOrganisateur)}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200 mt-2">
+                    <span className="text-blue-700">SP moyen / billet</span>
+                    <span className="font-bold text-blue-700">
+                      {stats.ticketsSold > 0 ? formatPrice(Math.round(stats.netOrganisateur / stats.ticketsSold)) : '—'}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <span className="text-gray-700">Taux de remplissage</span>

@@ -181,6 +181,7 @@ const WebScannerPage              = lazy(() => import('../components/pages/WebSc
 const FeetiNaFeetiAdminPage       = lazy(() => import('../components/pages/FeetiNaFeetiAdminPage').then(m => ({ default: m.FeetiNaFeetiAdminPage })));
 const UserProfilePage             = lazy(() => import('../components/pages/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
 const AdminAuditPage              = lazy(() => import('../components/pages/AdminAuditPage').then(m => ({ default: m.AdminAuditPage })));
+const GoogleCompletionPage        = lazy(() => import('../components/pages/GoogleCompletionPage').then(m => ({ default: m.GoogleCompletionPage })));
 
 // ── Correspondance page-name → route ─────────────────────────────────────────
 const PAGE_ROUTES: Record<string, string> = {
@@ -860,7 +861,7 @@ function OrganizerRoute() {
 function LoginRoute() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, register: registerUser } = useAuth();
+  const { login, register: registerUser, startGoogleAuth } = useAuth();
 
   const handleLogin = async (email: string, password: string) => {
     const user = await login(email, password);
@@ -888,10 +889,34 @@ function LoginRoute() {
     navigate(user.role === 'organizer' ? '/organizer' : '/', { replace: true });
   };
 
+  const handleGoogleLogin = async () => {
+    const result = await startGoogleAuth();
+    if (result.requiresCompletion) {
+      navigate('/login/google-complete', { state: { prefill: result.prefill }, replace: true });
+      return;
+    }
+    if (!result.user) throw new Error("Connexion Google impossible");
+    toast.success(`Bienvenue ${result.user.name} !`);
+    navigate(result.user.role === 'organizer' ? '/organizer' : '/dashboard', { replace: true });
+  };
+
+  const handleGoogleRegister = async () => {
+    const result = await startGoogleAuth();
+    if (result.requiresCompletion) {
+      navigate('/login/google-complete', { state: { prefill: result.prefill }, replace: true });
+      return;
+    }
+    if (!result.user) throw new Error("Inscription Google impossible");
+    toast.success(`Bienvenue ${result.user.name} !`);
+    navigate(result.user.role === 'organizer' ? '/organizer' : '/dashboard', { replace: true });
+  };
+
   return (
     <LoginPage
       onLogin={handleLogin}
       onRegister={handleRegister}
+      onGoogleLogin={handleGoogleLogin}
+      onGoogleRegister={handleGoogleRegister}
       onBack={() => navigate(-1)}
     />
   );
@@ -1009,6 +1034,7 @@ export function AppRoutes() {
         <Route path="/legal/faq"          element={<FAQPage />} />
         <Route path="/legal/:page"        element={<LegalRoute />} />
         <Route path="/login"              element={<LoginRoute />} />
+        <Route path="/login/google-complete" element={<GoogleCompletionPage />} />
 
         {/* Routes protégées — utilisateur connecté */}
         <Route element={<ProtectedRoute />}>

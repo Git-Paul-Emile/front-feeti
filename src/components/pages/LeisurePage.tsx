@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { SEO } from '../SEO';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
@@ -101,6 +102,12 @@ export function LeisurePage({ onNavigate: _onNavigate }: LeisurePageProps) {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Loisirs — Hôtels, Restaurants, Sports & Sorties"
+        description="Explorez les meilleurs hôtels, restaurants, activités sportives, bars et sorties en Afrique. La plateforme Feeti Loisirs réunit toutes vos envies en un seul endroit."
+        url="https://feeti.io/leisure"
+        keywords="loisirs afrique, hôtels, restaurants, sports, bien-être, sorties, bar, nightlife"
+      />
       {/* Hero Section */}
       <div className="relative h-[513px] overflow-hidden rounded-[12px] mx-[72px] mt-[141px]">
         <div

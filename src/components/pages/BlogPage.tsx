@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { SEO } from '../SEO';
 import { Search, Calendar, User, TrendingUp, Grid, List, BookOpen, Star, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -128,6 +129,12 @@ export function BlogPage({ onBack, onPostSelect, onNavigate, initialCategory = '
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO
+        title="Blog — Actualités & Culture"
+        description="Actualités culturelles, interviews d'artistes, conseils pour promoteurs et tout l'univers de l'événementiel africain sur le blog Feeti."
+        url="https://feeti.io/blog"
+        keywords="blog événementiel afrique, actualités culturelles, interviews artistes, promoteurs"
+      />
       {/* Header */}
       <div className="bg-gradient-to-r from-[#4338ca] to-[#059669] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

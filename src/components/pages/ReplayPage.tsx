@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { SEO } from '../SEO';
 import { Play, Star, Calendar, Clock, ChevronLeft, ChevronRight, ArrowLeft, X, Info } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -411,6 +412,12 @@ export function ReplayPage({
 
   return (
     <div className="bg-black relative w-full min-h-screen" data-name="replay">
+      <SEO
+        title="Replay — Revivez les meilleurs moments"
+        description="Retrouvez les replays des meilleurs événements sur Feeti. Concerts, festivals et spectacles en replay à la demande."
+        url="https://feeti.io/replay"
+        keywords="replay concerts, événements replay, streaming replay afrique, revoir spectacles"
+      />
       {/* Hero Slider */}
       <div 
         className="relative w-full h-[410px] md:h-[510px] lg:h-[570px] overflow-hidden"

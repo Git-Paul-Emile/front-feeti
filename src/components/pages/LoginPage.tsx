@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SEO } from '../SEO';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import svgPaths from "../../imports/svg-wlelb3n4ow";
@@ -33,6 +34,8 @@ const EVENT_CATEGORIES = [
 export interface LoginPageProps {
   onLogin: (email: string, password: string) => Promise<void>;
   onRegister?: (data: RegisterData) => Promise<void>;
+  onGoogleLogin?: () => Promise<void>;
+  onGoogleRegister?: () => Promise<void>;
   onBack?: () => void;
 }
 
@@ -49,6 +52,7 @@ interface RegisterFields {
   password: string;
   confirmPassword: string;
   role: 'user' | 'organizer';
+  acceptTerms: boolean;
 }
 
 // ── Drapeau Congo (inchangé) ─────────────────────────────────────────────────
@@ -169,8 +173,9 @@ function inputClass(hasError: boolean) {
 }
 
 // ── Formulaire de connexion ──────────────────────────────────────────────────
-function LoginForm({ onLogin, onSwitchToRegister }: {
+function LoginForm({ onLogin, onGoogleLogin, onSwitchToRegister }: {
   onLogin: LoginPageProps['onLogin'];
+  onGoogleLogin?: LoginPageProps['onGoogleLogin'];
   onSwitchToRegister: () => void;
 }) {
   const [serverError, setServerError] = useState('');
@@ -259,6 +264,7 @@ function LoginForm({ onLogin, onSwitchToRegister }: {
       {/* Bouton Google (UI uniquement) */}
       <button
         type="button"
+        onClick={() => void onGoogleLogin?.()}
         disabled={isSubmitting}
         className="w-full bg-[#f4f6f4] rounded-[12px] px-[10px] py-[20px] h-[62px] flex items-center justify-center gap-[10px] hover:bg-white hover:shadow-lg transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
       >
@@ -356,8 +362,9 @@ function InterestsStep({
 }
 
 // ── Formulaire d'inscription ─────────────────────────────────────────────────
-function RegisterForm({ onRegister, onSwitchToLogin }: {
+function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
   onRegister?: LoginPageProps['onRegister'];
+  onGoogleRegister?: LoginPageProps['onGoogleRegister'];
   onSwitchToLogin: () => void;
 }) {
   const [serverError, setServerError] = useState('');
@@ -576,6 +583,31 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
         <FieldError message={errors.role?.message} />
       </div>
 
+      {/* Conditions d'utilisation */}
+      <div className="space-y-2">
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            className="mt-0.5 w-4 h-4 rounded border-[rgba(192,169,237,0.5)] bg-transparent accent-[#c0a9ed] cursor-pointer shrink-0"
+            {...register('acceptTerms', {
+              required: "Vous devez accepter les conditions d'utilisation",
+            })}
+          />
+          <span className="text-white/70 text-[13px] font-['Inter',sans-serif] leading-snug">
+            J'accepte les{' '}
+            <button type="button" className="text-[#c0a9ed] underline hover:text-white transition-colors">
+              Conditions d'utilisation
+            </button>{' '}
+            et la{' '}
+            <button type="button" className="text-[#c0a9ed] underline hover:text-white transition-colors">
+              Politique de confidentialité
+            </button>{' '}
+            de Feeti
+          </span>
+        </label>
+        <FieldError message={errors.acceptTerms?.message} />
+      </div>
+
       {/* Erreur serveur globale */}
       {serverError && (
         <p className="text-red-400 text-[14px] font-['Inter',sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2">
@@ -594,6 +626,22 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
         </span>
       </button>
 
+      <div className="flex items-center justify-center py-1">
+        <span className="text-white text-[14px] font-medium font-['Poppins',sans-serif]">ou</span>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => void onGoogleRegister?.()}
+        disabled={isSubmitting}
+        className="w-full bg-[#f4f6f4] rounded-[12px] px-[10px] py-[20px] h-[62px] flex items-center justify-center gap-[10px] hover:bg-white hover:shadow-lg transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <div className="w-[28px] h-[28px] bg-center bg-cover bg-no-repeat group-hover:scale-110 transition-transform" style={{ backgroundImage: `url('${imgImage7}')` }} />
+        <span className="text-black text-[14px] text-center font-['Poppins',sans-serif]">
+          S'inscrire avec Google
+        </span>
+      </button>
+
       <div className="text-center pt-2">
         <p className="text-white text-[14px] font-medium">
           Déjà un compte ?{' '}
@@ -607,11 +655,17 @@ function RegisterForm({ onRegister, onSwitchToLogin }: {
 }
 
 // ── Page principale ──────────────────────────────────────────────────────────
-export function LoginPage({ onLogin, onRegister, onBack }: LoginPageProps) {
+export function LoginPage({ onLogin, onRegister, onGoogleLogin, onGoogleRegister, onBack }: LoginPageProps) {
   const [isLogin, setIsLogin] = useState(true);
 
   return (
     <div className="bg-[#0e0434] relative size-full min-h-screen" data-name="Login">
+      <SEO
+        title="Connexion & Inscription"
+        description="Connectez-vous ou créez votre compte Feeti pour accéder à la billetterie, au streaming live et aux loisirs en Afrique."
+        url="https://feeti.io/login"
+        keywords="connexion feeti, inscription, compte feeti, login"
+      />
       <div className="flex flex-row items-center justify-center relative size-full min-h-screen px-4">
         <div className="box-border content-stretch flex gap-[10px] items-center px-[36px] py-[33px] relative w-full max-w-[430px]">
           <div className="w-full">
@@ -628,9 +682,9 @@ export function LoginPage({ onLogin, onRegister, onBack }: LoginPageProps) {
             </div>
 
             {isLogin ? (
-              <LoginForm onLogin={onLogin} onSwitchToRegister={() => setIsLogin(false)} />
+              <LoginForm onLogin={onLogin} onGoogleLogin={onGoogleLogin} onSwitchToRegister={() => setIsLogin(false)} />
             ) : (
-              <RegisterForm onRegister={onRegister} onSwitchToLogin={() => setIsLogin(true)} />
+              <RegisterForm onRegister={onRegister} onGoogleRegister={onGoogleRegister} onSwitchToLogin={() => setIsLogin(true)} />
             )}
 
             {onBack && (

@@ -15,8 +15,13 @@ import {
   createUserWithEmailAndPassword,
   deleteUser,
   EmailAuthProvider,
+  getAdditionalUserInfo,
+  GoogleAuthProvider,
   onAuthStateChanged,
   reauthenticateWithCredential,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signInWithEmailAndPassword,
   signOut,
   updateEmail,
@@ -53,6 +58,11 @@ function toIsoString(value: Timestamp | string | null | undefined): string {
 function rethrowUserFacing(e: unknown): never {
   throw new Error(firebaseClientErrorToUserMessage(e));
 }
+
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: "select_account" });
+const PENDING_GOOGLE_KEY = "feeti2_google_pending";
+const PENDING_GOOGLE_REDIRECT_KEY = "feeti2_google_redirect_pending";
 
 export class FirebaseAuthProvider implements AuthProvider {
   readonly mode = "firebase" as const;
@@ -102,6 +112,92 @@ export class FirebaseAuthProvider implements AuthProvider {
         updatedAt: serverTimestamp(),
       });
 
+      return await this.requireProfile();
+    } catch (e) {
+      rethrowUserFacing(e);
+    }
+  }
+
+  async startGoogleAuth() {
+    try {
+      // Consommer d'abord un éventuel résultat de redirect précédent
+      const redirectResult = await getRedirectResult(auth);
+      if (redirectResult) {
+        const info = getAdditionalUserInfo(redirectResult);
+        if (info?.isNewUser) {
+          window.sessionStorage.setItem(PENDING_GOOGLE_KEY, "1");
+          window.sessionStorage.removeItem(PENDING_GOOGLE_REDIRECT_KEY);
+          return {
+            requiresCompletion: true,
+            prefill: {
+              name: redirectResult.user.displayName ?? undefined,
+              email: redirectResult.user.email ?? undefined,
+            },
+          };
+        }
+        window.sessionStorage.removeItem(PENDING_GOOGLE_REDIRECT_KEY);
+        return { requiresCompletion: false, user: await this.requireProfile() };
+      }
+
+      // Essayer d'abord la popup
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const info = getAdditionalUserInfo(result);
+        if (info?.isNewUser) {
+          window.sessionStorage.setItem(PENDING_GOOGLE_KEY, "1");
+          return {
+            requiresCompletion: true,
+            prefill: {
+              name: result.user.displayName ?? undefined,
+              email: result.user.email ?? undefined,
+            },
+          };
+        }
+        return { requiresCompletion: false, user: await this.requireProfile() };
+      } catch (popupError: unknown) {
+        const errorCode = (popupError as { code?: string }).code;
+        
+        // Si la popup est bloquée ou fermée, fallback sur la redirection
+        if (
+          errorCode === "auth/popup-blocked" ||
+          errorCode === "auth/popup-closed-by-user" ||
+          errorCode === "auth/cancelled-popup-request"
+        ) {
+          console.log("Popup bloquée ou fermée, passage à la redirection Google...");
+          window.sessionStorage.setItem(PENDING_GOOGLE_REDIRECT_KEY, "1");
+          await signInWithRedirect(auth, googleProvider);
+          // La redirection va recharger la page, donc ce return n'est pas atteint
+          return { requiresCompletion: false };
+        }
+
+        // Autres erreurs : relancer
+        throw popupError;
+      }
+    } catch (e) {
+      rethrowUserFacing(e);
+    }
+  }
+
+  async completeGoogleRegistration(data: Omit<RegisterData, "email" | "password">): Promise<AuthUser> {
+    const user = auth.currentUser;
+    const pending = window.sessionStorage.getItem(PENDING_GOOGLE_KEY);
+    if (!user || !pending) {
+      throw new Error("Session Google expirée. Relancez l'inscription Google.");
+    }
+
+    try {
+      await addDoc(collection(db, "users"), {
+        uid: user.uid,
+        name: data.name,
+        email: user.email ?? "",
+        phone: data.phone ?? null,
+        role: data.role ?? "user",
+        interests: data.interests ?? [],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      await updateFirebaseProfile(user, { displayName: data.name });
+      window.sessionStorage.removeItem(PENDING_GOOGLE_KEY);
       return await this.requireProfile();
     } catch (e) {
       rethrowUserFacing(e);

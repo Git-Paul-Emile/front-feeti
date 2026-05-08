@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { SEO } from '../SEO';
 import { Button } from '../ui/button';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import {
@@ -101,6 +102,12 @@ export function BonPlansPage({ onBack, onNavigate, filter }: BonPlansPageProps) 
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO
+        title="Bons Plans — Offres & Promotions"
+        description="Découvrez les meilleurs bons plans, offres spéciales et promotions en Afrique sur Feeti. Restaurants, hôtels, activités et événements à prix réduit."
+        url="https://feeti.io/deals"
+        keywords="bons plans afrique, promotions, offres spéciales, réductions, feeti deals"
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">

@@ -1,4 +1,2 @@
-/// <reference types="vite/client" />
-
-// Déclaration de module pour sonner
-declare module 'sonner';
+﻿/// <reference types="vite/client" />
+/// <reference types="vite-plugin-pwa/react" />

@@ -1,4 +1,5 @@
 import { memo, useMemo, useCallback } from 'react';
+import { SEO } from '../SEO';
 import { EventCard } from '../EventCard';
 import { EventPromotionBadge, isEventPromotionActive } from '../PromotionBadge';
 import { SliderOriginalInteractif } from '../SliderOriginalInteractif';
@@ -95,6 +96,12 @@ const HomePage = memo(function HomePage({ events, onEventSelect, onNavigate, onS
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="Feeti | Tickets · Accès · Loisirs · Streaming"
+        description="Feeti, plateforme tout-en-un de billetterie digitale, contrôle d'accès, loisirs et streaming live en Afrique. Sécurisé, data-driven, conçu pour les promoteurs, artistes et marques."
+        url="https://feeti.io"
+        keywords="billetterie afrique, tickets événements, streaming live afrique, contrôle accès, loisirs, concerts"
+      />
       {/* Slider Original Interactif */}
       <SliderOriginalInteractif
         events={events}

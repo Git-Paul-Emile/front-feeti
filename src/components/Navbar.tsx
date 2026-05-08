@@ -193,36 +193,11 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
           : 'bg-white'
       } px-4 sm:px-6 md:px-8 lg:px-12 xl:px-[75px] py-3 sm:py-4 md:py-6 h-[70px] sm:h-[80px] md:h-[90px] flex items-center justify-between sticky top-0 z-50 shadow-sm`}>
         {/* Logo */}
-        <div 
+        <div
           onClick={() => onNavigate('home')}
-          className="h-[24px] w-[96px] sm:h-[28px] sm:w-[112px] md:h-[32px] md:w-[128px] relative cursor-pointer hover:opacity-80 transition-opacity"
+          className="h-[24px] w-[96px] sm:h-[28px] sm:w-[112px] md:h-[32px] md:w-[128px] cursor-pointer hover:opacity-80 transition-opacity"
         >
-          <div className="absolute bottom-0 left-[73.81%] right-0 top-0">
-            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 41 39">
-              <g>
-                <path d={svgPaths.pb4c4300} fill="#1A0957" />
-                <path d={svgPaths.p2a0dbb00} fill="#811AEC" />
-                <path d={svgPaths.p16d5e380} fill="#F1C519" />
-                <path d={svgPaths.p15cd3f80} fill="#E43962" />
-                <path d={svgPaths.pfe8d400} fill="#16BDA0" />
-                <path d={svgPaths.p3693380} fill="#811AEC" />
-                <path d={svgPaths.p1116dfc0} fill="#F1C519" />
-                <path d={svgPaths.p2022e980} fill="#E43962" />
-                <path d={svgPaths.p206aab00} fill="#16BDA0" />
-              </g>
-            </svg>
-          </div>
-          <div className="absolute bottom-[8.01%] left-0 right-[28.1%] top-[8.01%]">
-            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 113 33">
-              <g>
-                <path d={svgPaths.p2d591880} fill="#1A0957" />
-                <path d={svgPaths.p3aaf32c0} fill="#1A0957" />
-                <path d={svgPaths.p87ab6f0} fill="#1A0957" />
-                <path d={svgPaths.p20a2e100} fill="#1A0957" />
-                <path d={svgPaths.p66cf900} fill="#1A0957" />
-              </g>
-            </svg>
-          </div>
+          <img src="/logo.png" alt="Feeti" className="h-full w-auto object-contain" />
         </div>
 
         {/* Country selector for medium screens (when top bar is hidden) */}

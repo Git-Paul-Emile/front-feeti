@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { SEO } from '../SEO';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
@@ -71,6 +72,12 @@ export function LeisureCategoryPage({ categorySlug, pageTitle, heroBg }: Leisure
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title={pageTitle}
+        description={`Découvrez les meilleures adresses ${pageTitle.toLowerCase()} en Afrique sur Feeti Loisirs. Réservez facilement en ligne.`}
+        url={`https://feeti.io/leisure/${categorySlug}`}
+        keywords={`${pageTitle.toLowerCase()}, loisirs afrique, feeti, réservation`}
+      />
       {/* Hero */}
       <div className="relative h-[200px] overflow-hidden rounded-[12px] mx-[72px] mt-[141px]">
         <div

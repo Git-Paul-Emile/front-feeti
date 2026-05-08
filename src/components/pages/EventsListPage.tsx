@@ -1,10 +1,12 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { isEventPromotionActive } from '../PromotionBadge';
+import { EventCard } from '../EventCard';
+import { SEO } from '../SEO';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Badge } from '../ui/badge';
-import { LiveEventCard } from '../LiveEventCard';
-import { Search, Filter, Calendar, MapPin, DollarSign, Monitor, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Search, Filter, Calendar, MapPin, DollarSign, Monitor, X } from 'lucide-react';
 import { SliderOriginalInteractif } from '../SliderOriginalInteractif';
 
 interface Event {
@@ -26,6 +28,10 @@ interface Event {
   createdAt?: string;
   organizer: string;
   tags?: string[];
+  promotionType?: string | null;
+  promotionStatus?: string | null;
+  promotionStartDate?: string | null;
+  promotionEndDate?: string | null;
 }
 
 interface EventsListPageProps {
@@ -70,16 +76,27 @@ export function EventsListPage({
 
   // ── Options dérivées de TOUS les events (pas pré-filtrés) ────────────────
   const categories = useMemo(
-    () => ['all', ...Array.from(new Set(events.map(e => e.category))).sort()],
+    () => [
+      'all',
+      ...Array.from(
+        new Set(
+          events
+            .map(e => e.category?.trim())
+            .filter(Boolean)
+        )
+      ).sort(),
+    ],
     [events]
   );
   const cities = useMemo(() => {
     // Extraire la ville depuis "Lieu, Ville" → dernier segment après la dernière virgule
     const citySet = new Set(
-      events.map(e => {
-        const parts = e.location.split(',');
-        return parts.length > 1 ? parts[parts.length - 1].trim() : e.location.trim();
-      })
+      events
+        .map(e => {
+          const parts = e.location.split(',');
+          return parts.length > 1 ? parts[parts.length - 1].trim() : e.location.trim();
+        })
+        .filter(Boolean)
     );
     return ['all', ...Array.from(citySet).sort()];
   }, [events]);
@@ -143,6 +160,24 @@ export function EventsListPage({
     return filtered;
   }, [events, searchTerm, selectedCategory, selectedLocation, typeFilter, showFeaturedOnly, showMonthOnly, priceRange, sortBy]);
 
+  const nonFeaturedEvents = useMemo(() =>
+    filteredAndSortedEvents.filter(e =>
+      !e.isFeatured && !(isEventPromotionActive(e) && e.promotionType === 'OR')
+    ),
+    [filteredAndSortedEvents]
+  );
+
+  // Quand le filtre "à la une" est actif, les cards montrent aussi les featured
+  const displayedCards = showFeaturedOnly ? filteredAndSortedEvents : nonFeaturedEvents;
+
+  // Slider : respect du typeFilter (live / in-person) pour cohérence avec le compteur
+  const sliderEvents = useMemo(() => {
+    let evs = [...events];
+    if (typeFilter === 'live')      evs = evs.filter(e => e.isLive);
+    if (typeFilter === 'in-person') evs = evs.filter(e => !e.isLive);
+    return evs.sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+  }, [events, typeFilter]);
+
   // ── Effacer tous les filtres ──────────────────────────────────────────────
   const clearFilters = useCallback(() => {
     setSearchTerm('');
@@ -170,46 +205,19 @@ export function EventsListPage({
     : showMonthOnly    ? 'Événements ce mois-ci'
     : 'Tous les événements';
 
-  // ── Scroll horizontal ─────────────────────────────────────────────────────
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft,  setCanScrollLeft]  = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-  const [currentPage,    setCurrentPage]    = useState(0);
-  const totalPages = Math.max(1, Math.ceil(filteredAndSortedEvents.length / 4));
-
-  const checkScrollButtons = useCallback(() => {
-    if (!scrollContainerRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-    setCanScrollLeft(scrollLeft > 0);
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
-    const progress = scrollLeft / (scrollWidth - clientWidth);
-    setCurrentPage(Math.round(progress * (totalPages - 1)));
-  }, [totalPages]);
-
-  const scrollLeft = useCallback(() => {
-    scrollContainerRef.current?.scrollBy({ left: -(scrollContainerRef.current.clientWidth * 0.8), behavior: 'smooth' });
-  }, []);
-
-  const scrollRight = useCallback(() => {
-    scrollContainerRef.current?.scrollBy({ left: scrollContainerRef.current.clientWidth * 0.8, behavior: 'smooth' });
-  }, []);
-
-  useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    checkScrollButtons();
-    el.addEventListener('scroll', checkScrollButtons);
-    const onResize = () => setTimeout(checkScrollButtons, 100);
-    window.addEventListener('resize', onResize);
-    return () => { el.removeEventListener('scroll', checkScrollButtons); window.removeEventListener('resize', onResize); };
-  }, [checkScrollButtons]);
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO
+        title="Événements"
+        description="Découvrez tous les événements disponibles sur Feeti : concerts, festivals, conférences, spectacles. Achetez vos billets en ligne en toute sécurité."
+        url="https://feeti.io/events"
+        keywords="événements afrique, concerts, festivals, billets, spectacles, agenda culturel"
+      />
 
-      {/* Slider Original Interactif */}
+      {/* Slider Original Interactif — filtre par type actif */}
       <SliderOriginalInteractif
-        events={[...events].sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())}
+        events={sliderEvents}
         onEventSelect={onEventSelect}
         onPurchase={onPurchase}
         onStreamWatch={onStreamWatch}
@@ -389,66 +397,28 @@ export function EventsListPage({
             <p className="text-gray-500 mb-6">Modifiez vos critères de recherche ou effacez les filtres.</p>
             <Button onClick={clearFilters} variant="outline">Effacer tous les filtres</Button>
           </div>
-        ) : (
-          <div className="relative">
-            {/* Flèches de navigation */}
-            {filteredAndSortedEvents.length > 4 && (
-              <>
-                <button
-                  onClick={scrollLeft}
-                  disabled={!canScrollLeft}
-                  className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/95 shadow-xl flex items-center justify-center ${
-                    canScrollLeft ? 'text-gray-700 hover:text-[#de0035] cursor-pointer' : 'text-gray-300 cursor-not-allowed'
-                  }`}
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-                <button
-                  onClick={scrollRight}
-                  disabled={!canScrollRight}
-                  className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/95 shadow-xl flex items-center justify-center ${
-                    canScrollRight ? 'text-gray-700 hover:text-[#de0035] cursor-pointer' : 'text-gray-300 cursor-not-allowed'
-                  }`}
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-              </>
-            )}
-
-            {/* Conteneur scroll horizontal */}
-            <div
-              ref={scrollContainerRef}
-              className="flex overflow-x-auto scrollbar-hide gap-4 sm:gap-6 lg:gap-8 pb-4 px-12"
-            >
-              {filteredAndSortedEvents.map(event => (
-                <div key={event.id} className="shrink-0 w-72 sm:w-80 lg:w-[350px] xl:w-[380px]">
-                  <LiveEventCard
-                    event={event}
-                    onSelect={onEventSelect}
-                    onPurchase={onPurchase}
-                    onStreamWatch={onStreamWatch}
-                    onWishlist={onWishlist}
-                    isFavorite={event.isFavorite}
-                  />
-                </div>
+        ) : displayedCards.length > 0 ? (
+          <div>
+            <div className="mb-6 flex items-center gap-3">
+              <h2 className="text-xl font-semibold text-gray-800">
+                {showFeaturedOnly ? 'Événements à la une' : 'Autres événements'}
+              </h2>
+              <span className="text-sm text-gray-500">({displayedCards.length})</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {displayedCards.map(event => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onSelect={onEventSelect}
+                  onPurchase={onPurchase}
+                  onStreamWatch={onStreamWatch}
+                  onWishlist={onWishlist}
+                />
               ))}
             </div>
-
-            {/* Indicateur de pagination */}
-            {filteredAndSortedEvents.length > 4 && (
-              <div className="flex justify-center mt-6 space-x-2">
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <div
-                    key={i}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      currentPage === i ? 'bg-[#de0035] w-8' : 'bg-gray-300 w-2'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

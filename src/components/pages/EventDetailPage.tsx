@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { SEO } from '../SEO';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -142,6 +143,14 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO
+        title={event.title}
+        description={event.description?.slice(0, 160) || `Achetez vos billets pour ${event.title} sur Feeti.`}
+        url={`https://feeti.io/events/${event.id}`}
+        image={event.image || undefined}
+        type="article"
+        keywords={`${event.title}, billets, événement, ${event.location || 'afrique'}`}
+      />
       {/* Header with back button */}
       <div className="bg-white border-b border-gray-200 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">

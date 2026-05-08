@@ -18,16 +18,13 @@ api.interceptors.request.use(async (config) => {
     await auth.authStateReady();
   }
 
-  let token: string | null = null;
-  if (auth.currentUser) {
+  let token = localStorage.getItem("accessToken") || localStorage.getItem("feeti_token");
+  if (!token && auth.currentUser) {
     try {
       token = await auth.currentUser.getIdToken(false);
     } catch {
       token = null;
     }
-  }
-  if (!token) {
-    token = localStorage.getItem("accessToken") || localStorage.getItem("feeti_token");
   }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

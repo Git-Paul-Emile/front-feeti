@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import {
   ArrowLeft, Plus, RefreshCw, Download, Shield, Users, Map,
   TicketCheck, CheckCircle2, XCircle, AlertTriangle, Mail,
-  RotateCcw, Trash2, Eye, ChevronRight, Layers, Zap, Copy, QrCode,
+  RotateCcw, Trash2, Eye, ChevronRight, Layers, Zap, Copy, QrCode, Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -85,6 +85,7 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
   const [badgesLoading, setBadgesLoading] = useState(false);
   const [badgeDialog, setBadgeDialog] = useState(false);
   const [badgeForm, setBadgeForm] = useState({ categoryId: '', holderName: '', holderEmail: '', holderPhone: '', holderPhoto: '', ticketId: '' });
+  const [badgePhotoPreview, setBadgePhotoPreview] = useState<string | null>(null);
   const [qrDialog, setQrDialog] = useState<{ open: boolean; badge?: AccessBadge }>({ open: false });
   const [sourceEventId, setSourceEventId] = useState('');
 
@@ -348,6 +349,18 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
 
   // ── Badge actions ─────────────────────────────────────────────────────────
 
+  const handleBadgePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      setBadgePhotoPreview(result);
+      setBadgeForm(p => ({ ...p, holderPhoto: result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleGenerateBadge = async () => {
     try {
       const badge = await AccessAPI.generateBadge(eventId, {
@@ -361,6 +374,7 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
       setBadges(prev => [badge, ...prev]);
       setBadgeDialog(false);
       setBadgeForm({ categoryId: '', holderName: '', holderEmail: '', holderPhone: '', holderPhoto: '', ticketId: '' });
+      setBadgePhotoPreview(null);
       toast.success('Badge généré');
     } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Erreur'); }
   };
@@ -982,9 +996,20 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
               <div>
                 <Label>Code zone</Label>
                 <Select value={zoneForm.code} onValueChange={v => setZoneForm(p => ({ ...p, code: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {zoneForm.code}{zoneForm.name.trim() ? ` (${zoneForm.name.trim()})` : ''}
+                    </SelectValue>
+                  </SelectTrigger>
                   <SelectContent>
-                    {ZONE_CODES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {ZONE_CODES.map(c => {
+                      const existing = zones.find(z => z.code === c);
+                      return (
+                        <SelectItem key={c} value={c}>
+                          {c}{existing ? ` (${existing.name})` : ''}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -1059,7 +1084,7 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
       </Dialog>
 
       {/* ── Dialog Générer Badge ───────────────────────────────────────────────── */}
-      <Dialog open={badgeDialog} onOpenChange={setBadgeDialog}>
+      <Dialog open={badgeDialog} onOpenChange={(o) => { setBadgeDialog(o); if (!o) { setBadgePhotoPreview(null); setBadgeForm({ categoryId: '', holderName: '', holderEmail: '', holderPhone: '', holderPhoto: '', ticketId: '' }); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Générer un badge QR</DialogTitle>
@@ -1087,8 +1112,23 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
               <Input value={badgeForm.holderPhone} onChange={e => setBadgeForm(p => ({ ...p, holderPhone: e.target.value }))} placeholder="+242..." />
             </div>
             <div>
-              <Label>Photo URL</Label>
-              <Input value={badgeForm.holderPhoto} onChange={e => setBadgeForm(p => ({ ...p, holderPhoto: e.target.value }))} placeholder="https://..." />
+              <Label>Photo (optionnel)</Label>
+              <label className="flex items-center gap-3 mt-1 cursor-pointer p-3 border-2 border-dashed border-gray-200 rounded-lg hover:border-indigo-400 transition-colors">
+                <Upload className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className="text-sm text-gray-500 flex-1 truncate">
+                  {badgePhotoPreview ? 'Photo sélectionnée — cliquer pour changer' : 'Cliquer pour choisir une photo...'}
+                </span>
+                <input type="file" accept="image/*" className="sr-only" onChange={handleBadgePhotoChange} />
+              </label>
+              {badgePhotoPreview && (
+                <div className="mt-2 flex items-center gap-2">
+                  <img src={badgePhotoPreview} alt="Aperçu" className="w-14 h-14 rounded-full object-cover border-2 border-indigo-200" />
+                  <button type="button" className="text-xs text-red-500 hover:text-red-700"
+                    onClick={() => { setBadgePhotoPreview(null); setBadgeForm(p => ({ ...p, holderPhoto: '' })); }}>
+                    Supprimer
+                  </button>
+                </div>
+              )}
             </div>
             <div>
               <Label>ID Billet (optionnel)</Label>

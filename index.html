@@ -1,18 +1,58 @@
 
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <!-- Start cookieyes banner -->
-      <script id="cookieyes" type="text/javascript" src="https://cdn-cookieyes.com/client_data/afed23b78c02e9819bc1befdbb1b8f19/script.js"></script>
-      <!-- End cookieyes banner -->
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Feeti — Billetterie & Streaming</title>
-    </head>
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <!-- Start cookieyes banner -->
+    <script id="cookieyes" type="text/javascript" src="https://cdn-cookieyes.com/client_data/afed23b78c02e9819bc1befdbb1b8f19/script.js"></script>
+    <!-- End cookieyes banner -->
 
-    <body>
-      <div id="root"></div>
-      <script type="module" src="/src/main.tsx"></script>
-    </body>
-  </html>
-  
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- PWA primary color -->
+    <meta name="theme-color" content="#811AEC" />
+    <meta name="theme-color" content="#811AEC" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#811AEC" media="(prefers-color-scheme: light)" />
+
+    <!-- PWA installable / standalone -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Fééti" />
+    <meta name="application-name" content="Fééti" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+
+    <!-- SEO -->
+    <meta name="description" content="Achetez vos billets, accédez aux lives et replays d'événements avec Feeti." />
+    <meta name="keywords" content="billetterie, événements, live, streaming, concerts, feeti" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Feeti" />
+    <meta property="og:title" content="Feeti — Billetterie & Streaming" />
+    <meta property="og:description" content="Achetez vos billets, accédez aux lives et replays d'événements avec Feeti." />
+    <meta property="og:image" content="/logo.png" />
+    <meta property="og:url" content="https://feeti.io" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Feeti — Billetterie & Streaming" />
+    <meta name="twitter:description" content="Achetez vos billets, accédez aux lives et replays d'événements avec Feeti." />
+    <meta name="twitter:image" content="/logo.png" />
+
+    <!-- Microsoft -->
+    <meta name="msapplication-TileColor" content="#811AEC" />
+    <meta name="msapplication-TileImage" content="/favicon.png" />
+
+    <title>Feeti — Billetterie & Streaming</title>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

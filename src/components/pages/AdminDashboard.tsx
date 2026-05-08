@@ -1492,11 +1492,14 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   }, [realUsers, searchTerm]);
 
   const filteredEvents = useMemo(() => {
-    return events.filter(event =>
-      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.location.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const STATUS_ORDER: Record<string, number> = { draft: 0, published: 1, cancelled: 2, rejected: 3 };
+    return events
+      .filter(event =>
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.location.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
   }, [events, searchTerm]);
 
   const categoryData = useMemo(() => {
@@ -2137,11 +2140,23 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
               </div>
             </div>
 
+            {events.filter(e => e.status === 'draft').length > 0 && (
+              <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-300 rounded-lg">
+                <Clock3 className="w-5 h-5 text-amber-600 shrink-0" />
+                <div>
+                  <p className="font-semibold text-amber-800">
+                    {events.filter(e => e.status === 'draft').length} événement(s) en attente de validation
+                  </p>
+                  <p className="text-sm text-amber-600">Ces événements ne sont pas visibles par le public tant qu'ils ne sont pas approuvés.</p>
+                </div>
+              </div>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle>Gestion des Événements</CardTitle>
                 <CardDescription>
-                  {filteredEvents.length} événement(s) — {events.filter(e => e.status === 'draft').length} brouillon(s) en attente
+                  {filteredEvents.length} événement(s) au total — {events.filter(e => e.status === 'draft').length} en attente, {events.filter(e => e.status === 'published').length} publiés
                 </CardDescription>
               </CardHeader>
               <CardContent>

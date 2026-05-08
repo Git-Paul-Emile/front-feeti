@@ -1,4 +1,5 @@
 import { ArrowLeft, DollarSign, CheckCircle, XCircle, AlertTriangle, Clock, FileText, MessageSquare } from 'lucide-react';
+import { SEO } from '../SEO';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +9,12 @@ export function RefundPolicyPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-green-50">
+      <SEO
+        title="Politique de Remboursement"
+        description="Conditions de remboursement des billets achetés sur Feeti. Délais, procédures et cas éligibles au remboursement."
+        url="https://feeti.io/legal/refund"
+        keywords="remboursement billet feeti, politique remboursement, annulation événement"
+      />
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <Button variant="ghost" onClick={() => navigate(-1)} className="mb-2">

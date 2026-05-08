@@ -17,6 +17,7 @@ import { Textarea } from '../ui/textarea';
 import { toast } from 'sonner';
 import AccessAPI from '../../services/api/AccessAPI';
 import type { EventZone, ScanResult, OfflineScan } from '../../services/api/AccessAPI';
+import { useAuth } from '../../context/AuthContext';
 
 // ─── Offline queue helpers ─────────────────────────────────────────────────
 
@@ -44,6 +45,11 @@ const RESULT_CONFIG = {
 export function WebScannerPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const isPrivileged = ['organizer', 'admin', 'super_admin', 'moderator'].includes(
+    user?.adminRole ?? user?.role ?? ''
+  );
 
   const [zones, setZones] = useState<EventZone[]>([]);
   const [zonesLoading, setZonesLoading] = useState(true);
@@ -54,7 +60,7 @@ export function WebScannerPage() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncing, setSyncing] = useState(false);
   const [agentCode, setAgentCode] = useState(sessionStorage.getItem('feeti_access_agent_code') ?? '');
-  const [agentUnlocked, setAgentUnlocked] = useState(false);
+  const [agentUnlocked, setAgentUnlocked] = useState(isPrivileged);
   const [agentChecking, setAgentChecking] = useState(false);
   const [suspectDialog, setSuspectDialog] = useState(false);
   const [suspectReason, setSuspectReason] = useState('');
@@ -79,6 +85,11 @@ export function WebScannerPage() {
       oscillator.stop(ctx.currentTime + (type === 'error' ? 0.28 : 0.16));
     } catch {}
   };
+
+  // Auto-unlock pour organisateurs/admins
+  useEffect(() => {
+    if (isPrivileged) setAgentUnlocked(true);
+  }, [isPrivileged]);
 
   // ── Load zones ─────────────────────────────────────────────────────────
   useEffect(() => {

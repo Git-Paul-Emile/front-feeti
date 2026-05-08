@@ -29,6 +29,12 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<AppUser>;
   register: (data: RegisterData) => Promise<AppUser>;
+  startGoogleAuth: () => Promise<{
+    requiresCompletion: boolean;
+    user?: AppUser;
+    prefill?: { name?: string; email?: string };
+  }>;
+  completeGoogleRegistration: (data: Omit<RegisterData, "email" | "password">) => Promise<AppUser>;
   logout: () => Promise<void>;
   updateProfile: (data: UpdateProfileData) => Promise<AppUser>;
   changePassword: (data: ChangePasswordData) => Promise<void>;
@@ -85,6 +91,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return appUser;
   }, []);
 
+  const startGoogleAuth = useCallback(async () => {
+    const result = await backendGateway.auth.startGoogleAuth();
+    if (result.user) {
+      const appUser = mapToAppUser(result.user);
+      setUser(appUser);
+      return { ...result, user: appUser };
+    }
+    return result;
+  }, []);
+
+  const completeGoogleRegistration = useCallback(async (data: Omit<RegisterData, "email" | "password">): Promise<AppUser> => {
+    const authUser = await backendGateway.auth.completeGoogleRegistration(data);
+    const appUser = mapToAppUser(authUser);
+    setUser(appUser);
+    return appUser;
+  }, []);
+
   const logout = useCallback(async (): Promise<void> => {
     await backendGateway.auth.logout();
     setUser(null);
@@ -108,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, login, register, logout, updateProfile, changePassword, deleteAccount }}
+      value={{ user, isLoading, login, register, startGoogleAuth, completeGoogleRegistration, logout, updateProfile, changePassword, deleteAccount }}
     >
       {children}
     </AuthContext.Provider>

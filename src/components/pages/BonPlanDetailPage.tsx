@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { SEO } from '../SEO';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card, CardContent } from '../ui/card';
@@ -119,6 +120,14 @@ export function BonPlanDetailPage({ dealId, onBack }: BonPlanDetailPageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO
+        title={deal.title}
+        description={deal.description?.slice(0, 160) || `Profitez de ce bon plan sur Feeti : ${deal.title}.`}
+        url={`https://feeti.io/deals/${dealId}`}
+        image={deal.image || undefined}
+        type="article"
+        keywords={`${deal.title}, bon plan, ${deal.category || 'offre'}, afrique, feeti`}
+      />
       {/* Hero Image */}
       <div className="relative h-[300px] sm:h-[400px] lg:h-[480px] overflow-hidden">
         <ImageWithFallback

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feeti — Hors ligne</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f1a;
+      color: #ffffff;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      background: #811AEC;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 2rem;
+      font-size: 2.5rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #811AEC, #E43962);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    p {
+      color: #a0a0b8;
+      font-size: 1rem;
+      line-height: 1.6;
+      max-width: 360px;
+      margin-bottom: 2rem;
+    }
+
+    button {
+      background: #811AEC;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 0.875rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s;
+    }
+    button:hover { opacity: .85; }
+
+    .status {
+      margin-top: 1.5rem;
+      font-size: 0.8rem;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="icon">🎟️</div>
+  <h1>Vous êtes hors ligne</h1>
+  <p>
+    Vérifiez votre connexion Internet et réessayez.<br />
+    Les événements déjà consultés restent accessibles dans le cache.
+  </p>
+  <button onclick="retry()">Réessayer</button>
+  <p class="status" id="status"></p>
+
+  <script>
+    function retry() {
+      document.getElementById('status').textContent = 'Vérification…';
+      fetch('/', { method: 'HEAD', cache: 'no-store' })
+        .then(() => { window.location.href = '/'; })
+        .catch(() => { document.getElementById('status').textContent = 'Toujours hors ligne.'; });
+    }
+
+    // Auto-redirect when connection is restored
+    window.addEventListener('online', () => {
+      document.getElementById('status').textContent = 'Connexion rétablie, redirection…';
+      setTimeout(() => { window.location.href = '/'; }, 800);
+    });
+  </script>
+</body>
+</html>

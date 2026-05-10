@@ -11,7 +11,7 @@ import type {
 } from "../api/EventsAPI";
 import type { APIResponse } from "../api/BaseAPI";
 
-export type BackendProviderMode = "express" | "firebase";
+export type BackendProviderMode = "express";
 
 export interface AuthStateListener {
   (user: AuthUser | null): void | Promise<void>;

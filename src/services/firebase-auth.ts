@@ -1,53 +1,25 @@
-import { initializeApp } from "firebase/app";
-import { 
-  getAuth, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
+import {
+  signInWithPopup,
+  GoogleAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   updateProfile,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "./firebase-config";
+import { auth } from "../config/firebase";
 import { firebaseClientErrorToUserMessage } from "../utils/firebaseUserFacingError";
 
-// Configuration Firebase - à remplacer par tes valeurs
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDemo",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "feeti2.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "feeti2",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "feeti2.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:123456789:web:abc123"
-};
-
-// Initialiser Firebase
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-
-// Providers
 const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({
-  prompt: "select_account" // Force la sélection de compte
-});
+googleProvider.setCustomParameters({ prompt: "select_account" });
 
-// ── Authentification Google (Redirection) ─────────────────────────────────
 export const signInWithGoogle = async () => {
   try {
-    // Utiliser la redirection pour Google
     const result = await signInWithPopup(auth, googleProvider);
     const idToken = await result.user.getIdToken();
-    
-    return {
-      success: true,
-      user: result.user,
-      idToken
-    };
+    return { success: true, user: result.user, idToken };
   } catch (error: unknown) {
-    console.error("Erreur Google signIn:", error);
     return {
       success: false,
       error: firebaseClientErrorToUserMessage(
@@ -58,27 +30,18 @@ export const signInWithGoogle = async () => {
   }
 };
 
-// ── Authentification par email/mot de passe ───────────────────────────────
 export const registerWithEmail = async (email: string, password: string, displayName?: string) => {
   try {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     const idToken = await result.user.getIdToken();
-    
-    // Mettre à jour le profil si un nom est fourni
     if (displayName) {
       await updateProfile(result.user, { displayName });
     }
-    
-    return {
-      success: true,
-      user: result.user,
-      idToken
-    };
+    return { success: true, user: result.user, idToken };
   } catch (error: unknown) {
-    console.error("Erreur inscription:", error);
     return {
       success: false,
-      error: firebaseClientErrorToUserMessage(error, "Impossible de finaliser l’inscription pour le moment."),
+      error: firebaseClientErrorToUserMessage(error, "Impossible de finaliser l'inscription pour le moment."),
     };
   }
 };
@@ -87,62 +50,52 @@ export const signInWithEmail = async (email: string, password: string) => {
   try {
     const result = await signInWithEmailAndPassword(auth, email, password);
     const idToken = await result.user.getIdToken();
-    
-    return {
-      success: true,
-      user: result.user,
-      idToken
-    };
+    return { success: true, user: result.user, idToken };
   } catch (error: unknown) {
-    console.error("Erreur connexion:", error);
     return {
       success: false,
       error: firebaseClientErrorToUserMessage(
         error,
-        "Connexion impossible pour le moment. Vérifiez votre connexion et réessayez.",
+        "Connexion impossible pour le moment. Vérifiez votre connexion et réessayez."
       ),
     };
   }
 };
 
-// ── Déconnexion ─────────────────────────────────────────────────────────
 export const logout = async () => {
   try {
     await signOut(auth);
     return { success: true };
   } catch (error: unknown) {
-    console.error("Erreur déconnexion:", error);
-    return { success: false, error: firebaseClientErrorToUserMessage(error, "Impossible de vous déconnecter pour le moment.") };
+    return {
+      success: false,
+      error: firebaseClientErrorToUserMessage(error, "Impossible de vous déconnecter pour le moment."),
+    };
   }
 };
 
-// ── Observer l'état d'authentification ─────────────────────────────────
 export const onAuthChange = (callback: (user: any) => void) => {
   return onAuthStateChanged(auth, callback);
 };
 
-// ── Reset mot de passe ─────────────────────────────────────────────────
 export const resetPassword = async (email: string) => {
   try {
     await sendPasswordResetEmail(auth, email);
     return { success: true };
   } catch (error: unknown) {
-    console.error("Erreur reset password:", error);
-    return { success: false, error: firebaseClientErrorToUserMessage(error, "Impossible d’envoyer l’e‑mail de réinitialisation.") };
+    return {
+      success: false,
+      error: firebaseClientErrorToUserMessage(error, "Impossible d'envoyer l'e‑mail de réinitialisation."),
+    };
   }
 };
 
-// ── Vérifier le token ID ───────────────────────────────────────────────
 export const getIdToken = async () => {
   const user = auth.currentUser;
-  if (user) {
-    return await user.getIdToken();
-  }
+  if (user) return await user.getIdToken();
   return null;
 };
 
-export const getCurrentUser = () => {
-  return auth.currentUser;
-};
+export const getCurrentUser = () => auth.currentUser;
 
-export default app;
+export { auth };

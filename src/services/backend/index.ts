@@ -1,5 +1,5 @@
 export { backendGateway } from "./gateway";
-export { getBackendProviderMode, setBackendProviderMode } from "./mode";
+export { getBackendProviderMode } from "./mode";
 export type {
   AuthProvider,
   BackendEvent,

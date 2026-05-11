@@ -30,7 +30,8 @@ interface FeetiPlayApiResponse<T> {
   data?: T;
 }
 
-const FEETIPLAY_API_BASE_URL: string = (import.meta as any).env?.VITE_FEETIPLAY_API_URL ?? '';
+const FEETIPLAY_API_BASE_URL: string = (import.meta as any).env?.VITE_FEETIPLAY_API_URL
+  || ((typeof window !== 'undefined' && window.location.hostname === 'localhost') ? 'http://localhost:8001/api' : '');
 
 const client = FEETIPLAY_API_BASE_URL
   ? axios.create({
@@ -42,8 +43,12 @@ const client = FEETIPLAY_API_BASE_URL
 
 async function extractData<T>(path: string, fallback: T): Promise<T> {
   if (!client) return fallback;
-  const response = await client.get<FeetiPlayApiResponse<T>>(path);
-  return response.data.data as T;
+  try {
+    const response = await client.get<FeetiPlayApiResponse<T>>(path);
+    return response.data.data as T;
+  } catch {
+    return fallback;
+  }
 }
 
 const FeetiPlayEventsAPI = {

@@ -23,9 +23,20 @@ function getConfiguredBackendUrl() {
   }
 }
 
+function getDefaultBackendUrl() {
+  if (typeof window === 'undefined') {
+    return `http://localhost:${DEFAULT_BACKEND_PORT}`;
+  }
+
+  if (window.location.protocol === 'https:') {
+    return window.location.origin;
+  }
+
+  return `http://${getWindowHostname()}:${DEFAULT_BACKEND_PORT}`;
+}
+
 export function getBackendBaseUrls() {
-  const configured = getConfiguredBackendUrl()
-    || `http://${getWindowHostname()}:${DEFAULT_BACKEND_PORT}`;
+  const configured = getConfiguredBackendUrl() || getDefaultBackendUrl();
 
   return [normalizeBaseUrl(configured)];
 }

@@ -51,10 +51,10 @@ function SectionHeader({ onNavigate }: { onNavigate: (page: string) => void }) {
     <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 mb-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-4xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">
             Féetiche
           </h2>
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base text-gray-600">
             Découvrez avec nous, les meilleures offres, les meilleures découvertes, et meilleurs moments d'évasion
           </p>
         </div>
@@ -62,16 +62,16 @@ function SectionHeader({ onNavigate }: { onNavigate: (page: string) => void }) {
         {/* See More Button */}
         <button
           onClick={() => onNavigate('blog')}
-          className="h-10 lg:h-11 px-6 lg:px-8 border border-[#000441] bg-transparent text-[#000441] rounded-lg flex items-center justify-center gap-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#000441] relative overflow-hidden group transition-colors duration-300"
+          className="self-start sm:self-auto shrink-0 h-9 sm:h-10 lg:h-11 px-4 sm:px-6 lg:px-8 border border-[#000441] bg-transparent text-[#000441] rounded-lg flex items-center justify-center gap-2 sm:gap-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#000441] relative overflow-hidden group transition-colors duration-300"
         >
           {/* Fill Animation Background */}
           <div className="absolute inset-0 bg-[#000441] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-out origin-left rounded-lg"></div>
 
           {/* Button Content */}
-          <span className="text-sm lg:text-base relative z-10 group-hover:text-white transition-colors duration-300">
+          <span className="text-xs sm:text-sm lg:text-base relative z-10 group-hover:text-white transition-colors duration-300">
             voir plus
           </span>
-          <div className="w-4 h-4 lg:w-5 lg:h-5 relative z-10 group-hover:text-white transition-colors duration-300">
+          <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 relative z-10 group-hover:text-white transition-colors duration-300">
             <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 22 21">
               <path
                 d={svgPaths.p1a3da900}

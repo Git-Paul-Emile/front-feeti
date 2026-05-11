@@ -3,7 +3,7 @@ import type { Country } from '../services/api/CountryAPI';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
-import { Menu, User, Settings, LogOut, ChevronDown, MapPin, Star, Megaphone, Zap, Heart, Shield } from 'lucide-react';
+import { Menu, User, Settings, LogOut, ChevronDown, ChevronRight, MapPin, Star, Megaphone, Zap, Heart, Shield } from 'lucide-react';
 import svgPaths from "../imports/svg-pgf9xqt80w";
 
 
@@ -19,6 +19,10 @@ interface NavbarProps {
 
 export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selectedCountry, onCountrySelect, countries = [] }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
+
+  const toggleDropdown = (key: string) =>
+    setOpenDropdowns(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
 
   const navItems = [
     { key: 'home', label: 'Accueil', isActive: currentPage === 'home' },
@@ -344,7 +348,7 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
 
 
           {/* Mobile menu button */}
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+          <Sheet open={isMobileMenuOpen} onOpenChange={(open) => { setIsMobileMenuOpen(open); if (!open) setOpenDropdowns([]); }}>
             <SheetTrigger asChild>
               <Button
                 variant="ghost"
@@ -354,15 +358,15 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                 <Menu className="h-5 w-5 text-[#03033b]" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-              <SheetHeader>
+            <SheetContent side="right" className="w-[85vw] sm:w-[360px] flex flex-col p-0">
+              <SheetHeader className="border-b border-gray-100" style={{ padding: '18px 20px 12px' }}>
                 <SheetTitle className="text-left text-[#03033b]">Menu</SheetTitle>
               </SheetHeader>
-              
+
               {/* Mobile Navigation */}
-              <div className="flex flex-col space-y-4 mt-6">
+              <div className="flex flex-col overflow-y-auto flex-1" style={{ padding: '16px 20px 24px' }}>
                 {/* Country selector for mobile */}
-                <div className="pb-4 border-b border-gray-200">
+                <div className="pb-4 border-b border-gray-200 mb-4">
                   <h3 className="font-semibold text-[#03033b] mb-3 text-sm">Votre position</h3>
                   <div className="grid grid-cols-2 gap-2">
                     {countries.map((country) => (
@@ -371,113 +375,126 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                         onClick={() => {
                           onCountrySelect(country);
                         }}
-                        className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-200 ${
+                        className={`flex items-center gap-2 p-2.5 rounded-lg transition-all duration-200 text-left ${
                           selectedCountry?.code === country.code
                             ? 'bg-blue-50 border-2 border-blue-200 text-blue-700'
                             : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100 text-gray-700'
                         }`}
                       >
-                        <span className="text-lg">{country.flag}</span>
-                        <span className="text-xs font-medium truncate">{country.name}</span>
+                        <span className="text-sm font-bold shrink-0 text-gray-500 w-6">{country.code}</span>
+                        <span className="text-xs font-medium leading-tight line-clamp-2">{country.name}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 {/* Action buttons for mobile */}
-                <div className="pb-4 border-b border-gray-200 space-y-3">
+                <div className="pb-4 border-b border-gray-200 mb-4 space-y-3">
                   <button
                     onClick={() => {
                       window.location.href = `${(import.meta as any).env?.VITE_FEETIPLAY_URL ?? 'http://localhost:5173'}/live`;
                       setIsMobileMenuOpen(false);
                     }}
-                    className="w-full bg-gradient-to-r from-[#dc2626] to-[#b91c1c] text-white py-3 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center space-x-2"
+                    className="w-full bg-gradient-to-r from-[#dc2626] to-[#b91c1c] text-white py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   >
-                    <Zap className="w-4 h-4" />
+                    <Zap className="w-4 h-4 shrink-0" />
                     <span>Event en direct</span>
                   </button>
-                  
+
                   <button
                     onClick={() => {
                       onNavigate('organizer-dashboard');
                       setIsMobileMenuOpen(false);
                     }}
-                    className="w-full bg-gradient-to-r from-[#03033b] to-[#1a0957] text-white py-3 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center justify-center space-x-2"
+                    className="w-full bg-gradient-to-r from-[#03033b] to-[#1a0957] text-white py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   >
-                    <Megaphone className="w-4 h-4 text-[#00BDD7]" />
+                    <Megaphone className="w-4 h-4 text-[#00BDD7] shrink-0" />
                     <span>Poster l'annonce</span>
                   </button>
                 </div>
                 
-                {navItems.map((item) => (
-                  <div key={item.key} className="border-b border-gray-100 pb-4 last:border-b-0">
-                    {item.hasDropdown ? (
-                      <div>
-                        <h3 className="font-semibold text-[#03033b] mb-2 text-lg">{item.label}</h3>
-                        <div className="space-y-2 pl-4">
-                          {item.key === 'events' && (
-                            <>
-                              <button
-                                onClick={() => { onNavigate('events'); setIsMobileMenuOpen(false); }}
-                                className="block w-full text-left text-gray-600 hover:text-[#16BDA0] transition-colors"
-                              >
-                                Tous les événements
-                              </button>
-                              <button
-                                onClick={() => { onNavigate('events', { featuredFilter: true, typeFilter: 'in-person' }); setIsMobileMenuOpen(false); }}
-                                className="flex items-center w-full text-left text-gray-600 hover:text-[#16BDA0] transition-colors"
-                              >
-                                <Star className="mr-2 h-4 w-4 text-green-500" />
-                                À la une
-                              </button>
-                            </>
+                {navItems.map((item) => {
+                  const isOpen = openDropdowns.includes(item.key);
+                  return (
+                    <div key={item.key} className="border-b border-gray-100 last:border-b-0">
+                      {item.hasDropdown ? (
+                        <div>
+                          <button
+                            onClick={() => toggleDropdown(item.key)}
+                            className="flex items-center justify-between w-full py-3 text-base font-semibold text-[#03033b] hover:text-[#16BDA0] transition-colors"
+                          >
+                            <span>{item.label}</span>
+                            {isOpen
+                              ? <ChevronDown className="w-4 h-4 shrink-0" />
+                              : <ChevronRight className="w-4 h-4 shrink-0" />
+                            }
+                          </button>
+                          {isOpen && (
+                            <div className="space-y-0.5 pl-3 border-l-2 border-gray-100 mb-3">
+                              {item.key === 'events' && (
+                                <>
+                                  <button
+                                    onClick={() => { onNavigate('events'); setIsMobileMenuOpen(false); }}
+                                    className="block w-full text-left text-sm text-gray-500 hover:text-[#16BDA0] py-1.5 transition-colors"
+                                  >
+                                    Tous les événements
+                                  </button>
+                                  <button
+                                    onClick={() => { onNavigate('events', { featuredFilter: true, typeFilter: 'in-person' }); setIsMobileMenuOpen(false); }}
+                                    className="flex items-center w-full text-left text-sm text-gray-500 hover:text-[#16BDA0] py-1.5 transition-colors"
+                                  >
+                                    <Star className="mr-1.5 h-3.5 w-3.5 text-green-500 shrink-0" />
+                                    À la une
+                                  </button>
+                                </>
+                              )}
+                              {item.key === 'streaming' && (
+                                <>
+                                  <button
+                                    onClick={() => { onNavigate('events', { typeFilter: 'live', monthFilter: true }); setIsMobileMenuOpen(false); }}
+                                    className="flex items-center w-full text-left text-sm text-gray-500 hover:text-[#16BDA0] py-1.5 transition-colors"
+                                  >
+                                    <Star className="mr-1.5 h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                                    En live de ce mois
+                                  </button>
+                                  <button
+                                    onClick={() => { onNavigate('events', { typeFilter: 'live' }); setIsMobileMenuOpen(false); }}
+                                    className="block w-full text-left text-sm text-gray-500 hover:text-[#16BDA0] py-1.5 transition-colors"
+                                  >
+                                    Tous les événements en live
+                                  </button>
+                                  <button
+                                    onClick={() => { onNavigate('events', { typeFilter: 'live', featuredFilter: true }); setIsMobileMenuOpen(false); }}
+                                    className="flex items-center w-full text-left text-sm text-gray-500 hover:text-[#16BDA0] py-1.5 transition-colors"
+                                  >
+                                    <Star className="mr-1.5 h-3.5 w-3.5 text-green-500 shrink-0" />
+                                    À la une
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           )}
-                          {item.key === 'streaming' && (
-                            <>
-                              <button
-                                onClick={() => { onNavigate('events', { typeFilter: 'live', monthFilter: true }); setIsMobileMenuOpen(false); }}
-                                className="flex items-center w-full text-left text-gray-600 hover:text-[#16BDA0] transition-colors"
-                              >
-                                <Star className="mr-2 h-4 w-4 text-indigo-500" />
-                                En live de ce mois
-                              </button>
-                              <button
-                                onClick={() => { onNavigate('events', { typeFilter: 'live' }); setIsMobileMenuOpen(false); }}
-                                className="block w-full text-left text-gray-600 hover:text-[#16BDA0] transition-colors"
-                              >
-                                Tous les événements en live
-                              </button>
-                              <button
-                                onClick={() => { onNavigate('events', { typeFilter: 'live', featuredFilter: true }); setIsMobileMenuOpen(false); }}
-                                className="flex items-center w-full text-left text-gray-600 hover:text-[#16BDA0] transition-colors"
-                              >
-                                <Star className="mr-2 h-4 w-4 text-green-500" />
-                                À la une
-                              </button>
-                            </>
-                          )}
-
                         </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          onNavigate(item.key);
-                          setIsMobileMenuOpen(false);
-                        }}
-                        className={`w-full text-left text-lg font-semibold transition-colors ${
-                          item.isActive ? 'text-[#16BDA0]' : 'text-[#03033b] hover:text-[#16BDA0]'
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    )}
-                  </div>
-                ))}
+                      ) : (
+                        <button
+                          onClick={() => {
+                            onNavigate(item.key);
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className={`w-full text-left py-3 text-base font-semibold transition-colors ${
+                            item.isActive ? 'text-[#16BDA0]' : 'text-[#03033b] hover:text-[#16BDA0]'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
 
                 {/* Country selector for mobile */}
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="mb-4">
+                <div className="pt-3 border-t border-gray-200">
+                  <div className="mb-3">
                     <h3 className="font-semibold text-[#03033b] text-sm mb-3">Votre position</h3>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -531,7 +548,7 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
 
                 {/* User section for mobile */}
                 {currentUser && (
-                  <div className="pt-4 border-t border-gray-200">
+                  <div className="pt-3 border-t border-gray-200">
                     <div className="flex items-center space-x-3 mb-4">
                       <div className="w-10 h-10 bg-[#03033b] rounded-full flex items-center justify-center">
                         <User className="w-5 h-5 text-[#00BDD7]" />
@@ -600,7 +617,7 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
 
                 {/* Login button for mobile when not authenticated */}
                 {!currentUser && (
-                  <div className="pt-4 border-t border-gray-200">
+                  <div className="pt-3 border-t border-gray-200">
                     <button
                       onClick={() => {
                         onNavigate('login');

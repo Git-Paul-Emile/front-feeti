@@ -36,24 +36,24 @@ export function TousNosBonPlansSection({ onNavigate }: TousNosBonPlansSectionPro
     <section className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-2">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">
               Tous nos bons plans
             </h2>
-            <p className="text-gray-600">
-              Découvrez nos meilleures offres et réductions
+            <p className="text-sm sm:text-base text-gray-600">
+              Découvrez nos meilleures offres
             </p>
           </div>
           <button
             onClick={() => onNavigate('deals-list')}
-            className="h-10 lg:h-11 px-6 lg:px-8 border border-[#000441] bg-transparent text-[#000441] rounded-lg flex items-center justify-center gap-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#000441] focus-visible:ring-offset-2 relative overflow-hidden group transition-colors duration-300"
+            className="self-start sm:self-auto shrink-0 h-9 sm:h-10 lg:h-11 px-4 sm:px-6 lg:px-8 border border-[#000441] bg-transparent text-[#000441] rounded-lg flex items-center justify-center gap-2 sm:gap-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#000441] focus-visible:ring-offset-2 relative overflow-hidden group transition-colors duration-300"
           >
             <div className="absolute inset-0 bg-[#000441] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-out origin-left rounded-lg"></div>
-            <span className="text-sm lg:text-base relative z-10 group-hover:text-white transition-colors duration-300">
+            <span className="text-xs sm:text-sm lg:text-base relative z-10 group-hover:text-white transition-colors duration-300">
               voir plus
             </span>
-            <div className="w-4 h-4 lg:w-5 lg:h-5 relative z-10 group-hover:text-white transition-colors duration-300">
+            <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 relative z-10 group-hover:text-white transition-colors duration-300">
               <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 22 21">
                 <path
                   d="M11.5 1L21 10.5M21 10.5L11.5 20M21 10.5H1"

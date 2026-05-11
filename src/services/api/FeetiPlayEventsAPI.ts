@@ -30,35 +30,37 @@ interface FeetiPlayApiResponse<T> {
   data?: T;
 }
 
-const FEETIPLAY_API_BASE_URL =
-  (import.meta as any).env?.VITE_FEETIPLAY_API_URL ?? 'http://localhost:8001/api';
+const FEETIPLAY_API_BASE_URL: string = (import.meta as any).env?.VITE_FEETIPLAY_API_URL ?? '';
 
-const client = axios.create({
-  baseURL: FEETIPLAY_API_BASE_URL,
-  timeout: 30_000,
-  headers: { 'Content-Type': 'application/json' },
-});
+const client = FEETIPLAY_API_BASE_URL
+  ? axios.create({
+      baseURL: FEETIPLAY_API_BASE_URL,
+      timeout: 30_000,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  : null;
 
-async function extractData<T>(path: string): Promise<T> {
+async function extractData<T>(path: string, fallback: T): Promise<T> {
+  if (!client) return fallback;
   const response = await client.get<FeetiPlayApiResponse<T>>(path);
   return response.data.data as T;
 }
 
 const FeetiPlayEventsAPI = {
   getAll(): Promise<FeetiPlayEvent[]> {
-    return extractData<FeetiPlayEvent[]>('/events');
+    return extractData<FeetiPlayEvent[]>('/events', []);
   },
 
   getLive(): Promise<FeetiPlayEvent[]> {
-    return extractData<FeetiPlayEvent[]>('/events?live=true');
+    return extractData<FeetiPlayEvent[]>('/events?live=true', []);
   },
 
   getReplays(): Promise<FeetiPlayEvent[]> {
-    return extractData<FeetiPlayEvent[]>('/events?replay=true');
+    return extractData<FeetiPlayEvent[]>('/events?replay=true', []);
   },
 
-  getEventById(id: string): Promise<FeetiPlayEvent> {
-    return extractData<FeetiPlayEvent>(`/events/${id}`);
+  getEventById(id: string): Promise<FeetiPlayEvent | null> {
+    return extractData<FeetiPlayEvent | null>(`/events/${id}`, null);
   },
 };
 

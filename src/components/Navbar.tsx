@@ -20,6 +20,7 @@ interface NavbarProps {
 export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selectedCountry, onCountrySelect, countries = [] }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
+  const FEETIPLAY_URL = ((import.meta as any).env?.VITE_FEETIPLAY_URL ?? '').trim();
 
   const toggleDropdown = (key: string) =>
     setOpenDropdowns(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
@@ -305,7 +306,11 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
         <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
           {/* Live Event Button - Responsive */}
           <button
-            onClick={() => window.location.href = `${(import.meta as any).env?.VITE_FEETIPLAY_URL ?? 'http://localhost:5173'}/live`}
+            onClick={() => {
+              if (FEETIPLAY_URL) {
+                window.location.href = `${FEETIPLAY_URL}/live`;
+              }
+            }}
             className="group relative bg-gradient-to-r from-[#dc2626] to-[#b91c1c] h-[30px] sm:h-[32px] md:h-[35px] w-[120px] sm:w-[140px] md:w-[160px] rounded-[20px] sm:rounded-[22px] md:rounded-[25px] flex items-center justify-center px-2 sm:px-3 md:px-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
           >
             {/* Shine effect */}
@@ -392,7 +397,9 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                 <div className="pb-4 border-b border-gray-200 mb-4 space-y-3">
                   <button
                     onClick={() => {
-                      window.location.href = `${(import.meta as any).env?.VITE_FEETIPLAY_URL ?? 'http://localhost:5173'}/live`;
+                      if (FEETIPLAY_URL) {
+                        window.location.href = `${FEETIPLAY_URL}/live`;
+                      }
                       setIsMobileMenuOpen(false);
                     }}
                     className="w-full bg-gradient-to-r from-[#dc2626] to-[#b91c1c] text-white py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"

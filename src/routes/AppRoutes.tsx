@@ -54,7 +54,7 @@ function adaptEvent(e: BackendEvent) {
   };
 }
 
-const FEETIPLAY_URL = (import.meta as any).env?.VITE_FEETIPLAY_URL ?? 'http://localhost:5173';
+const FEETIPLAY_URL = ((import.meta as any).env?.VITE_FEETIPLAY_URL ?? '').trim();
 const FEETIPLAY_EVENT_PREFIX = 'feetiplay_';
 
 type AppEvent = ReturnType<typeof adaptEvent>;
@@ -105,7 +105,7 @@ function adaptFeetiPlayEvent(e: FeetiPlayEvent): AppEvent {
     promotionEndDate: null,
     source: 'feetiplay' as const,
     isReplay: e.isReplay ?? false,
-    externalUrl: `${FEETIPLAY_URL}/event/${e.id}`,
+    externalUrl: FEETIPLAY_URL ? `${FEETIPLAY_URL}/event/${e.id}` : undefined,
   };
 }
 
@@ -330,7 +330,9 @@ function EventDetailRoute() {
       onBack={() => navigate('/events')}
       onPurchase={(eid: string) => {
         if (isFeetiPlayRouteId(eid)) {
-          window.open(`${FEETIPLAY_URL}/event/${fromFeetiPlayRouteId(eid)}`, '_blank', 'noopener,noreferrer');
+          if (FEETIPLAY_URL) {
+            window.open(`${FEETIPLAY_URL}/event/${fromFeetiPlayRouteId(eid)}`, '_blank', 'noopener,noreferrer');
+          }
           return;
         }
         navigate(`/events/${eid}/buy`);
@@ -353,7 +355,9 @@ function PaymentRoute() {
   useEffect(() => {
     if (!id) { setLoading(false); return; }
     if (isFeetiPlayRouteId(id)) {
-      window.open(`${FEETIPLAY_URL}/event/${fromFeetiPlayRouteId(id)}`, '_blank', 'noopener,noreferrer');
+      if (FEETIPLAY_URL) {
+        window.open(`${FEETIPLAY_URL}/event/${fromFeetiPlayRouteId(id)}`, '_blank', 'noopener,noreferrer');
+      }
       setLoading(false);
       return;
     }
@@ -388,7 +392,9 @@ function StreamingRoute() {
     if (!id) return;
     // Le streaming se passe sur FeetiPlay — redirection immédiate
     const eventId = isFeetiPlayRouteId(id) ? fromFeetiPlayRouteId(id) : id;
-    window.location.href = `${FEETIPLAY_URL}/event/${eventId}`;
+    if (FEETIPLAY_URL) {
+      window.location.href = `${FEETIPLAY_URL}/event/${eventId}`;
+    }
   }, [id]);
 
   return <PageLoader />;

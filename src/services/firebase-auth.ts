@@ -90,6 +90,23 @@ export const resetPassword = async (email: string) => {
   }
 };
 
+export const authStateReady = async (): Promise<void> => {
+  if (typeof window === 'undefined') return;
+  if ((auth as any)._authStateReady) {
+    return (auth as any)._authStateReady;
+  }
+
+  const promise = new Promise<void>((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, () => {
+      resolve();
+      unsubscribe();
+    });
+  });
+
+  (auth as any)._authStateReady = promise;
+  return promise;
+};
+
 export const getIdToken = async () => {
   const user = auth.currentUser;
   if (user) return await user.getIdToken();

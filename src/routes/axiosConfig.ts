@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getPreferredBackendBaseUrl, resolveBackendBaseUrl } from "../utils/backendConfig";
-import { auth } from "../config/firebase";
+import { auth, authStateReady } from "../services/firebase-auth";
 
 const api = axios.create({
   baseURL: getPreferredBackendBaseUrl(),
@@ -14,17 +14,18 @@ api.interceptors.request.use(async (config) => {
   const baseURL = await resolveBackendBaseUrl();
   config.baseURL = baseURL;
 
-  if (typeof auth.authStateReady === "function") {
-    await auth.authStateReady();
-  }
+  await authStateReady();
 
-  let token = localStorage.getItem("accessToken") || localStorage.getItem("feeti_token");
-  if (!token && auth.currentUser) {
+  let token = null;
+  if (auth.currentUser) {
     try {
       token = await auth.currentUser.getIdToken(false);
     } catch {
       token = null;
     }
+  }
+  if (!token) {
+    token = localStorage.getItem("accessToken") || localStorage.getItem("feeti_token");
   }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

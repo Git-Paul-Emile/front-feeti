@@ -47,7 +47,7 @@ interface Event {
   externalUrl?: string;
 }
 
-const FEETIPLAY_URL = (import.meta as any).env?.VITE_FEETIPLAY_URL ?? 'http://localhost:5173';
+const FEETIPLAY_URL = ((import.meta as any).env?.VITE_FEETIPLAY_URL ?? '').trim();
 
 interface EventDetailPageProps {
   event: Event;
@@ -65,7 +65,7 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
   const [selectedTickets, setSelectedTickets] = useState(1);
   const isFeetiPlayEvent = event.source === 'feetiplay';
   const canWatchNow = event.isLive || !!event.videoUrl || !!event.streamUrl || !!event.isReplay;
-  const externalEventUrl = event.externalUrl ?? `${FEETIPLAY_URL}/event/${event.id}`;
+  const externalEventUrl = event.externalUrl ?? (FEETIPLAY_URL ? `${FEETIPLAY_URL}/event/${event.id}` : undefined);
 
   // Charger l'état favori depuis l'API au montage (si connecté)
   useEffect(() => {
@@ -81,7 +81,9 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
 
   const toggleFavorite = async () => {
     if (isFeetiPlayEvent) {
-      window.open(externalEventUrl, '_blank', 'noopener,noreferrer');
+      if (externalEventUrl) {
+        window.open(externalEventUrl, '_blank', 'noopener,noreferrer');
+      }
       return;
     }
     if (!currentUser) {
@@ -416,7 +418,7 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
                         </Button>
                       )}
 
-                      {canWatchNow && (
+                      {canWatchNow && externalEventUrl && (
                         <a
                           href={externalEventUrl}
                           target="_blank"
@@ -454,7 +456,7 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
                       <p className="text-sm text-gray-600">
                         Cet événement a déjà eu lieu.
                       </p>
-                      {canWatchNow && (
+                      {canWatchNow && externalEventUrl && (
                         <a
                           href={externalEventUrl}
                           target="_blank"

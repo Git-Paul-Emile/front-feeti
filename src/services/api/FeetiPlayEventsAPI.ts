@@ -45,7 +45,7 @@ async function extractData<T>(path: string, fallback: T): Promise<T> {
   if (!client) return fallback;
   try {
     const response = await client.get<FeetiPlayApiResponse<T>>(path);
-    return response.data.data as T;
+    return (response.data?.data ?? fallback) as T;
   } catch {
     return fallback;
   }

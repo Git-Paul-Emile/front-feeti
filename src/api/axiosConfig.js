@@ -1,6 +1,6 @@
 ﻿import axios from 'axios';
 import { getPreferredBackendBaseUrl, resolveBackendBaseUrl } from '../utils/backendConfig';
-import { auth } from '../config/firebase';
+import { auth, authStateReady } from '../services/firebase-auth';
 
 const axiosInstance = axios.create({
   baseURL: `${getPreferredBackendBaseUrl()}/api`,
@@ -18,9 +18,7 @@ axiosInstance.interceptors.request.use(async (config) => {
   const baseURL = await resolveBackendBaseUrl();
   config.baseURL = `${baseURL}/api`;
 
-  if (typeof auth.authStateReady === 'function') {
-    await auth.authStateReady();
-  }
+  await authStateReady();
 
   let token = null;
   if (auth.currentUser) {
@@ -45,7 +43,12 @@ axiosInstance.interceptors.response.use(
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       localStorage.removeItem('feeti_token');
       if (auth.currentUser) {
-        await auth.currentUser.getIdToken(true).catch(() => {});
+        const refreshedToken = await auth.currentUser.getIdToken(true).catch(() => null);
+        if (refreshedToken) {
+          localStorage.setItem('accessToken', refreshedToken);
+        }
+      } else {
+        localStorage.removeItem('accessToken');
       }
     }
 

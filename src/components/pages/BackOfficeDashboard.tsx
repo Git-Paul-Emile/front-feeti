@@ -121,12 +121,13 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
     setLoading(true);
     try {
       const data = await EventsBackendAPI.getAllEventsAdmin();
-      setEvents(data);
+      const eventsArray = Array.isArray(data) ? data : [];
+      setEvents(eventsArray);
       setStats({
-        totalEvents: data.length,
-        liveEvents: data.filter(e => e.isLive).length,
-        totalRevenue: data.reduce((sum, e) => sum + e.price * e.attendees, 0),
-        totalAttendees: data.reduce((sum, e) => sum + e.attendees, 0),
+        totalEvents: eventsArray.length,
+        liveEvents: eventsArray.filter(e => e.isLive).length,
+        totalRevenue: eventsArray.reduce((sum, e) => sum + e.price * e.attendees, 0),
+        totalAttendees: eventsArray.reduce((sum, e) => sum + e.attendees, 0),
       });
       toast.success('Données chargées avec succès');
     } catch (error) {
@@ -256,7 +257,8 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
 
   // Données pour les graphiques
   const categoryChartData = useMemo(() => {
-    const categoryCounts = events.reduce((acc, event) => {
+    const eventsArray = Array.isArray(events) ? events : [];
+    const categoryCounts = eventsArray.reduce((acc, event) => {
       acc[event.category] = (acc[event.category] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);

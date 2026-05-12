@@ -220,8 +220,9 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
   const handleApplyDefaultZones = async () => {
     try {
       const data = await AccessAPI.applyDefaultZones(eventId);
-      setZones(data);
-      toast.success(`${data.length} zones chargées`);
+      const zonesArray = Array.isArray(data) ? data : [];
+      setZones(zonesArray);
+      toast.success(`${zonesArray.length} zones chargées`);
     } catch { toast.error('Erreur lors de l\'application des templates'); }
   };
 
@@ -274,9 +275,10 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
   const handleApplyDefaultCategories = async () => {
     try {
       const data = await AccessAPI.applyDefaultCategories(eventId);
-      setCategories(data);
+      const categoriesArray = Array.isArray(data) ? data : [];
+      setCategories(categoriesArray);
       await loadCategories();
-      toast.success(`${data.length} catégories chargées`);
+      toast.success(`${categoriesArray.length} catégories chargées`);
     } catch { toast.error('Erreur'); }
   };
 

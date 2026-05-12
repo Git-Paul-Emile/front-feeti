@@ -71,8 +71,9 @@ export function ControllerDashboard({ onLogout }: ControllerDashboardProps) {
     setHistoryLoading(true);
     try {
       const data = await ControllerAPI.getMyScanHistory();
-      setHistory(data);
-      setScanCount(data.length);
+      const historyArray = Array.isArray(data) ? data : [];
+      setHistory(historyArray);
+      setScanCount(historyArray.length);
     } catch {
       toast.error('Erreur lors du chargement de l\'historique');
     } finally {

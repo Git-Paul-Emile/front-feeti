@@ -27,7 +27,7 @@ export function ReplayBonPlansSection({ onNavigate }: ReplayBonPlansSectionProps
       .then(data => setLiveEvents(data.filter(e => e.isLive)))
       .catch(() => {});
     DealsBackendAPI.getDeals({ limit: 5 })
-      .then(res => setDeals(res.data))
+      .then(res => setDeals(Array.isArray(res.data) ? res.data : []))
       .catch(() => {});
   }, []);
 

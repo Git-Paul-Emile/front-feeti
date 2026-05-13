@@ -536,7 +536,7 @@ export function CategorySelector({ onCategorySelect, onSearch }: CategorySelecto
         <div className="bg-[#000441] px-4 py-6 rounded-[32px]" data-name="Categories Container">
           <div className="overflow-x-auto category-slider scrollbar-hide">
             <div className="flex gap-3 min-w-max">
-              {error || categories.length === 0 ? (
+              {error || !categories || categories.length === 0 ? (
                 <p className="text-white/50 text-sm py-2 px-4">
                   {error ? 'Impossible de charger les catégories.' : 'Aucune catégorie disponible.'}
                 </p>

@@ -48,6 +48,21 @@
     <meta name="msapplication-TileColor" content="#811AEC" />
     <meta name="msapplication-TileImage" content="/favicon.png" />
 
+    <!-- Block React DevTools global hook in production -->
+    <script>
+      if (typeof window !== 'undefined') {
+        Object.defineProperty(window, '__REACT_DEVTOOLS_GLOBAL_HOOK__', {
+          get() {
+            return undefined;
+          },
+          set() {
+            // Ignore attempts to set it
+          },
+          configurable: false,
+        });
+      }
+    </script>
+
     <title>Feeti — Billetterie & Streaming</title>
   </head>
 

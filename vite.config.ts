@@ -212,6 +212,7 @@
     build: {
       target: 'esnext',
       outDir: 'build',
+      sourcemap: true,
     },
     server: {
       port: FRONTEND_PORT,

@@ -216,7 +216,7 @@ export function BlogPostCard({ post, onReadMore, variant = 'default' }: BlogPost
         </div>
         
         {/* Tags */}
-        {post.tags.length > 0 && (
+        {(post.tags?.length ?? 0) > 0 && (
           <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
             {post.tags.slice(0, 3).map((tag) => (
               <div key={tag} className="flex items-center space-x-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-full">

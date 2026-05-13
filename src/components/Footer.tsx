@@ -350,9 +350,7 @@ function Logo({ onNavigate }: { onNavigate: (page: string, params?: any) => void
       className="absolute h-[28px] left-[81px] top-[108px] w-[112px] hover:opacity-80 transition-opacity duration-200"
       data-name="logo"
     >
-      <span className="inline-flex items-center justify-center bg-white rounded-lg px-2 py-1 h-full">
-        <img src="/logo.png" alt="Feeti" className="h-full w-auto object-contain" />
-      </span>
+      <img src="/logo blanc.png" alt="Fééti" className="h-full w-auto object-contain" />
     </button>
   );
 }
@@ -528,9 +526,7 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
               onClick={() => onNavigate('home')}
               className="hover:opacity-80 transition-opacity duration-200"
             >
-              <span className="inline-flex items-center justify-center bg-white rounded-lg px-3 py-1">
-                <img src="/logo.png" alt="Feeti" className="w-[96px] h-auto object-contain" />
-              </span>
+              <img src="/logo blanc.png" alt="Fééti" className="w-[96px] h-auto object-contain" />
             </button>
 
             {/* Modern Social Media Icons */}

@@ -493,7 +493,7 @@ export function CategorySelector({ onCategorySelect, onSearch }: CategorySelecto
   useEffect(() => {
     CategoriesAPI.getAll()
       .then((cats) => { setCategories(cats); setError(false); })
-      .catch(() => { setCategories([]); setError(true); });
+      .catch((err) => { console.error('[CategorySelector] Échec chargement catégories:', err?.message || err); setCategories([]); setError(true); });
   }, []);
 
   const handleCategoryClick = useCallback((categoryName: string) => {

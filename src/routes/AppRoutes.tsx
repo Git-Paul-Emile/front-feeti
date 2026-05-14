@@ -557,7 +557,7 @@ function HomeRoute() {
       .then(([localEvents, liveFeetiPlayEvents]) => {
         setEvents(mergeEvents(localEvents.map(adaptEvent), liveFeetiPlayEvents.map(adaptFeetiPlayEvent)));
       })
-      .catch(() => {});
+      .catch((err) => { console.error('[HomeRoute] Échec chargement events:', err?.message || err); });
   }, [selectedCountry?.code]);
 
   useEffect(() => {
@@ -624,7 +624,7 @@ function EventsRoute() {
       .then(([localEvents, liveFeetiPlayEvents]) => {
         setEvents(mergeEvents(localEvents.map(adaptEvent), liveFeetiPlayEvents.map(adaptFeetiPlayEvent)));
       })
-      .catch(() => {});
+      .catch((err) => { console.error('[EventsRoute] Échec chargement events:', err?.message || err); });
   }, [selectedCountry?.code]);
 
   useEffect(() => {

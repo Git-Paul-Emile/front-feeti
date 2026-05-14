@@ -29,6 +29,13 @@ function getDefaultBackendUrl() {
   }
 
   if (window.location.protocol === 'https:') {
+    // En production HTTPS sans VITE_BACKEND_URL configuré, le fallback sur l'origine
+    // frontend enverrait les appels API vers le mauvais serveur. Log d'avertissement.
+    console.warn(
+      '[backendConfig] VITE_BACKEND_URL non configuré en production. ' +
+      'Définissez cette variable dans le dashboard Vercel/hôte. ' +
+      'Fallback sur l\'origine courante : ' + window.location.origin
+    );
     return window.location.origin;
   }
 

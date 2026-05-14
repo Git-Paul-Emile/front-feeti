@@ -14,13 +14,12 @@ function getWindowHostname() {
   return 'localhost';
 }
 
+// Vite remplace statiquement import.meta.env.VITE_* à la compilation.
+// Ne pas utiliser l'optional chaining ici — ça empêche la substitution.
+const VITE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 function getConfiguredBackendUrl() {
-  try {
-    const configured = import.meta?.env?.VITE_BACKEND_URL;
-    return configured ? normalizeBaseUrl(configured) : null;
-  } catch {
-    return null;
-  }
+  return VITE_BACKEND_URL ? normalizeBaseUrl(VITE_BACKEND_URL) : null;
 }
 
 function getDefaultBackendUrl() {

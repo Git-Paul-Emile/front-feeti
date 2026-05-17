@@ -206,6 +206,41 @@ html {
   font-size: var(--font-size);
 }
 
+/* ── Scrollbar stylisée — fenêtre principale uniquement ─────────────────── */
+html::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+html::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #16bda0, #00bdd7);
+  border-radius: 3px;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #10a68d, #009bb5);
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #16bda0 #f1f1f1;
+}
+
+/* Masquer les scrollbars sur tous les conteneurs internes */
+*:not(html)::-webkit-scrollbar {
+  display: none;
+}
+
+*:not(html) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 /* Hide scrollbar for horizontal slider */
 .scrollbar-hide {
   -ms-overflow-style: none;

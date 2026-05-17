@@ -52,7 +52,7 @@ function SectionHeader({ onNavigate }: { onNavigate: (page: string) => void }) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">
-            Féetiche
+            Féétiche
           </h2>
           <p className="text-sm sm:text-base text-gray-600">
             Découvrez avec nous, les meilleures offres, les meilleures découvertes, et meilleurs moments d'évasion

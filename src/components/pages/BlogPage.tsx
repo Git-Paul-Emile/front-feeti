@@ -146,7 +146,7 @@ export function BlogPage({ onBack, onPostSelect, onNavigate, initialCategory = '
                 </Button>
               )}
               <div>
-                <h1 className="text-3xl lg:text-4xl font-bold mb-2">Féetiche</h1>
+                <h1 className="text-3xl lg:text-4xl font-bold mb-2">Féétiche</h1>
                 <p className="text-white/90 text-lg">
                   Actualités, tendances et coulisses de l'événementiel en Afrique Centrale
                 </p>

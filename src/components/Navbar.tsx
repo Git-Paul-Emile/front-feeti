@@ -31,7 +31,7 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
     { key: 'streaming', label: 'En live', hasDropdown: true },
     { key: 'deals-list', label: 'Bon plan', hasDropdown: false },
     { key: 'leisure', label: 'Loisirs', hasDropdown: false },
-    { key: 'blog', label: 'Féetiche' },
+    { key: 'blog', label: 'Féétiche' },
   ];
 
   return (

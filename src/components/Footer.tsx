@@ -697,6 +697,11 @@ export function Footer({ onNavigate, onLegalPageNavigate }: FooterProps) {
         <SocialMedia />
         <SocialMediaModern />
       </ResponsiveContainer>
+      <div className="border-t border-white/10 py-4 text-center">
+        <p className="text-white text-sm">
+          © 2026 Fééti.io , propulsé par Eroiste , Tous droits réservés.
+        </p>
+      </div>
     </div>
   );
 }

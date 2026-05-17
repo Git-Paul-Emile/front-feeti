@@ -672,7 +672,7 @@ export function LoginPage({ onLogin, onRegister, onGoogleLogin, onGoogleRegister
             {/* En-tête */}
             <div className="text-center mb-6">
               <h1 className="text-white text-[40px] font-['Inter',sans-serif] font-bold leading-[1.04] tracking-[-1.6px] mb-3">
-                {isLogin ? 'Féeter' : 'Devenir Féeteur(se)'}
+                {isLogin ? 'Fééter' : 'Devenir Fééteur(se)'}
               </h1>
               <p className="text-white text-[17.2px] font-['Inter',sans-serif] leading-[22.933px] tracking-[-0.516px] opacity-80 max-w-[360px] mx-auto">
                 {isLogin

@@ -504,7 +504,7 @@ export function EmailTemplate({ tickets, customerName, customerEmail, orderId }:
           color: '#6b7280'
         }}>
           <p style={{ margin: '0 0 8px 0' }}>
-            © 2024 Feeti. Tous droits réservés.
+            © 2026 Fééti.io , propulsé par Eroiste , Tous droits réservés.
           </p>
           <p style={{ margin: '0' }}>
             Cet email a été envoyé à {customerEmail}

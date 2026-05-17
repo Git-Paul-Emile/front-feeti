@@ -157,7 +157,7 @@ export function ReplayBonPlansSection({ onNavigate }: ReplayBonPlansSectionProps
                 </p>
 
                 <button
-                  onClick={() => onNavigate('events')}
+                  onClick={() => onNavigate('deals')}
                   className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#e43962] to-[#f54975] hover:from-[#d63356] hover:to-[#e73668] text-white font-bold rounded-full transition-all duration-300 hover:scale-105 shadow-lg"
                 >
                   Voir +

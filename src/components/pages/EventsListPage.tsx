@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { isEventPromotionActive } from '../PromotionBadge';
 import { EventCard } from '../EventCard';
 import { SEO } from '../SEO';
 import { Button } from '../ui/button';
@@ -22,6 +21,7 @@ interface Event {
   category: string;
   attendees: number;
   maxAttendees: number;
+  eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
   isLive: boolean;
   isFeatured?: boolean;
   isFavorite?: boolean;
@@ -124,8 +124,9 @@ export function EventsListPage({
       }
 
       // Type
-      if (typeFilter === 'live'       && !event.isLive)  return false;
-      if (typeFilter === 'in-person'  &&  event.isLive)  return false;
+      const hasStreaming = event.isLive || event.eventType === 'STREAMING_LIVE' || event.eventType === 'MIXTE';
+      if (typeFilter === 'live'      && !hasStreaming)  return false;
+      if (typeFilter === 'in-person' &&  (event.isLive || event.eventType === 'STREAMING_LIVE')) return false;
 
       // À la une
       if (showFeaturedOnly && !event.isFeatured) return false;
@@ -159,16 +160,6 @@ export function EventsListPage({
 
     return filtered;
   }, [events, searchTerm, selectedCategory, selectedLocation, typeFilter, showFeaturedOnly, showMonthOnly, priceRange, sortBy]);
-
-  const nonFeaturedEvents = useMemo(() =>
-    filteredAndSortedEvents.filter(e =>
-      !e.isFeatured && !(isEventPromotionActive(e) && e.promotionType === 'OR')
-    ),
-    [filteredAndSortedEvents]
-  );
-
-  // Quand le filtre "à la une" est actif, les cards montrent aussi les featured
-  const displayedCards = showFeaturedOnly ? filteredAndSortedEvents : nonFeaturedEvents;
 
   // Slider : respect du typeFilter (live / in-person) pour cohérence avec le compteur
   const sliderEvents = useMemo(() => {
@@ -397,16 +388,16 @@ export function EventsListPage({
             <p className="text-gray-500 mb-6">Modifiez vos critères de recherche ou effacez les filtres.</p>
             <Button onClick={clearFilters} variant="outline">Effacer tous les filtres</Button>
           </div>
-        ) : displayedCards.length > 0 ? (
+        ) : (
           <div>
             <div className="mb-6 flex items-center gap-3">
               <h2 className="text-xl font-semibold text-gray-800">
-                {showFeaturedOnly ? 'Événements à la une' : 'Autres événements'}
+                {showFeaturedOnly ? 'Événements à la une' : showMonthOnly ? 'Événements ce mois-ci' : typeFilter === 'live' ? 'Événements en live' : typeFilter === 'in-person' ? 'Événements en présentiel' : 'Tous les événements'}
               </h2>
-              <span className="text-sm text-gray-500">({displayedCards.length})</span>
+              <span className="text-sm text-gray-500">({filteredAndSortedEvents.length})</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayedCards.map(event => (
+              {filteredAndSortedEvents.map(event => (
                 <EventCard
                   key={event.id}
                   event={event}
@@ -418,7 +409,7 @@ export function EventsListPage({
               ))}
             </div>
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );

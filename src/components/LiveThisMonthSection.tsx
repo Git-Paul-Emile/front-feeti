@@ -20,6 +20,7 @@ interface Event {
   tags?: string[];
   attendees: number;
   maxAttendees: number;
+  eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
   isLive: boolean;
   isFavorite?: boolean;
   organizer: string;
@@ -49,7 +50,7 @@ export function LiveThisMonthSection({ events = [], onEventSelect, onPurchase, o
   const LIVE_PROMO_RANK: Record<string, number> = { OR: 4, ARGENT: 3, BRONZE: 2, LITE: 1 };
   const liveEvents = useMemo(() =>
     events
-      .filter(e => e.isLive)
+      .filter(e => e.isLive || e.eventType === 'STREAMING_LIVE' || e.eventType === 'MIXTE')
       .sort((a, b) => {
         const rankA = isEventPromotionActive(a) && a.promotionType ? (LIVE_PROMO_RANK[a.promotionType] ?? 0) : 0;
         const rankB = isEventPromotionActive(b) && b.promotionType ? (LIVE_PROMO_RANK[b.promotionType] ?? 0) : 0;

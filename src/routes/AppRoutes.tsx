@@ -33,6 +33,7 @@ function adaptEvent(e: BackendEvent) {
     maxAttendees: e.maxAttendees,
     duration: e.duration || '',
     salesBlocked: e.salesBlocked ?? false,
+    eventType: e.eventType,
     isLive: e.isLive,
     vipPrice: e.vipPrice,
     countryCode: e.countryCode,
@@ -88,6 +89,7 @@ function adaptFeetiPlayEvent(e: FeetiPlayEvent): AppEvent {
     maxAttendees: Math.max(viewers + 1, 1000),
     duration: e.duration || '',
     salesBlocked: false,
+    eventType: e.eventType ?? 'STREAMING_LIVE',
     isLive: e.isLive,
     vipPrice: undefined,
     countryCode: undefined,
@@ -552,7 +554,7 @@ function HomeRoute() {
   useEffect(() => {
     Promise.all([
       EventsBackendAPI.getAllEvents(selectedCountry?.code),
-      FeetiPlayEventsAPI.getLive().catch(() => [] as FeetiPlayEvent[]),
+      FeetiPlayEventsAPI.getLiveAndUpcoming().catch(() => [] as FeetiPlayEvent[]),
     ])
       .then(([localEvents, liveFeetiPlayEvents]) => {
         setEvents(mergeEvents(localEvents.map(adaptEvent), liveFeetiPlayEvents.map(adaptFeetiPlayEvent)));
@@ -619,7 +621,7 @@ function EventsRoute() {
   useEffect(() => {
     Promise.all([
       EventsBackendAPI.getAllEvents(selectedCountry?.code),
-      FeetiPlayEventsAPI.getLive().catch(() => [] as FeetiPlayEvent[]),
+      FeetiPlayEventsAPI.getLiveAndUpcoming().catch(() => [] as FeetiPlayEvent[]),
     ])
       .then(([localEvents, liveFeetiPlayEvents]) => {
         setEvents(mergeEvents(localEvents.map(adaptEvent), liveFeetiPlayEvents.map(adaptFeetiPlayEvent)));
@@ -687,7 +689,7 @@ function LiveEventsRoute() {
   useEffect(() => {
     Promise.all([
       EventsBackendAPI.getAllEvents(selectedCountry?.code),
-      FeetiPlayEventsAPI.getLive().catch(() => [] as FeetiPlayEvent[]),
+      FeetiPlayEventsAPI.getLiveAndUpcoming().catch(() => [] as FeetiPlayEvent[]),
     ])
       .then(([localEvents, liveFeetiPlayEvents]) => {
         setEvents(mergeEvents(

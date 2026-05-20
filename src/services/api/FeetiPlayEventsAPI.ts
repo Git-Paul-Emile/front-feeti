@@ -12,6 +12,7 @@ export interface FeetiPlayEvent {
   channelName: string;
   category: string;
   tags: string[];
+  eventType?: 'STREAMING_LIVE' | 'MIXTE';
   isLive: boolean;
   isReplay: boolean;
   isFeatured: boolean;
@@ -58,6 +59,11 @@ const FeetiPlayEventsAPI = {
 
   getLive(): Promise<FeetiPlayEvent[]> {
     return extractData<FeetiPlayEvent[]>('/events?live=true', []);
+  },
+
+  async getLiveAndUpcoming(): Promise<FeetiPlayEvent[]> {
+    const all = await extractData<FeetiPlayEvent[]>('/events', []);
+    return all.filter(e => !e.isReplay);
   },
 
   getReplays(): Promise<FeetiPlayEvent[]> {

@@ -71,6 +71,7 @@ export interface BackendEvent {
   attendees: number;
   duration?: string;
   salesBlocked: boolean;
+  eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
   isLive: boolean;
   isFeatured: boolean;
   isFavorite: boolean;

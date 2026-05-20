@@ -161,11 +161,11 @@ export function EventsListPage({
     return filtered;
   }, [events, searchTerm, selectedCategory, selectedLocation, typeFilter, showFeaturedOnly, showMonthOnly, priceRange, sortBy]);
 
-  // Slider : respect du typeFilter (live / in-person) pour cohérence avec le compteur
+  // Slider : respect du typeFilter pour cohérence avec le compteur
   const sliderEvents = useMemo(() => {
     let evs = [...events];
-    if (typeFilter === 'live')      evs = evs.filter(e => e.isLive);
-    if (typeFilter === 'in-person') evs = evs.filter(e => !e.isLive);
+    if (typeFilter === 'live')      evs = evs.filter(e => e.isLive || e.eventType === 'STREAMING_LIVE' || e.eventType === 'MIXTE');
+    if (typeFilter === 'in-person') evs = evs.filter(e => !e.isLive && e.eventType !== 'STREAMING_LIVE');
     return evs.sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
   }, [events, typeFilter]);
 

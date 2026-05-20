@@ -87,7 +87,7 @@ const HomePage = memo(function HomePage({ events, onEventSelect, onNavigate, onS
   }, [onNavigate]);
 
   const handleViewAllEvents = useCallback(() => {
-    onNavigate('events', { typeFilter: 'live', showSlider: true });
+    onNavigate('events', { featuredFilter: true });
   }, [onNavigate]);
 
   const handleWishlist = useCallback((eventId: string) => {
@@ -146,7 +146,7 @@ const HomePage = memo(function HomePage({ events, onEventSelect, onNavigate, onS
               </p>
               <div className="flex items-center space-x-2 mt-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full" />
-                <span className="text-sm text-gray-500">Événements en présentiel uniquement</span>
+                <span className="text-sm text-gray-500">Tous types : présentiel, live, mixte</span>
               </div>
             </div>
             <button

@@ -270,7 +270,7 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                         <DropdownMenuItem onClick={() => onNavigate('events')} className="hover:bg-gray-50">
                           Tous les événements
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onNavigate('events', { featuredFilter: true, typeFilter: 'in-person' })} className="hover:bg-gray-50">
+                        <DropdownMenuItem onClick={() => onNavigate('events', { featuredFilter: true })} className="hover:bg-gray-50">
                           À la une
                         </DropdownMenuItem>
                       </>
@@ -447,7 +447,7 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                                     Tous les événements
                                   </button>
                                   <button
-                                    onClick={() => { onNavigate('events', { featuredFilter: true, typeFilter: 'in-person' }); setIsMobileMenuOpen(false); }}
+                                    onClick={() => { onNavigate('events', { featuredFilter: true }); setIsMobileMenuOpen(false); }}
                                     className="flex items-center w-full text-left text-sm text-gray-500 hover:text-[#16BDA0] py-1.5 transition-colors"
                                   >
                                     <Star className="mr-1.5 h-3.5 w-3.5 text-green-500 shrink-0" />

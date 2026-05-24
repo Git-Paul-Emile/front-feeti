@@ -10,6 +10,12 @@ export function GoogleCompletionPage() {
   const { completeGoogleRegistration } = useAuth();
   const prefill = (location.state as { prefill?: { name?: string; email?: string } } | null)?.prefill;
 
+  useEffect(() => {
+    if (!window.sessionStorage.getItem("feeti2_google_pending_token")) {
+      navigate("/login", { replace: true });
+    }
+  }, [navigate]);
+
   const [name, setName] = useState(prefill?.name ?? "");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"user" | "organizer">("user");

@@ -17,6 +17,7 @@ import {
 import { auth } from "../../../config/firebase";
 import { firebaseClientErrorToUserMessage } from "../../../utils/firebaseUserFacingError";
 import AuthAPI, {
+  ApiError,
   type AuthUser,
   type ChangePasswordData,
   type RegisterData,
@@ -98,46 +99,36 @@ export class ExpressAuthProvider implements AuthProvider {
       if (redirectResult) {
         const info = getAdditionalUserInfo(redirectResult);
         const idToken = await redirectResult.user.getIdToken();
+        const prefill = {
+          name: redirectResult.user.displayName ?? undefined,
+          email: redirectResult.user.email ?? undefined,
+        };
+        window.sessionStorage.removeItem(PENDING_GOOGLE_REDIRECT_KEY);
 
         if (info?.isNewUser) {
           window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, idToken);
-          window.sessionStorage.removeItem(PENDING_GOOGLE_REDIRECT_KEY);
-          return {
-            requiresCompletion: true,
-            prefill: {
-              name: redirectResult.user.displayName ?? undefined,
-              email: redirectResult.user.email ?? undefined,
-            },
-          };
+          return { requiresCompletion: true, prefill };
         }
 
-        const user = await AuthAPI.loginProfile(idToken);
-        window.sessionStorage.removeItem(PENDING_GOOGLE_REDIRECT_KEY);
-        return { requiresCompletion: false, user };
+        try {
+          const user = await AuthAPI.loginProfile(idToken);
+          return { requiresCompletion: false, user };
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 404) {
+            // Profil backend absent (inscription précédemment abandonnée)
+            window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, idToken);
+            return { requiresCompletion: true, prefill };
+          }
+          throw err;
+        }
       }
 
       // Essayer d'abord la popup
+      let popupResult;
       try {
-        const result = await signInWithPopup(auth, googleProvider);
-        const info = getAdditionalUserInfo(result);
-        const idToken = await result.user.getIdToken();
-
-        if (info?.isNewUser) {
-          window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, idToken);
-          return {
-            requiresCompletion: true,
-            prefill: {
-              name: result.user.displayName ?? undefined,
-              email: result.user.email ?? undefined,
-            },
-          };
-        }
-
-        const user = await AuthAPI.loginProfile(idToken);
-        return { requiresCompletion: false, user };
+        popupResult = await signInWithPopup(auth, googleProvider);
       } catch (popupError: unknown) {
         const errorCode = (popupError as { code?: string }).code;
-        
         // Si la popup est bloquée ou fermée, fallback sur la redirection
         if (
           errorCode === "auth/popup-blocked" ||
@@ -147,12 +138,33 @@ export class ExpressAuthProvider implements AuthProvider {
           console.log("Popup bloquée ou fermée, passage à la redirection Google...");
           window.sessionStorage.setItem(PENDING_GOOGLE_REDIRECT_KEY, "1");
           await signInWithRedirect(auth, googleProvider);
-          // La redirection va recharger la page, donc ce return n'est pas atteint
           return { requiresCompletion: false };
         }
-
-        // Autres erreurs : relancer
         throw popupError;
+      }
+
+      const info = getAdditionalUserInfo(popupResult);
+      const idToken = await popupResult.user.getIdToken();
+      const prefill = {
+        name: popupResult.user.displayName ?? undefined,
+        email: popupResult.user.email ?? undefined,
+      };
+
+      if (info?.isNewUser) {
+        window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, idToken);
+        return { requiresCompletion: true, prefill };
+      }
+
+      try {
+        const user = await AuthAPI.loginProfile(idToken);
+        return { requiresCompletion: false, user };
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
+          // Profil backend absent (inscription précédemment abandonnée)
+          window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, idToken);
+          return { requiresCompletion: true, prefill };
+        }
+        throw err;
       }
     } catch (e) {
       rethrowUserFacing(e);

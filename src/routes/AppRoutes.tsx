@@ -871,6 +871,12 @@ function LoginRoute() {
   const location = useLocation();
   const { login, register: registerUser, startGoogleAuth } = useAuth();
 
+  useEffect(() => {
+    if (window.sessionStorage.getItem("feeti2_google_pending_token")) {
+      navigate("/login/google-complete", { replace: true });
+    }
+  }, [navigate]);
+
   const handleLogin = async (email: string, password: string) => {
     const user = await login(email, password);
     toast.success(`Bienvenue ${user.name} !`);

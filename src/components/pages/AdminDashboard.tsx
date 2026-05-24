@@ -4792,7 +4792,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                                         <AlertDialogFooter>
                                           <AlertDialogCancel onClick={() => setFeaturedAdminNote('')}>Annuler</AlertDialogCancel>
                                           <AlertDialogAction
-                                            className="bg-green-600 hover:bg-green-700"
+                                            className="bg-green-600 hover:bg-green-700 text-white"
                                             onClick={() => handleApproveFeaturedRequest(req.id)}
                                             disabled={featuredProcessingId === req.id}
                                           >

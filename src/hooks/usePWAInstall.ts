@@ -10,6 +10,7 @@ interface PWAInstallState {
   canInstall: boolean;
   isInstalled: boolean;
   isIOS: boolean;
+  isIPad: boolean;
   install: () => Promise<'accepted' | 'dismissed' | 'unavailable'>;
   dismiss: () => void;
 }
@@ -34,8 +35,17 @@ function isRunningStandalone(): boolean {
   );
 }
 
+function detectIPad(): boolean {
+  // iPad iOS < 13
+  if (/ipad/i.test(navigator.userAgent)) return true;
+  // iPad iOS 13+ reports as "Macintosh" but has touch
+  if (/macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1) return true;
+  return false;
+}
+
 function detectIOS(): boolean {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as any).MSStream;
+  if (/iphone|ipod/i.test(navigator.userAgent)) return true;
+  return detectIPad();
 }
 
 export function usePWAInstall(): PWAInstallState {
@@ -43,6 +53,7 @@ export function usePWAInstall(): PWAInstallState {
   const [isInstalled, setIsInstalled] = useState(isRunningStandalone);
   const [dismissed, setDismissed] = useState(isDismissed);
   const isIOS = detectIOS();
+  const isIPad = detectIPad();
 
   useEffect(() => {
     if (isRunningStandalone()) return;
@@ -81,5 +92,5 @@ export function usePWAInstall(): PWAInstallState {
 
   const canInstall = !isInstalled && !dismissed && (!!deferredPrompt || isIOS);
 
-  return { canInstall, isInstalled, isIOS, install, dismiss };
+  return { canInstall, isInstalled, isIOS, isIPad, install, dismiss };
 }

@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import svgPaths from '../imports/svg-12mm8ldurx';
 
-const SCROLL_THRESHOLD = 300; // px avant d'afficher la bannière
+const SCROLL_THRESHOLD = 300; // px avant d'afficher sur Android
+const IOS_DELAY_MS    = 3000; // délai avant d'afficher sur iOS (pas de scroll nécessaire)
 
 function FeetiMark({ size = 28 }: { size?: number }) {
   return (
@@ -20,7 +21,7 @@ function FeetiMark({ size = 28 }: { size?: number }) {
   );
 }
 
-function IOSGuide({ onClose }: { onClose: () => void }) {
+function IOSGuide({ isIPad, onClose }: { isIPad: boolean; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60" />
@@ -48,7 +49,9 @@ function IOSGuide({ onClose }: { onClose: () => void }) {
             </div>
             <div>
               <p className="text-white font-semibold text-sm">1. Appuyez sur Partager</p>
-              <p className="text-white/40 text-xs mt-0.5">Bouton en bas de Safari</p>
+              <p className="text-white/40 text-xs mt-0.5">
+                {isIPad ? 'Bouton en haut à droite de Safari' : 'Bouton en bas de Safari'}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-2xl px-4 py-3" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -76,30 +79,39 @@ function IOSGuide({ onClose }: { onClose: () => void }) {
 }
 
 export function PWAInstallBanner() {
-  const { canInstall, isIOS, install, dismiss } = usePWAInstall();
+  const { canInstall, isIOS, isIPad, install, dismiss } = usePWAInstall();
   const [installing, setInstalling] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [visible, setVisible] = useState(false);
 
-  // Affiche la bannière seulement après SCROLL_THRESHOLD px de défilement
   useEffect(() => {
     if (!canInstall) return;
 
-    const onScroll = () => setScrolled(window.scrollY >= SCROLL_THRESHOLD);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll(); // état initial
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [canInstall]);
+    if (isIOS) {
+      // Sur iOS on n'a pas de beforeinstallprompt — on affiche après un court délai
+      const t = setTimeout(() => setVisible(true), IOS_DELAY_MS);
+      return () => clearTimeout(t);
+    } else {
+      // Sur Android/desktop : afficher après scroll
+      const onScroll = () => setVisible(window.scrollY >= SCROLL_THRESHOLD);
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+      return () => window.removeEventListener('scroll', onScroll);
+    }
+  }, [canInstall, isIOS]);
 
   if (!canInstall) return null;
-
-  const visible = scrolled;
 
   const handleInstall = async () => {
     if (isIOS) { setShowIOSGuide(true); return; }
     setInstalling(true);
     const outcome = await install();
     if (outcome !== 'accepted') setInstalling(false);
+  };
+
+  const handleDismiss = () => {
+    setVisible(false);
+    dismiss();
   };
 
   return (
@@ -112,9 +124,9 @@ export function PWAInstallBanner() {
           borderBottom: '1px solid rgba(129,26,236,0.3)',
           boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
           paddingTop: 'env(safe-area-inset-top)',
-          // Slide in/out
           transform: visible ? 'translateY(0)' : 'translateY(-110%)',
           transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          pointerEvents: visible ? 'auto' : 'none',
         }}
       >
         <div className="flex items-center gap-3 px-4 py-2.5 max-w-2xl mx-auto">
@@ -127,7 +139,9 @@ export function PWAInstallBanner() {
           <div className="flex-1 min-w-0">
             <p className="font-bold text-white text-sm leading-tight">Fééti</p>
             <p className="text-white/60 text-xs leading-tight truncate">
-              Accédez à vos billets même sans connexion.
+              {isIOS
+                ? 'Installez l\'app pour accéder à vos billets hors-ligne.'
+                : 'Accédez à vos billets même sans connexion.'}
             </p>
           </div>
           <button
@@ -144,7 +158,7 @@ export function PWAInstallBanner() {
             {installing ? 'En cours…' : 'Installer'}
           </button>
           <button
-            onClick={dismiss}
+            onClick={handleDismiss}
             aria-label="Fermer"
             className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full"
             style={{ color: 'rgba(255,255,255,0.4)' }}
@@ -159,7 +173,10 @@ export function PWAInstallBanner() {
       </div>
 
       {showIOSGuide && (
-        <IOSGuide onClose={() => { setShowIOSGuide(false); dismiss(); }} />
+        <IOSGuide
+          isIPad={isIPad}
+          onClose={() => { setShowIOSGuide(false); handleDismiss(); }}
+        />
       )}
     </>
   );

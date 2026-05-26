@@ -1,6 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" shape-rendering="geometricPrecision">
-  <!-- Fond blanc arrondi -->
-  <rect width="512" height="512" rx="115" ry="115" fill="white"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#811AEC"/>
+      <stop offset="100%" stop-color="#4a0e9a"/>
+    </linearGradient>
+  </defs>
+  <!-- Fond dégradé violet arrondi -->
+  <rect width="512" height="512" rx="115" ry="115" fill="url(#bg)"/>
 
   <!-- Fééti logomark centré et mis à l'échelle (viewBox original 73×69 → ~352×333 dans 512×512) -->
   <g transform="translate(80, 89.7) scale(4.82)" clip-path="url(#rounded)">

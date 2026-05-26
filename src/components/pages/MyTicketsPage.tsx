@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { ArrowLeft, Ticket, Calendar, MapPin, Clock, Download, QrCode, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Ticket, Calendar, MapPin, Clock, Download, QrCode, RefreshCw, RotateCcw, X } from 'lucide-react';
 import { QRCodeGenerator, generateQRDataUrl } from '../QRCodeGenerator';
 import TicketAPI, { type BackendTicket } from '../../services/api/TicketAPI';
 import { toast } from 'sonner@2.0.3';
@@ -23,29 +23,57 @@ function formatPrice(price: number, currency: string) {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  valid:   { label: 'Valide',   color: 'bg-green-100 text-green-800' },
-  used:    { label: 'Utilisé',  color: 'bg-gray-100 text-gray-600' },
-  expired: { label: 'Expiré',   color: 'bg-red-100 text-red-700' },
+  valid:            { label: 'Valide',              color: 'bg-green-100 text-green-800' },
+  used:             { label: 'Utilisé',             color: 'bg-gray-100 text-gray-600' },
+  expired:          { label: 'Expiré',              color: 'bg-red-100 text-red-700' },
+  refund_requested: { label: 'Remboursement demandé', color: 'bg-orange-100 text-orange-800' },
+  refunded:         { label: 'Remboursé',           color: 'bg-blue-100 text-blue-800' },
 };
 
 export function MyTicketsPage({ onBack }: MyTicketsPageProps) {
   const [tickets, setTickets] = useState<BackendTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [refundModal, setRefundModal] = useState<{ ticketId: string; eventTitle: string } | null>(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundLoading, setRefundLoading] = useState(false);
 
-  const loadTickets = async () => {
-    setLoading(true);
+  const loadTickets = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await TicketAPI.getMyTickets();
       setTickets(data);
     } catch {
-      toast.error('Impossible de charger vos billets');
+      if (!silent) toast.error('Impossible de charger vos billets');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
+    }
+  }, []);
+
+  const handleRequestRefund = async () => {
+    if (!refundModal || !refundReason.trim()) return;
+    setRefundLoading(true);
+    try {
+      await TicketAPI.requestRefund(refundModal.ticketId, refundReason.trim());
+      toast.success('Demande de remboursement envoyée. Délai de traitement : 5 à 7 jours ouvrables.');
+      setRefundModal(null);
+      setRefundReason('');
+      // Rechargement depuis le serveur pour avoir l'état confirmé
+      await loadTickets(true);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Impossible d\'envoyer la demande de remboursement');
+    } finally {
+      setRefundLoading(false);
     }
   };
 
-  useEffect(() => { loadTickets(); }, []);
+  useEffect(() => {
+    loadTickets();
+    // Recharger silencieusement quand l'utilisateur revient sur l'onglet (ex: après un achat)
+    const onVisible = () => { if (document.visibilityState === 'visible') loadTickets(true); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [loadTickets]);
 
   const handleDownloadPDF = (ticket: BackendTicket) => {
     const qrDataUrl = generateQRDataUrl(ticket.qrData, 200);
@@ -57,9 +85,10 @@ export function MyTicketsPage({ onBack }: MyTicketsPageProps) {
         <style>
           body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
           .ticket { max-width: 580px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
-          .header { background: linear-gradient(135deg, #4338ca, #059669); color: white; padding: 28px 24px; text-align: center; }
-          .header h1 { margin: 0 0 6px 0; font-size: 22px; }
-          .header p { margin: 0; opacity: .85; font-size: 14px; }
+          .header { position: relative; background: linear-gradient(135deg, #4338ca, #059669); color: white; padding: 28px 24px; text-align: center; overflow: hidden; }
+          .header-img { width: 100%; height: 140px; object-fit: cover; display: block; }
+          .header h1 { margin: 0 0 6px 0; font-size: 22px; position: relative; z-index: 1; }
+          .header p { margin: 0; opacity: .85; font-size: 14px; position: relative; z-index: 1; }
           .body { padding: 24px; }
           .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
           .item { background: #f3f4f6; border-radius: 8px; padding: 12px; }
@@ -72,6 +101,7 @@ export function MyTicketsPage({ onBack }: MyTicketsPageProps) {
       </head>
       <body>
         <div class="ticket">
+          ${event?.image ? `<img class="header-img" src="${event.image}" alt="${event?.title ?? ''}" />` : ''}
           <div class="header">
             <h1>${event?.title ?? 'Événement'}</h1>
             <p>Billet ${ticket.category} — N° ${ticket.id.slice(-8).toUpperCase()}</p>
@@ -148,17 +178,28 @@ export function MyTicketsPage({ onBack }: MyTicketsPageProps) {
               const isExpanded = expandedId === ticket.id;
               return (
                 <Card key={ticket.id} className={`overflow-hidden border-2 transition-all ${ticket.status === 'valid' ? 'border-indigo-200' : 'border-gray-200'}`}>
-                  {/* Top band */}
-                  <div className={`h-1.5 w-full ${ticket.status === 'valid' ? 'bg-gradient-to-r from-indigo-500 to-purple-600' : 'bg-gray-300'}`} />
+                  {/* Event image banner */}
+                  {ev?.image ? (
+                    <div className="relative h-28 overflow-hidden">
+                      <img src={ev.image} alt={ev.title} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
+                        <p className="text-white font-semibold text-sm truncate">{ev.title}</p>
+                        <Badge className={s.color + ' shrink-0'}>{s.label}</Badge>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={`h-1.5 w-full ${ticket.status === 'valid' ? 'bg-gradient-to-r from-indigo-500 to-purple-600' : 'bg-gray-300'}`} />
+                  )}
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <CardTitle className="text-base truncate">{ev?.title ?? 'Événement'}</CardTitle>
+                        {!ev?.image && <CardTitle className="text-base truncate">{ev?.title ?? 'Événement'}</CardTitle>}
                         <p className="text-sm text-gray-500 mt-1">
                           Billet {ticket.category} — N° {ticket.id.slice(-8).toUpperCase()}
                         </p>
                       </div>
-                      <Badge className={s.color}>{s.label}</Badge>
+                      {!ev?.image && <Badge className={s.color}>{s.label}</Badge>}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -190,16 +231,18 @@ export function MyTicketsPage({ onBack }: MyTicketsPageProps) {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2 pt-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-2"
-                        onClick={() => setExpandedId(isExpanded ? null : ticket.id)}
-                      >
-                        <QrCode className="w-4 h-4" />
-                        {isExpanded ? 'Masquer QR' : 'Voir QR code'}
-                      </Button>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {ticket.status === 'valid' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                          onClick={() => setExpandedId(isExpanded ? null : ticket.id)}
+                        >
+                          <QrCode className="w-4 h-4" />
+                          {isExpanded ? 'Masquer QR' : 'Voir QR code'}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -209,6 +252,33 @@ export function MyTicketsPage({ onBack }: MyTicketsPageProps) {
                         <Download className="w-4 h-4" />
                         Télécharger PDF
                       </Button>
+                      {ticket.status === 'valid' && ev?.id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2 text-indigo-600 border-indigo-300 hover:bg-indigo-50"
+                          onClick={() => onBack()}
+                        >
+                          <Ticket className="w-4 h-4" />
+                          Achat supplémentaire
+                        </Button>
+                      )}
+                      {(ticket.status === 'valid') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50"
+                          onClick={() => { setRefundModal({ ticketId: ticket.id, eventTitle: ev?.title ?? 'cet événement' }); setRefundReason(''); }}
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          Remboursement
+                        </Button>
+                      )}
+                      {ticket.status === 'refund_requested' && ticket.refundRequestedAt && (
+                        <p className="text-xs text-orange-600 w-full mt-1">
+                          Demande envoyée le {new Date(ticket.refundRequestedAt).toLocaleDateString('fr-FR')} — Traitement sous 5 à 7 jours ouvrables
+                        </p>
+                      )}
                     </div>
 
                     {/* QR code expanded */}
@@ -237,6 +307,65 @@ export function MyTicketsPage({ onBack }: MyTicketsPageProps) {
           </div>
         )}
       </div>
+
+      {/* Modal remboursement */}
+      {refundModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Demande de remboursement</h2>
+                <p className="text-sm text-gray-500 mt-1">{refundModal.eventTitle}</p>
+              </div>
+              <button onClick={() => setRefundModal(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-orange-800">
+                <strong>Délai de traitement :</strong> 5 à 7 jours ouvrables après validation de votre demande.
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Raison du remboursement <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={refundReason}
+                onChange={e => setRefundReason(e.target.value)}
+                placeholder="Expliquez la raison de votre demande de remboursement..."
+                rows={4}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setRefundModal(null)}
+                disabled={refundLoading}
+              >
+                Annuler
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleRequestRefund}
+                disabled={refundLoading || !refundReason.trim()}
+              >
+                {refundLoading ? (
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                )}
+                Envoyer la demande
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

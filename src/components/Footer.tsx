@@ -136,7 +136,7 @@ function BusinessSection({ onNavigate }: { onNavigate: (page: string, params?: a
       <p className="font-bold leading-[1.4] not-italic opacity-40 relative shrink-0 text-[15px] text-white tracking-[0.6px] uppercase w-full">FOR BUSINESS</p>
       <div className="content-stretch flex flex-col font-normal gap-[4px] items-start justify-start leading-[1.4] not-italic relative shrink-0 text-[16px] xl:text-[18px] 2xl:text-[20px] text-white w-full" data-name="list">
         {items.map((item, index) => (
-          <button 
+          <button
             key={index}
             onClick={() => onNavigate('organizer-dashboard')}
             className="opacity-60 hover:opacity-100 hover:text-[#16bda0] transition-all duration-200 relative shrink-0 text-left w-full"
@@ -144,6 +144,12 @@ function BusinessSection({ onNavigate }: { onNavigate: (page: string, params?: a
             {item}
           </button>
         ))}
+        <button
+          onClick={() => onNavigate('feeti-access')}
+          className="opacity-60 hover:opacity-100 hover:text-[#16bda0] transition-all duration-200 relative shrink-0 text-left w-full"
+        >
+          Féeti Access
+        </button>
       </div>
     </div>
   );
@@ -226,38 +232,38 @@ function BonPlanSection({ onNavigate }: { onNavigate: (page: string, params?: an
   );
 }
 
-function QuickLinksSection({ onLegalPageNavigate }: { onLegalPageNavigate: (page: 'terms' | 'privacy' | 'cookies' | 'faq' | 'contact' | 'refund') => void }) {
+function QuickLinksSection({ onLegalPageNavigate, onNavigate }: { onLegalPageNavigate: (page: 'terms' | 'privacy' | 'cookies' | 'faq' | 'contact' | 'refund') => void; onNavigate: (page: string, params?: any) => void }) {
   return (
     <div className="content-stretch flex flex-col gap-[24px] items-start justify-start relative shrink-0 w-[193px]" data-name="section">
       <p className="font-bold leading-[1.4] min-w-full not-italic opacity-40 relative shrink-0 text-[15px] text-white tracking-[0.6px] uppercase">
         LIENS RAPIDES
       </p>
       <div className="content-stretch flex flex-col font-normal gap-[4px] items-start justify-start leading-[1.4] not-italic relative shrink-0 text-[16px] xl:text-[18px] 2xl:text-[20px] text-white w-[277px]" data-name="list">
-        <button 
+        <button
           onClick={() => onLegalPageNavigate('faq')}
           className="min-w-full opacity-60 hover:opacity-100 hover:text-[#16bda0] transition-all duration-200 relative shrink-0 text-left"
         >
           FAQs
         </button>
-        <button 
+        <button
           onClick={() => onLegalPageNavigate('contact')}
           className="min-w-full opacity-60 hover:opacity-100 hover:text-[#16bda0] transition-all duration-200 relative shrink-0 text-left"
         >
           Nous contacter
         </button>
-        <button 
+        <button
           onClick={() => onLegalPageNavigate('terms')}
           className="opacity-60 hover:opacity-100 hover:text-[#16bda0] transition-all duration-200 relative shrink-0 w-[266px] text-left"
         >
           Mentions légales
         </button>
-        <button 
+        <button
           onClick={() => onLegalPageNavigate('privacy')}
           className="opacity-60 hover:opacity-100 hover:text-[#16bda0] transition-all duration-200 relative shrink-0 w-[316px] text-left"
         >
           Politiques de confidentialité
         </button>
-        <button 
+        <button
           onClick={() => onLegalPageNavigate('refund')}
           className="opacity-60 hover:opacity-100 hover:text-[#16bda0] transition-all duration-200 relative shrink-0 w-[316px] text-left"
         >
@@ -302,7 +308,7 @@ function Nav({ onNavigate, onLegalPageNavigate }: { onNavigate: (page: string, p
       <LiveSection onNavigate={onNavigate} />
       <BonPlanSection onNavigate={onNavigate} />
       <LoisirSection onNavigate={onNavigate} />
-      <QuickLinksSection onLegalPageNavigate={onLegalPageNavigate} />
+      <QuickLinksSection onLegalPageNavigate={onLegalPageNavigate} onNavigate={onNavigate} />
     </div>
   );
 }
@@ -586,6 +592,7 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
                 <button onClick={() => onNavigate('organizer-dashboard')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Promoteurs</button>
                 <button onClick={() => onNavigate('organizer-dashboard')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Logiciel de billeterie</button>
                 <button onClick={() => onNavigate('organizer-dashboard')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Brand & Presse</button>
+                <button onClick={() => onNavigate('feeti-access')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Féeti Access</button>
               </nav>
             </div>
             

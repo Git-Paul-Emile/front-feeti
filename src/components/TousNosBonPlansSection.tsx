@@ -1,36 +1,34 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Play, MapPin } from 'lucide-react';
-import EventsBackendAPI, { type BackendEvent } from '../services/api/EventsBackendAPI';
+import { ChevronLeft, ChevronRight, Tag, MapPin } from 'lucide-react';
+import DealsBackendAPI, { type BackendDeal } from '../services/api/DealsBackendAPI';
 
 interface TousNosBonPlansSectionProps {
   onNavigate: (page: string, params?: any) => void;
 }
 
-const WEEKDAYS = ['DIM', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM'];
 const MONTHS = ['JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOÛ', 'SEP', 'OCT', 'NOV', 'DÉC'];
 
-function formatSliderDate(dateStr: string, time?: string): string {
+function formatValidUntil(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
-  const base = `${WEEKDAYS[d.getDay()]} ${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]} | ${d.getFullYear()}`;
-  return time ? `${base} · ${time}` : base;
+  return `Valable jusqu'au ${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 export function TousNosBonPlansSection({ onNavigate }: TousNosBonPlansSectionProps) {
-  const [sliderEvents, setSliderEvents] = useState<BackendEvent[]>([]);
+  const [sliderDeals, setSliderDeals] = useState<BackendDeal[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-    EventsBackendAPI.getAllEvents()
-      .then(evts => setSliderEvents(evts.filter(e => e.status === 'published' && e.isFeatured)))
+    DealsBackendAPI.getDeals({ sortBy: 'popularity', limit: 10 })
+      .then(res => setSliderDeals(res.data.filter(d => d.status === 'published' && d.isPopular)))
       .catch(() => {});
   }, []);
 
-  const nextSlide = () => setCurrentSlide(p => (p + 1) % sliderEvents.length);
-  const prevSlide = () => setCurrentSlide(p => (p - 1 + sliderEvents.length) % sliderEvents.length);
+  const nextSlide = () => setCurrentSlide(p => (p + 1) % sliderDeals.length);
+  const prevSlide = () => setCurrentSlide(p => (p - 1 + sliderDeals.length) % sliderDeals.length);
 
-  const currentEvent = sliderEvents[currentSlide] ?? null;
+  const currentDeal = sliderDeals[currentSlide] ?? null;
 
-  if (sliderEvents.length === 0 || !currentEvent) return null;
+  if (sliderDeals.length === 0 || !currentDeal) return null;
 
   return (
     <section className="py-16 bg-white">
@@ -42,7 +40,7 @@ export function TousNosBonPlansSection({ onNavigate }: TousNosBonPlansSectionPro
               Tous nos bons plans
             </h2>
             <p className="text-sm sm:text-base text-gray-600">
-              Découvrez nos meilleures offres
+              Découvrez nos meilleures offres et promotions
             </p>
           </div>
           <button
@@ -71,12 +69,19 @@ export function TousNosBonPlansSection({ onNavigate }: TousNosBonPlansSectionPro
         <div className="relative h-[300px] sm:h-[350px] lg:h-[400px] rounded-2xl overflow-hidden group">
           <div
             className="absolute inset-0 bg-center bg-cover bg-no-repeat transition-all duration-700 ease-in-out"
-            style={{ backgroundImage: currentEvent.image ? `url('${currentEvent.image}')` : undefined }}
+            style={{ backgroundImage: currentDeal.image ? `url('${currentDeal.image}')` : undefined, backgroundColor: '#03033b' }}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#03033b]/80 via-[#16bda0]/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#03033b]/85 via-[#16bda0]/35 to-transparent" />
+
+          {/* Badge réduction */}
+          {currentDeal.discount > 0 && (
+            <div className="absolute top-4 right-4 z-10 bg-[#de0035] text-white font-bold text-xl px-4 py-2 rounded-xl shadow-lg">
+              -{currentDeal.discount}%
+            </div>
+          )}
 
           {/* Navigation arrows */}
-          {sliderEvents.length > 1 && (
+          {sliderDeals.length > 1 && (
             <>
               <button
                 onClick={prevSlide}
@@ -97,47 +102,45 @@ export function TousNosBonPlansSection({ onNavigate }: TousNosBonPlansSectionPro
           <div className="absolute inset-0 flex items-end p-6 sm:p-8 lg:p-12">
             <div className="w-full max-w-2xl">
               <p className="text-white/75 text-sm mb-2">
-                {currentEvent.organizer?.name || currentEvent.category}
+                {currentDeal.merchantName}
               </p>
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight mb-4">
-                {currentEvent.title}
+                {currentDeal.title}
               </h2>
-              <p className="text-[#16bea1] text-lg sm:text-xl font-semibold mb-3">
-                {formatSliderDate(currentEvent.date, currentEvent.time)}
-              </p>
+              <div className="flex items-center gap-2 mb-2">
+                <Tag className="w-4 h-4 text-[#16bda0]" />
+                <p className="text-[#16bea1] text-lg sm:text-xl font-semibold">
+                  {currentDeal.discountedPrice.toLocaleString()} FCFA
+                  {currentDeal.originalPrice > currentDeal.discountedPrice && (
+                    <span className="ml-2 line-through text-white/50 text-base">
+                      {currentDeal.originalPrice.toLocaleString()} FCFA
+                    </span>
+                  )}
+                </p>
+              </div>
               <div className="flex items-center gap-2 mb-4">
                 <MapPin className="w-4 h-4 text-[#16bda0]" />
-                <p className="text-[#16bea1] text-sm sm:text-base">{currentEvent.location}</p>
+                <p className="text-[#16bea1] text-sm sm:text-base">{currentDeal.location}</p>
               </div>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {currentEvent.isLive && (
-                  <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5">
-                    <Play className="w-3 h-3 text-[#de0035] mr-1.5 fill-current" />
-                    <span className="text-white text-xs font-medium">EN LIVE STREAMING</span>
-                  </div>
-                )}
-                {currentEvent.attendees < currentEvent.maxAttendees && (
-                  <div className="bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5">
-                    <span className="text-white text-xs font-medium">Places disponibles</span>
-                  </div>
-                )}
-              </div>
+              <p className="text-white/60 text-xs mb-4">
+                {formatValidUntil(currentDeal.validUntil)}
+              </p>
               <button
-                onClick={() => onNavigate('events')}
+                onClick={() => onNavigate('deals-list')}
                 className="inline-flex items-center bg-white hover:scale-105 transition-all duration-300 shadow-lg rounded-lg overflow-hidden group/btn"
               >
-                <div className="bg-[#de0035] w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group-hover/btn:bg-[#c00030] transition-colors duration-200">
-                  <Play className="w-3 h-3 sm:w-4 sm:h-4 text-white fill-white" />
+                <div className="bg-[#16bda0] w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group-hover/btn:bg-[#13a88e] transition-colors duration-200">
+                  <Tag className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                 </div>
-                <span className="px-3 py-2 text-sm font-semibold text-black">Voir l'événement</span>
+                <span className="px-3 py-2 text-sm font-semibold text-black">Voir ce bon plan</span>
               </button>
             </div>
           </div>
 
           {/* Indicateurs */}
-          {sliderEvents.length > 1 && (
+          {sliderDeals.length > 1 && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-              {sliderEvents.map((_, index) => (
+              {sliderDeals.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentSlide(index)}

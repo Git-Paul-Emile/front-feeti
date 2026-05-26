@@ -280,8 +280,8 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
-      if (!customerInfo.firstName || !customerInfo.lastName || !customerInfo.email) {
-        toast.error('Veuillez remplir tous les champs obligatoires');
+      if (!customerInfo.firstName || !customerInfo.lastName || !customerInfo.email || !customerInfo.phone) {
+        toast.error('Veuillez remplir tous les champs obligatoires (prénom, nom, email et téléphone)');
         return;
       }
       if (deliveryMethod === 'physical') {

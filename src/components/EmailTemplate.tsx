@@ -217,11 +217,35 @@ export function EmailTemplate({ tickets, customerName, customerEmail, orderId }:
                 overflow: 'hidden',
                 backgroundColor: '#ffffff'
               }}>
+                {/* Image de l'événement */}
+                {ticket.eventImage && (
+                  <div style={{
+                    height: '140px',
+                    overflow: 'hidden',
+                    position: 'relative'
+                  }}>
+                    <img
+                      src={ticket.eventImage}
+                      alt={ticket.eventTitle}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block'
+                      }}
+                    />
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.65) 100%)'
+                    }} />
+                  </div>
+                )}
                 {/* Header du billet */}
                 <div style={{
-                  background: ticket.category === 'VIP' 
+                  background: ticket.category === 'VIP'
                     ? 'linear-gradient(135deg, #f59e0b, #d97706)'
-                    : ticket.category === 'Premium' 
+                    : ticket.category === 'Premium'
                     ? 'linear-gradient(135deg, #4338ca, #6366f1)'
                     : 'linear-gradient(135deg, #6b7280, #4b5563)',
                   color: '#ffffff',

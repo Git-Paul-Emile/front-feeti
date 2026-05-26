@@ -1,3 +1,4 @@
+import api from '../../routes/axiosConfig';
 import { backendGateway } from "../backend";
 import type {
   BackendTicket,
@@ -66,6 +67,11 @@ const TicketAPI = {
     paymentId: string;
   }): Promise<ConfirmPaymentResult> {
     return backendGateway.tickets.confirmAndPurchase(data);
+  },
+
+  async requestRefund(ticketId: string, reason: string): Promise<BackendTicket> {
+    const res = await api.post<{ data: BackendTicket }>(`/api/tickets/${ticketId}/refund-request`, { reason });
+    return res.data.data;
   },
 };
 

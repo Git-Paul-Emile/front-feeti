@@ -21,6 +21,8 @@ export interface RegisterData {
   password: string;                     // utilisé côté client pour Firebase Auth uniquement
   role?: "user" | "organizer";
   interests?: string[];
+  country?: string;
+  city?: string;
 }
 
 export interface UpdateProfileData {

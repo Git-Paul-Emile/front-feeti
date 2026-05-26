@@ -193,17 +193,46 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const IMAGE_MAX_SIZES: Record<string, number> = {
+    mainPoster: 10 * 1024 * 1024,   // 10 MB
+    organizerLogo: 5 * 1024 * 1024, // 5 MB
+    gallery: 5 * 1024 * 1024,       // 5 MB par image
+  };
+
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
   const handleFileUpload = (field: string, files: FileList | null) => {
     if (!files || files.length === 0) return;
 
+    const maxSize = IMAGE_MAX_SIZES[field] ?? 10 * 1024 * 1024;
+    const validFiles: File[] = [];
+
+    for (const file of Array.from(files)) {
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        toast.error(`"${file.name}" : format non supporté. Utilisez JPG, PNG, WebP ou GIF.`);
+        continue;
+      }
+      if (file.size > maxSize) {
+        const limitMB = Math.round(maxSize / (1024 * 1024));
+        toast.error(`"${file.name}" dépasse la limite de ${limitMB} MB.`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (validFiles.length === 0) return;
+
     if (field === 'gallery') {
-      setFormData(prev => ({
-        ...prev,
-        gallery: [...prev.gallery, ...Array.from(files)]
-      }));
-      toast.success(`${files.length} image(s) ajoutée(s)`);
+      setFormData(prev => {
+        const remaining = 5 - prev.gallery.length;
+        if (remaining <= 0) { toast.error('Maximum 5 images dans la galerie'); return prev; }
+        const toAdd = validFiles.slice(0, remaining);
+        if (toAdd.length < validFiles.length) toast.error(`Seulement ${toAdd.length} image(s) ajoutée(s) (limite 5)`);
+        else toast.success(`${toAdd.length} image(s) ajoutée(s)`);
+        return { ...prev, gallery: [...prev.gallery, ...toAdd] };
+      });
     } else {
-      setFormData(prev => ({ ...prev, [field]: files[0] }));
+      setFormData(prev => ({ ...prev, [field]: validFiles[0] }));
       toast.success('Image chargée avec succès');
     }
   };
@@ -303,8 +332,8 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
         }
         break;
       case 4:
-        if (!formData.venueName || !formData.address || !formData.city) {
-          toast.error('Veuillez renseigner le lieu de l\'événement');
+        if (!formData.venueName || !formData.address || !formData.city || !formData.countryCode) {
+          toast.error('Veuillez renseigner le lieu de l\'événement (nom, adresse, ville et pays)');
           return false;
         }
         break;
@@ -499,12 +528,17 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
               </div>
 
               <div className="space-y-2">
-                <Label>Logo ou image de marque</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors">
+                <Label>Logo ou image de marque <span className="text-gray-400 font-normal text-xs">(facultatif)</span></Label>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 rounded px-2 py-0.5">Carré recommandé : 500 × 500 px</span>
+                  <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 border border-gray-200 rounded px-2 py-0.5">Formats : JPG · PNG · WebP</span>
+                  <span className="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-2 py-0.5 font-medium">Max 5 MB</span>
+                </div>
+                <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${formData.organizerLogo ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-indigo-400'}`}>
                   <input
                     type="file"
                     id="organizerLogo"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
                     onChange={(e) => handleFileUpload('organizerLogo', e.target.files)}
                     className="hidden"
                   />
@@ -512,17 +546,13 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
                     {formData.organizerLogo ? (
                       <div className="flex items-center justify-center gap-2">
                         <CheckCircle className="w-5 h-5 text-green-600" />
-                        <span>{formData.organizerLogo.name}</span>
+                        <span className="text-green-800 font-medium">{formData.organizerLogo.name}</span>
+                        <span className="text-xs text-gray-500">({(formData.organizerLogo.size / (1024 * 1024)).toFixed(1)} MB)</span>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         <Upload className="w-12 h-12 mx-auto text-gray-400" />
-                        <p className="text-sm text-gray-600">
-                          Cliquez pour télécharger votre logo
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          PNG, JPG jusqu'à 5MB
-                        </p>
+                        <p className="text-sm text-gray-600">Cliquez pour télécharger votre logo</p>
                       </div>
                     )}
                   </label>
@@ -1017,12 +1047,17 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label>Affiche principale * (Format paysage recommandé)</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-indigo-400 transition-colors">
+                <Label>Affiche principale <span className="text-red-500">*</span></Label>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 rounded px-2 py-0.5 font-medium">Dimensions : 1920 × 1080 px (16:9)</span>
+                  <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 border border-gray-200 rounded px-2 py-0.5">Formats : JPG · PNG · WebP</span>
+                  <span className="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-2 py-0.5 font-medium">Max 10 MB</span>
+                </div>
+                <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${formData.mainPoster ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-indigo-400'}`}>
                   <input
                     type="file"
                     id="mainPoster"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
                     onChange={(e) => handleFileUpload('mainPoster', e.target.files)}
                     className="hidden"
                   />
@@ -1030,7 +1065,8 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
                     {formData.mainPoster ? (
                       <div className="flex flex-col items-center gap-2">
                         <CheckCircle className="w-8 h-8 text-green-600" />
-                        <span className="font-medium">{formData.mainPoster.name}</span>
+                        <span className="font-medium text-green-800">{formData.mainPoster.name}</span>
+                        <span className="text-xs text-gray-500">({(formData.mainPoster.size / (1024 * 1024)).toFixed(1)} MB)</span>
                         <Button type="button" size="sm" variant="outline" onClick={(e) => {
                           e.preventDefault();
                           handleInputChange('mainPoster', null);
@@ -1042,15 +1078,9 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
                       <div className="space-y-3">
                         <ImageIcon className="w-16 h-16 mx-auto text-gray-400" />
                         <div>
-                          <p className="font-medium text-gray-700">
-                            Téléchargez l'affiche principale
-                          </p>
-                          <p className="text-sm text-gray-500 mt-1">
-                            Format recommandé: 1920x1080px
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            PNG, JPG jusqu'à 10MB
-                          </p>
+                          <p className="font-semibold text-gray-700">Cliquez pour télécharger l'affiche</p>
+                          <p className="text-sm text-gray-500 mt-1">Résolution recommandée : 1920 × 1080 px</p>
+                          <p className="text-xs text-red-500 mt-1 font-medium">Obligatoire — sans affiche, votre événement ne sera pas publié</p>
                         </div>
                       </div>
                     )}
@@ -1059,12 +1089,17 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
               </div>
 
               <div className="space-y-2">
-                <Label>Galerie d'images (max 5)</Label>
+                <Label>Galerie d'images (max 5 — facultatif)</Label>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 border border-gray-200 rounded px-2 py-0.5">Formats : JPG · PNG · WebP</span>
+                  <span className="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-2 py-0.5 font-medium">Max 5 MB par image</span>
+                  <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded px-2 py-0.5">{formData.gallery.length}/5 images</span>
+                </div>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors">
                   <input
                     type="file"
                     id="gallery"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
                     multiple
                     onChange={(e) => handleFileUpload('gallery', e.target.files)}
                     className="hidden"
@@ -1072,7 +1107,7 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
                   <label htmlFor="gallery" className="cursor-pointer">
                     <Upload className="w-10 h-10 mx-auto text-gray-400 mb-2" />
                     <p className="text-sm text-gray-600">
-                      Cliquez pour ajouter des images
+                      {formData.gallery.length >= 5 ? 'Limite atteinte (5/5)' : 'Cliquez pour ajouter des images'}
                     </p>
                   </label>
                 </div>
@@ -1348,27 +1383,68 @@ export function EventSubmissionPage({ onBack, currentUser }: EventSubmissionPage
               <Separator />
 
               {(formData.eventType === 'STREAMING_LIVE' || formData.eventType === 'MIXTE') && (
-                <div className="space-y-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Video className="w-5 h-5 text-red-600" />
-                    <h4 className="font-semibold text-red-800">
-                      Consentement requis — Événement {formData.eventType === 'MIXTE' ? 'Mixte' : 'Streaming Live'}
-                    </h4>
+                <div className="space-y-4 p-4 bg-red-50 border-2 border-red-300 rounded-xl">
+                  <div className="flex items-center gap-2 pb-3 border-b border-red-200">
+                    <Video className="w-5 h-5 text-red-600 shrink-0" />
+                    <div>
+                      <h4 className="font-bold text-red-900 text-base">
+                        Contrat de diffusion streaming — Lecture obligatoire
+                      </h4>
+                      <p className="text-xs text-red-600 mt-0.5">
+                        Événement {formData.eventType === 'MIXTE' ? 'Mixte (présentiel + live)' : 'Streaming Live uniquement'}
+                      </p>
+                    </div>
                   </div>
-                  <Alert className="bg-white border-red-200">
-                    <Info className="w-4 h-4" />
-                    <AlertDescription className="text-sm">
-                      Les événements en diffusion live sont soumis à des conditions spécifiques. Des <strong>formulaires PDF</strong> vous seront envoyés à <strong>{formData.organizerEmail}</strong> après soumission. Vous devrez les compléter et les retourner avant la publication.
+
+                  {/* Texte du contrat */}
+                  <div className="bg-white border border-red-200 rounded-lg p-4 max-h-64 overflow-y-auto text-sm text-gray-700 space-y-3 leading-relaxed">
+                    <p className="font-bold text-gray-900 text-center uppercase tracking-wide text-xs">
+                      Contrat de diffusion d'événement en live — Plateforme Fééti
+                    </p>
+
+                    <p><strong>Entre</strong> la société Fééti (ci-après « la Plateforme ») et l'Organisateur soussigné (ci-après « l'Organisateur »), il est convenu ce qui suit :</p>
+
+                    <p><strong>Article 1 — Objet</strong><br/>
+                    Le présent contrat régit les conditions de diffusion en streaming live ou mixte de l'événement décrit dans le formulaire de soumission sur la plateforme Fééti.</p>
+
+                    <p><strong>Article 2 — Droits et autorisations</strong><br/>
+                    L'Organisateur certifie détenir l'intégralité des droits de diffusion (droits d'auteur, droits voisins, droits d'image) sur les contenus diffusés, incluant la musique, les performances artistiques, les images et toute autre œuvre. L'Organisateur dégage expressément la Plateforme de toute responsabilité liée à des infractions aux droits de propriété intellectuelle.</p>
+
+                    <p><strong>Article 3 — Obligations de l'Organisateur</strong><br/>
+                    L'Organisateur s'engage à : (i) fournir un flux vidéo de qualité suffisante (minimum 720p) ; (ii) respecter les lois en vigueur sur la diffusion de contenus ; (iii) ne pas diffuser de contenu à caractère illicite, violent, discriminatoire ou pornographique ; (iv) notifier la Plateforme de tout incident technique dans les 24h.</p>
+
+                    <p><strong>Article 4 — Commission et paiement</strong><br/>
+                    La Plateforme percevra une commission sur les revenus générés par l'accès payant au streaming, conformément aux tarifs en vigueur communiqués à l'Organisateur lors de son inscription.</p>
+
+                    <p><strong>Article 5 — Responsabilité et suspension</strong><br/>
+                    La Plateforme se réserve le droit de suspendre ou interrompre la diffusion en cas de violation des présentes conditions, sans préavis et sans indemnité. L'Organisateur reste seul responsable du contenu diffusé.</p>
+
+                    <p><strong>Article 6 — Documents complémentaires</strong><br/>
+                    Des formulaires PDF complémentaires seront envoyés à <strong>{formData.organizerEmail || 'votre adresse email'}</strong> après soumission. Leur retour complété et signé est obligatoire pour la publication de l'événement.</p>
+
+                    <p><strong>Article 7 — Durée</strong><br/>
+                    Le présent contrat prend effet à compter de la soumission du formulaire et s'applique pour la durée de la diffusion de l'événement concerné.</p>
+
+                    <p className="text-xs text-gray-500 pt-2 border-t border-gray-200">
+                      Version 1.2 — En vigueur depuis le 01/01/2025. Tout litige sera soumis à la juridiction compétente du siège social de Fééti.
+                    </p>
+                  </div>
+
+                  <Alert className="bg-amber-50 border-amber-200">
+                    <Info className="w-4 h-4 text-amber-600" />
+                    <AlertDescription className="text-sm text-amber-800">
+                      Des <strong>formulaires PDF</strong> vous seront automatiquement envoyés à <strong>{formData.organizerEmail || 'votre email'}</strong> après soumission. La diffusion ne sera activée qu'après réception et validation de ces documents.
                     </AlertDescription>
                   </Alert>
-                  <div className="flex items-start gap-3">
+
+                  <div className="flex items-start gap-3 pt-1">
                     <Checkbox
                       id="liveConsentAccepted"
                       checked={formData.liveConsentAccepted}
                       onCheckedChange={(checked: boolean) => handleInputChange('liveConsentAccepted', checked)}
                     />
-                    <Label htmlFor="liveConsentAccepted" className="cursor-pointer leading-relaxed text-red-800">
-                      <span className="font-semibold">* Obligatoire —</span> Je consens à recevoir, compléter et retourner les formulaires PDF requis pour la diffusion de mon événement en live sur la plateforme Feeti. Je comprends que la non-remise de ces documents peut entraîner le refus ou la suspension de la diffusion.
+                    <Label htmlFor="liveConsentAccepted" className="cursor-pointer leading-relaxed text-red-900">
+                      <span className="font-bold">* Obligatoire —</span> J'ai lu et j'accepte intégralement le Contrat de diffusion streaming Fééti ci-dessus. Je certifie détenir tous les droits nécessaires à la diffusion et je m'engage à fournir les documents complémentaires requis.
                     </Label>
                   </div>
                 </div>

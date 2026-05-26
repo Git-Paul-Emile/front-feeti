@@ -336,6 +336,14 @@ export function OrganizerDashboard({
               <QrCode className="w-4 h-4" />
               <span>Scanner billets</span>
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => onNavigate?.('standalone-badges')}
+              className="flex items-center space-x-2"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Badges indépendants</span>
+            </Button>
             
             <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
               <DialogTrigger asChild>

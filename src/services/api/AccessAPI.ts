@@ -43,9 +43,11 @@ export type BadgeStatus = 'active' | 'revoked' | 'expired';
 
 export interface AccessBadge {
   id: string;
-  eventId: string;
+  eventId?: string | null;
+  eventLabel?: string | null;
   ticketId?: string | null;
-  categoryId: string;
+  categoryId?: string | null;
+  categoryLabel?: string | null;
   holderName: string;
   holderEmail: string;
   holderPhone?: string | null;
@@ -56,7 +58,8 @@ export interface AccessBadge {
   revokedAt?: string | null;
   createdAt: string;
   updatedAt: string;
-  category?: ParticipantCategory;
+  category?: ParticipantCategory | null;
+  event?: { id: string; title: string } | null;
 }
 
 export type AccessResult = 'granted' | 'denied' | 'conditional';
@@ -311,6 +314,35 @@ const AccessAPI = {
     const res = await api.get<{ data: { qr: string; windowSeconds: number; nextRefreshAt: number } }>(
       `/api/access/events/${eventId}/badges/${badgeId}/qr`
     );
+    return res.data.data;
+  },
+
+  // ── Badges indépendants (standalone) ──────────────────────────────────────
+
+  async generateStandaloneBadge(data: {
+    holderName: string;
+    holderEmail: string;
+    holderPhone?: string;
+    categoryLabel: string;
+    eventLabel?: string;
+    eventId?: string;
+  }): Promise<AccessBadge> {
+    const res = await api.post<{ data: AccessBadge }>('/api/access/badges/standalone', data);
+    return res.data.data;
+  },
+
+  async getStandaloneBadges(): Promise<AccessBadge[]> {
+    const res = await api.get<{ data: AccessBadge[] }>('/api/access/badges/standalone');
+    return res.data.data;
+  },
+
+  async revokeStandaloneBadge(badgeId: string): Promise<AccessBadge> {
+    const res = await api.post<{ data: AccessBadge }>(`/api/access/badges/standalone/${badgeId}/revoke`);
+    return res.data.data;
+  },
+
+  async sendStandaloneBadge(badgeId: string): Promise<AccessBadge> {
+    const res = await api.post<{ data: AccessBadge }>(`/api/access/badges/standalone/${badgeId}/send`);
     return res.data.data;
   },
 };

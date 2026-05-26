@@ -179,6 +179,7 @@ const OrganizerFinancialDashboard = lazy(() => import('../components/pages/Organ
 const AdminFinancialDashboard     = lazy(() => import('../components/pages/AdminFinancialDashboard'));
 const FeetiNaFeetiPage            = lazy(() => import('../components/pages/FeetiNaFeetiPage').then(m => ({ default: m.FeetiNaFeetiPage })));
 const FeetiAccessDashboard        = lazy(() => import('../components/pages/FeetiAccessDashboard').then(m => ({ default: m.FeetiAccessDashboard })));
+const StandaloneAccessBadgeManager = lazy(() => import('../components/StandaloneAccessBadgeManager').then(m => ({ default: m.StandaloneAccessBadgeManager })));
 const WebScannerPage              = lazy(() => import('../components/pages/WebScannerPage').then(m => ({ default: m.WebScannerPage })));
 const FeetiNaFeetiAdminPage       = lazy(() => import('../components/pages/FeetiNaFeetiAdminPage').then(m => ({ default: m.FeetiNaFeetiAdminPage })));
 const UserProfilePage             = lazy(() => import('../components/pages/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
@@ -207,6 +208,8 @@ const PAGE_ROUTES: Record<string, string> = {
   'admin-audit': '/admin/audit',
   'feeti-na-feeti': '/feeti-na-feeti',
   'user-profile': '/profile',
+  'standalone-badges': '/organizer/badges-standalone',
+  'feeti-access': '/scan',
 };
 
 // ── Loader ────────────────────────────────────────────────────────────────────
@@ -312,17 +315,28 @@ function EventDetailRoute() {
   const [event, setEvent] = useState<AppEvent | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) { setLoading(false); return; }
-    const loader = isFeetiPlayRouteId(id)
-      ? FeetiPlayEventsAPI.getEventById(fromFeetiPlayRouteId(id)).then(adaptFeetiPlayEvent)
-      : EventsBackendAPI.getEventById(id).then(adaptEvent);
-
-    loader
-      .then(setEvent)
+  const loadEvent = useCallback((silent = false) => {
+    if (!id) { if (!silent) setLoading(false); return; }
+    if (isFeetiPlayRouteId(id)) {
+      FeetiPlayEventsAPI.getEventById(fromFeetiPlayRouteId(id))
+        .then(data => setEvent(adaptFeetiPlayEvent(data)))
+        .catch(() => setEvent(null))
+        .finally(() => { if (!silent) setLoading(false); });
+      return;
+    }
+    EventsBackendAPI.getEventById(id)
+      .then(data => setEvent(adaptEvent(data)))
       .catch(() => setEvent(null))
-      .finally(() => setLoading(false));
+      .finally(() => { if (!silent) setLoading(false); });
   }, [id]);
+
+  useEffect(() => {
+    loadEvent();
+    // Recharger quand l'utilisateur revient sur l'onglet (ex : après achat)
+    const onVisible = () => { if (document.visibilityState === 'visible') loadEvent(true); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [loadEvent]);
 
   if (loading) return <PageLoader />;
   if (!event) return <Navigate to="/events" replace />;
@@ -484,6 +498,11 @@ function FeetiAccessRoute() {
       onBack={() => navigate(`/organizer/event/${eventId}`)}
     />
   );
+}
+
+function StandaloneBadgeRoute() {
+  const navigate = useNavigate();
+  return <StandaloneAccessBadgeManager onBack={() => navigate('/organizer')} />;
 }
 
 function DealsListRoute() {
@@ -753,11 +772,18 @@ function OrganizerRoute() {
   const { user: currentUser } = useAuth();
   const [organizerEvents, setOrganizerEvents] = useState<BackendEvent[]>([]);
 
-  useEffect(() => {
+  const refreshEvents = useCallback(() => {
     EventsBackendAPI.getMyEvents()
       .then(setOrganizerEvents)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    refreshEvents();
+    const onVisible = () => { if (document.visibilityState === 'visible') refreshEvents(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [refreshEvents]);
 
   // Read and display one-time admin notifications
   useEffect(() => {
@@ -803,8 +829,8 @@ function OrganizerRoute() {
         isLive: eventData.isLive,
         status: 'draft',
       });
-      setOrganizerEvents(prev => [...prev, created]);
       toast.success('Événement créé avec succès !');
+      refreshEvents();
     } catch {
       toast.error('Erreur lors de la création de l\'événement');
     }
@@ -813,8 +839,8 @@ function OrganizerRoute() {
   const handleEventDelete = useCallback(async (eventId: string) => {
     try {
       await EventsBackendAPI.deleteEvent(eventId);
-      setOrganizerEvents(prev => prev.filter(e => e.id !== eventId));
       toast.success('Événement supprimé !');
+      refreshEvents();
     } catch {
       toast.error('Erreur lors de la suppression');
     }
@@ -842,8 +868,8 @@ function OrganizerRoute() {
         duration: eventData.duration,
         isLive: eventData.isLive,
       });
-      setOrganizerEvents(prev => prev.map(e => e.id === eventId ? updated : e));
       toast.success('Événement modifié avec succès !');
+      refreshEvents();
     } catch {
       toast.error('Erreur lors de la modification de l\'événement');
     }
@@ -1064,6 +1090,7 @@ export function AppRoutes() {
           <Route path="/organizer"        element={<OrganizerRoute />} />
           <Route path="/organizer/event/:eventId" element={<OrganizerEventRoute />} />
           <Route path="/organizer/event/:eventId/access" element={<FeetiAccessRoute />} />
+          <Route path="/organizer/badges-standalone" element={<StandaloneBadgeRoute />} />
           <Route path="/scan/access/:eventId" element={<WebScannerPage />} />
           <Route path="/organizer/finance" element={<OrganizerFinancialDashboard />} />
           <Route path="/verify"           element={<TicketVerificationPage onBack={() => {}} />} />

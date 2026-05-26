@@ -213,9 +213,11 @@ export interface BackendTicket {
   holderName: string;
   holderEmail: string;
   qrData: string;
-  status: "valid" | "used" | "expired";
+  status: "valid" | "used" | "expired" | "refund_requested" | "refunded";
   orderId: string;
   usedAt: string | null;
+  refundReason?: string | null;
+  refundRequestedAt?: string | null;
   createdAt: string;
   event?: {
     id: string;

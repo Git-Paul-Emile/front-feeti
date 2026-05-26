@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SEO } from '../SEO';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
@@ -8,7 +8,9 @@ import { imgGroup, imgGroup1 } from "../../imports/svg-g8yi2";
 import type { RegisterData } from '../../services/api/AuthAPI';
 import { ApiError } from '../../services/api/AuthAPI';
 import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
+import { resetPassword } from '../../services/firebase-auth';
 import { CategoryTab, getCategoryIcon } from '../CategorySelector';
+import CountryAPI, { type Country } from '../../services/api/CountryAPI';
 
 const EVENT_CATEGORIES = [
   { slug: 'musique',     label: 'Musique' },
@@ -36,6 +38,7 @@ export interface LoginPageProps {
   onRegister?: (data: RegisterData) => Promise<void>;
   onGoogleLogin?: () => Promise<void>;
   onGoogleRegister?: () => Promise<void>;
+  onForgotPassword?: () => void;
   onBack?: () => void;
 }
 
@@ -52,6 +55,8 @@ interface RegisterFields {
   password: string;
   confirmPassword: string;
   role: 'user' | 'organizer';
+  country: string;
+  city: string;
   acceptTerms: boolean;
 }
 
@@ -173,18 +178,38 @@ function inputClass(hasError: boolean) {
 }
 
 // ── Formulaire de connexion ──────────────────────────────────────────────────
-function LoginForm({ onLogin, onGoogleLogin, onSwitchToRegister }: {
+function LoginForm({ onLogin, onGoogleLogin, onSwitchToRegister, onForgotPassword }: {
   onLogin: LoginPageProps['onLogin'];
   onGoogleLogin?: LoginPageProps['onGoogleLogin'];
   onSwitchToRegister: () => void;
+  onForgotPassword?: () => void;
 }) {
   const [serverError, setServerError] = useState('');
+  const [showForgot, setShowForgot]     = useState(false);
+  const [forgotEmail, setForgotEmail]   = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError]   = useState('');
+  const [forgotDone, setForgotDone]     = useState(false);
+
   const {
     register,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<LoginFields>({ mode: 'onBlur' });
+
+  const handleSendReset = async () => {
+    if (!forgotEmail.trim()) return;
+    setForgotLoading(true);
+    setForgotError('');
+    const result = await resetPassword(forgotEmail.trim());
+    setForgotLoading(false);
+    if (result.success) {
+      setForgotDone(true);
+    } else {
+      setForgotError(result.error ?? "Erreur lors de l'envoi de l'email");
+    }
+  };
 
   const onSubmit = async (data: LoginFields) => {
     setServerError('');
@@ -232,6 +257,15 @@ function LoginForm({ onLogin, onGoogleLogin, onSwitchToRegister }: {
           })}
         />
         <FieldError message={errors.password?.message} />
+        <div className="text-right mt-1">
+          <button
+            type="button"
+            onClick={() => { setShowForgot(true); setForgotDone(false); setForgotEmail(''); setForgotError(''); onForgotPassword?.(); }}
+            className="text-white/70 text-[13px] font-['Inter',sans-serif] hover:text-white transition-colors"
+          >
+            Mot de passe oublié ?
+          </button>
+        </div>
       </div>
 
       {/* Erreur serveur globale */}
@@ -282,6 +316,66 @@ function LoginForm({ onLogin, onGoogleLogin, onSwitchToRegister }: {
           </button>
         </p>
       </div>
+
+      {/* Modal mot de passe oublié */}
+      {showForgot && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          onClick={() => setShowForgot(false)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-gray-900 font-semibold text-lg mb-1">Mot de passe oublié</h3>
+            {forgotDone ? (
+              <>
+                <p className="text-green-700 bg-green-50 rounded-lg px-4 py-3 text-sm mt-3">
+                  Un email de réinitialisation a été envoyé à <strong>{forgotEmail}</strong>. Vérifiez votre boîte mail (et les spams).
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowForgot(false)}
+                  className="w-full mt-4 border border-gray-200 rounded-lg py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Fermer
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-500 text-sm mb-4 mt-1">Entrez votre email pour recevoir un lien de réinitialisation.</p>
+                <input
+                  type="email"
+                  value={forgotEmail}
+                  onChange={e => setForgotEmail(e.target.value)}
+                  placeholder="votre@email.com"
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
+                  onKeyDown={e => e.key === 'Enter' && void handleSendReset()}
+                  autoFocus
+                />
+                {forgotError && <p className="text-red-500 text-xs mb-3">{forgotError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgot(false)}
+                    className="flex-1 border border-gray-200 rounded-lg py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleSendReset()}
+                    disabled={forgotLoading || !forgotEmail.trim()}
+                    className="flex-1 bg-indigo-600 text-white rounded-lg py-2.5 text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {forgotLoading ? 'Envoi…' : 'Envoyer le lien'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </form>
   );
 }
@@ -371,6 +465,11 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [countries, setCountries] = useState<Country[]>([]);
+
+  useEffect(() => {
+    CountryAPI.getAll().then(data => setCountries(data.filter(c => c.isActive))).catch(() => {});
+  }, []);
   const {
     register,
     handleSubmit,
@@ -412,6 +511,8 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
         password: data.password,
         role: data.role,
         interests: interests.length > 0 ? interests : undefined,
+        country: data.country,
+        city: data.city,
       });
     } catch (err) {
       if (err instanceof ApiError && err.errors) {
@@ -513,6 +614,40 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
           />
         </div>
         <FieldError message={errors.phone?.message} />
+      </div>
+
+      {/* Pays */}
+      <div>
+        <div className={inputClass(!!errors.country)}>
+          <select
+            className="w-full bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',sans-serif] [&>option]:text-black"
+            {...register('country', { required: 'Le pays est requis' })}
+            defaultValue=""
+          >
+            <option value="" disabled>Votre pays</option>
+            {countries.map(c => (
+              <option key={c.code} value={c.name}>{c.flag} {c.name}</option>
+            ))}
+          </select>
+        </div>
+        <FieldError message={errors.country?.message} />
+      </div>
+
+      {/* Ville */}
+      <div>
+        <div className={inputClass(!!errors.city)}>
+          <input
+            type="text"
+            placeholder="Votre ville"
+            autoComplete="address-level2"
+            className="w-full bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',sans-serif]"
+            {...register('city', {
+              required: 'La ville est requise',
+              minLength: { value: 2, message: 'Minimum 2 caractères' },
+            })}
+          />
+        </div>
+        <FieldError message={errors.city?.message} />
       </div>
 
       {/* Mot de passe */}
@@ -655,7 +790,7 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
 }
 
 // ── Page principale ──────────────────────────────────────────────────────────
-export function LoginPage({ onLogin, onRegister, onGoogleLogin, onGoogleRegister, onBack }: LoginPageProps) {
+export function LoginPage({ onLogin, onRegister, onGoogleLogin, onGoogleRegister, onForgotPassword, onBack }: LoginPageProps) {
   const [isLogin, setIsLogin] = useState(true);
 
   return (
@@ -682,7 +817,7 @@ export function LoginPage({ onLogin, onRegister, onGoogleLogin, onGoogleRegister
             </div>
 
             {isLogin ? (
-              <LoginForm onLogin={onLogin} onGoogleLogin={onGoogleLogin} onSwitchToRegister={() => setIsLogin(false)} />
+              <LoginForm onLogin={onLogin} onGoogleLogin={onGoogleLogin} onSwitchToRegister={() => setIsLogin(false)} onForgotPassword={onForgotPassword} />
             ) : (
               <RegisterForm onRegister={onRegister} onGoogleRegister={onGoogleRegister} onSwitchToLogin={() => setIsLogin(true)} />
             )}

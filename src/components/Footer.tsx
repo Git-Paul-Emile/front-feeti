@@ -148,7 +148,7 @@ function BusinessSection({ onNavigate }: { onNavigate: (page: string, params?: a
           onClick={() => onNavigate('feeti-access')}
           className="opacity-60 hover:opacity-100 hover:text-[#16bda0] transition-all duration-200 relative shrink-0 text-left w-full"
         >
-          Féeti Access
+          Fééti Access
         </button>
       </div>
     </div>
@@ -592,7 +592,7 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
                 <button onClick={() => onNavigate('organizer-dashboard')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Promoteurs</button>
                 <button onClick={() => onNavigate('organizer-dashboard')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Logiciel de billeterie</button>
                 <button onClick={() => onNavigate('organizer-dashboard')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Brand & Presse</button>
-                <button onClick={() => onNavigate('feeti-access')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Féeti Access</button>
+                <button onClick={() => onNavigate('feeti-access')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Fééti Access</button>
               </nav>
             </div>
             

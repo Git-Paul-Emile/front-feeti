@@ -209,7 +209,7 @@ const PAGE_ROUTES: Record<string, string> = {
   'feeti-na-feeti': '/feeti-na-feeti',
   'user-profile': '/profile',
   'standalone-badges': '/organizer/badges-standalone',
-  'feeti-access': '/scan',
+  'feeti-access': '/organizer/badges-standalone',
 };
 
 // ── Loader ────────────────────────────────────────────────────────────────────

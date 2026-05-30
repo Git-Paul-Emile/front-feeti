@@ -260,8 +260,9 @@ function Layout() {
     }
     const from = (location.state as any)?.from?.pathname;
     if (from && from !== '/') { navigate(from, { replace: true }); return; }
-    const isAdminLike = user.adminRole && !['user', 'organizer', 'controller'].includes(user.adminRole);
+    const isAdminLike = user.adminRole && !['user', 'organizer', 'controller', 'establishment_owner'].includes(user.adminRole);
     if (user.role === 'controller') { navigate('/controller', { replace: true }); return; }
+    if (isAdminLike) { navigate('/admin', { replace: true }); return; }
     navigate(user.role === 'organizer' ? '/organizer' : user.role === 'establishment_owner' ? '/establishment' : '/dashboard', { replace: true });
   }, [login, navigate, location.state]);
 
@@ -919,6 +920,8 @@ function LoginRoute() {
     const from = (location.state as any)?.from?.pathname;
     if (from && from !== '/') { navigate(from, { replace: true }); return; }
     if (user.role === 'controller') { navigate('/controller', { replace: true }); return; }
+    const isAdminLikeLogin = user.adminRole && !['user', 'organizer', 'controller', 'establishment_owner'].includes(user.adminRole);
+    if (isAdminLikeLogin) { navigate('/admin', { replace: true }); return; }
     navigate(user.role === 'organizer' ? '/organizer' : user.role === 'establishment_owner' ? '/establishment' : '/dashboard', { replace: true });
   };
 
@@ -936,7 +939,8 @@ function LoginRoute() {
     }
     if (!result.user) throw new Error("Connexion Google impossible");
     toast.success(`Bienvenue ${result.user.name} !`);
-    navigate(result.user.role === 'organizer' ? '/organizer' : '/dashboard', { replace: true });
+    const isAdminGoogle = result.user.adminRole && !['user', 'organizer', 'controller', 'establishment_owner'].includes(result.user.adminRole);
+    navigate(isAdminGoogle ? '/admin' : result.user.role === 'organizer' ? '/organizer' : '/dashboard', { replace: true });
   };
 
   const handleGoogleRegister = async () => {
@@ -947,7 +951,8 @@ function LoginRoute() {
     }
     if (!result.user) throw new Error("Inscription Google impossible");
     toast.success(`Bienvenue ${result.user.name} !`);
-    navigate(result.user.role === 'organizer' ? '/organizer' : '/dashboard', { replace: true });
+    const isAdminGoogleReg = result.user.adminRole && !['user', 'organizer', 'controller', 'establishment_owner'].includes(result.user.adminRole);
+    navigate(isAdminGoogleReg ? '/admin' : result.user.role === 'organizer' ? '/organizer' : '/dashboard', { replace: true });
   };
 
   return (

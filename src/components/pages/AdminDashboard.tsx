@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
@@ -1153,7 +1153,15 @@ const STATUS_COLOR: Record<string, string> = {
 
 export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('events');
+  const tabsListRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = tabsListRef.current;
+    if (!container) return;
+    const active = container.querySelector('[data-state="active"]') as HTMLElement | null;
+    if (active) active.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'nearest', inline: 'nearest' });
+  }, [activeTab]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
@@ -1966,8 +1974,13 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
     try {
       const data = await EventsBackendAPI.getAllEventsAdmin();
       setEvents(data);
-    } catch {
-      toast.error('Erreur lors du chargement des événements');
+    } catch (err: any) {
+      const msg = err?.response?.status === 403
+        ? 'Accès refusé — droits admin requis pour voir les événements'
+        : err?.response?.status === 401
+        ? 'Session expirée, veuillez vous reconnecter'
+        : 'Erreur lors du chargement des événements';
+      toast.error(msg);
     } finally {
       setEventsLoading(false);
     }
@@ -2032,16 +2045,19 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
     );
   }, [realUsers, searchTerm]);
 
+  const [eventSearchTerm, setEventSearchTerm] = useState('');
+
   const filteredEvents = useMemo(() => {
     const STATUS_ORDER: Record<string, number> = { draft: 0, published: 1, cancelled: 2, rejected: 3 };
+    const term = eventSearchTerm.toLowerCase();
     return events
       .filter(event =>
-        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.location.toLowerCase().includes(searchTerm.toLowerCase())
+        (event.title ?? '').toLowerCase().includes(term) ||
+        (event.category ?? '').toLowerCase().includes(term) ||
+        (event.location ?? '').toLowerCase().includes(term)
       )
       .sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
-  }, [events, searchTerm]);
+  }, [events, eventSearchTerm]);
 
   const categoryData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -2189,94 +2205,97 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
 
       <div className="max-w-7xl mx-auto p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="flex flex-nowrap overflow-x-auto w-full bg-white scrollbar-hide">
+          <div className="relative" ref={tabsListRef}>
+            <TabsList className="flex flex-nowrap overflow-x-auto justify-start w-full bg-white rounded-none h-auto p-0">
 
-            <TabsTrigger value="overview" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <BarChart3 className="w-4 h-4" />
-              <span className="hidden sm:inline">Vue d'ensemble</span>
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Utilisateurs</span>
-            </TabsTrigger>
-            <TabsTrigger value="events" className="flex items-center space-x-2 relative data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <Calendar className="w-4 h-4" />
-              <span className="hidden sm:inline">Événements</span>
-              {events.filter(e => e.status === 'draft').length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                  {events.filter(e => e.status === 'draft').length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="tickets" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <Ticket className="w-4 h-4" />
-              <span className="hidden sm:inline">Billets</span>
-            </TabsTrigger>
-            <TabsTrigger value="payments" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <CreditCard className="w-4 h-4" />
-              <span className="hidden sm:inline">Paiements</span>
-            </TabsTrigger>
-            <TabsTrigger value="content" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">Contenu</span>
-            </TabsTrigger>
-            <TabsTrigger value="live" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <Video className="w-4 h-4" />
-              <span className="hidden sm:inline">Live</span>
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <Tag className="w-4 h-4" />
-              <span className="hidden sm:inline">Catégories</span>
-            </TabsTrigger>
-            <TabsTrigger value="deals" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <Gift className="w-4 h-4" />
-              <span className="hidden sm:inline">Bons Plans</span>
-            </TabsTrigger>
-            <TabsTrigger value="leisure" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <MapPin className="w-4 h-4" />
-              <span className="hidden sm:inline">Loisirs</span>
-            </TabsTrigger>
-            <TabsTrigger value="delivery" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <Truck className="w-4 h-4" />
-              <span className="hidden sm:inline">Livraison</span>
-            </TabsTrigger>
-            <TabsTrigger value="promotions" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <Star className="w-4 h-4" />
-              <span className="hidden sm:inline">Promotions</span>
-            </TabsTrigger>
-            <TabsTrigger value="promo-suivi" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <TrendingUp className="w-4 h-4" />
-              <span className="hidden sm:inline">Suivi promos</span>
-            </TabsTrigger>
-            <TabsTrigger value="pack-config" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <Tag className="w-4 h-4" />
-              <span className="hidden sm:inline">Config packs</span>
-            </TabsTrigger>
-            <TabsTrigger value="deal-promos" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <Gift className="w-4 h-4" />
-              <span className="hidden sm:inline">Promos Bons Plans</span>
-            </TabsTrigger>
-            <TabsTrigger value="leisure-promos" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <MapPin className="w-4 h-4" />
-              <span className="hidden sm:inline">Promos Loisirs</span>
-            </TabsTrigger>
-            <TabsTrigger value="establishment-pricing" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none" onClick={() => { if (!estPricingLoaded) loadEstPricing(); }}>
-              <DollarSign className="w-4 h-4" />
-              <span className="hidden sm:inline">Tarification</span>
-            </TabsTrigger>
-            <TabsTrigger value="subscriptions" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none" onClick={loadAdminSubs}>
-              <CheckCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Abonnements</span>
-            </TabsTrigger>
-            <TabsTrigger value="deal-payments" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none" onClick={loadAdminDealPayments}>
-              <CreditCard className="w-4 h-4" />
-              <span className="hidden sm:inline">Paiements BP</span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Paramètres</span>
-            </TabsTrigger>
-          </TabsList>
+              <TabsTrigger value="subscriptions" onClick={loadAdminSubs} className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <CheckCircle className="w-4 h-4" /><span>Abonnements</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="tickets" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <Ticket className="w-4 h-4" /><span>Billets</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="deals" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <Gift className="w-4 h-4" /><span>Bons Plans</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="categories" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <Tag className="w-4 h-4" /><span>Catégories</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="pack-config" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <Tag className="w-4 h-4" /><span>Config packs</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="content" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <MessageSquare className="w-4 h-4" /><span>Contenu</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="events" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto relative data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <Calendar className="w-4 h-4" /><span>Événements</span>
+                {events.filter(e => e.status === 'draft').length > 0 && (
+                  <span className="bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                    {events.filter(e => e.status === 'draft').length}
+                  </span>
+                )}
+              </TabsTrigger>
+
+              <TabsTrigger value="live" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <Video className="w-4 h-4" /><span>Live</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="delivery" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <Truck className="w-4 h-4" /><span>Livraison</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="leisure" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <MapPin className="w-4 h-4" /><span>Loisirs</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="payments" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <CreditCard className="w-4 h-4" /><span>Paiements</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="deal-payments" onClick={loadAdminDealPayments} className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <CreditCard className="w-4 h-4" /><span>Paiements BP</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="deal-promos" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <Gift className="w-4 h-4" /><span>Promos Bons Plans</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="leisure-promos" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <MapPin className="w-4 h-4" /><span>Promos Loisirs</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="promotions" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <Star className="w-4 h-4" /><span>Promotions</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="promo-suivi" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <TrendingUp className="w-4 h-4" /><span>Suivi promos</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="establishment-pricing" onClick={() => { if (!estPricingLoaded) loadEstPricing(); }} className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <DollarSign className="w-4 h-4" /><span>Tarification</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="users" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <Users className="w-4 h-4" /><span>Utilisateurs</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="overview" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <BarChart3 className="w-4 h-4" /><span>Vue d'ensemble</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="settings" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <Settings className="w-4 h-4" /><span>Paramètres</span>
+              </TabsTrigger>
+
+            </TabsList>
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-white to-transparent" />
+          </div>
 
           {/* Vue d'ensemble */}
           <TabsContent value="overview" className="space-y-6">
@@ -2725,8 +2744,8 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
                     placeholder="Rechercher un événement..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    value={eventSearchTerm}
+                    onChange={(e) => setEventSearchTerm(e.target.value)}
                     className="pl-10"
                   />
                 </div>

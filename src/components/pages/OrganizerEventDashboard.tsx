@@ -98,6 +98,7 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
   const [ctrlPhone, setCtrlPhone] = useState('');
   const [ctrlShowPwd, setCtrlShowPwd] = useState(false);
   const [ctrlSaving, setCtrlSaving] = useState(false);
+  const [ctrlDeleting, setCtrlDeleting] = useState<string | null>(null);
 
   const computeStats = useCallback((ticketList: BackendTicket[]): EventStats => {
     const sold = ticketList.length;
@@ -148,19 +149,21 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
   }, [event.id, computeStats]);
 
   useEffect(() => { loadTickets(); }, [loadTickets]);
-  useEffect(() => { if (initialTab === 'controllers') loadControllers(); }, []);
 
   const loadControllers = useCallback(async () => {
     setControllersLoading(true);
     try {
       const data = await ControllerAPI.listForEvent(event.id);
       setControllers(data);
-    } catch {
+    } catch (err) {
+      console.error('[controllers] Erreur chargement:', err);
       toast.error('Erreur lors du chargement des contrôleurs');
     } finally {
       setControllersLoading(false);
     }
   }, [event.id]);
+
+  useEffect(() => { if (initialTab === 'controllers') loadControllers(); }, [loadControllers]);
 
   const handleAddController = useCallback(async () => {
     if (!ctrlName || !ctrlEmail || !ctrlPassword) {
@@ -169,29 +172,33 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
     }
     setCtrlSaving(true);
     try {
-      const assignment = await ControllerAPI.createAndAssign(event.id, {
+      await ControllerAPI.createAndAssign(event.id, {
         name: ctrlName, email: ctrlEmail, password: ctrlPassword, phone: ctrlPhone || undefined,
       });
-      setControllers(prev => [...prev, assignment]);
       setCtrlName(''); setCtrlEmail(''); setCtrlPassword(''); setCtrlPhone('');
       setShowAddController(false);
       toast.success('Contrôleur ajouté avec succès');
+      await loadControllers();
     } catch (err: unknown) {
       toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de l\'ajout du contrôleur'));
     } finally {
       setCtrlSaving(false);
     }
-  }, [event.id, ctrlName, ctrlEmail, ctrlPassword, ctrlPhone]);
+  }, [event.id, ctrlName, ctrlEmail, ctrlPassword, ctrlPhone, loadControllers]);
 
-  const handleRemoveController = useCallback(async (controllerId: string) => {
+  const handleRemoveController = useCallback(async (assignmentId: string) => {
+    setCtrlDeleting(assignmentId);
     try {
-      await ControllerAPI.remove(event.id, controllerId);
-      setControllers(prev => prev.filter(c => c.controllerId !== controllerId));
+      await ControllerAPI.remove(event.id, assignmentId);
       toast.success('Contrôleur retiré');
-    } catch {
-      toast.error('Erreur lors de la suppression');
+      await loadControllers();
+    } catch (err: unknown) {
+      console.error('[controllers] Erreur suppression:', err);
+      toast.error('Erreur lors de la suppression du contrôleur');
+    } finally {
+      setCtrlDeleting(null);
     }
-  }, [event.id]);
+  }, [event.id, loadControllers]);
 
   const handleQRScan = useCallback(async (qrData: string) => {
     try {
@@ -618,9 +625,13 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
                             variant="ghost"
                             size="sm"
                             className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleRemoveController(c.controllerId)}
+                            disabled={ctrlDeleting === c.id}
+                            onClick={() => handleRemoveController(c.id)}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            {ctrlDeleting === c.id
+                              ? <div className="w-4 h-4 animate-spin rounded-full border-2 border-red-300 border-t-red-600" />
+                              : <Trash2 className="w-4 h-4" />
+                            }
                           </Button>
                         </div>
                       </div>

@@ -25,7 +25,11 @@ export interface PromotionPurchase {
   pricePaid: number;
   currency: string;
   status: string;
+  paymentMode: 'immediate' | 'on_sales';
+  paymentStatus: 'pending' | 'completed' | 'failed' | 'deducted';
+  paymentProvider: string | null;
   paymentSimulated: boolean;
+  amountDeducted: number;
   promotionStartDate: string;
   promotionEndDate: string;
   deactivatedAt: string | null;
@@ -40,9 +44,17 @@ export interface PromotionPurchaseResult {
   packType: string;
   pricePaid: number;
   currency: string;
+  paymentMode: 'immediate' | 'on_sales';
+  paymentStatus: string;
   promotionStartDate: string;
   promotionEndDate: string;
   durationDays: number;
+}
+
+export interface PurchasePromotionOptions {
+  paymentMode: 'immediate' | 'on_sales';
+  paymentProvider?: string;
+  paymentRef?: string;
 }
 
 export interface AdminPromotionStats {
@@ -66,8 +78,12 @@ const PromotionAPI = {
   },
 
   /** Organisateur achète un pack pour son événement */
-  async purchasePromotion(eventId: string, packType: string): Promise<PromotionPurchaseResult> {
-    const res = await api.post(`/api/promotion/events/${eventId}/promote`, { packType });
+  async purchasePromotion(
+    eventId: string,
+    packType: string,
+    options: PurchasePromotionOptions
+  ): Promise<PromotionPurchaseResult> {
+    const res = await api.post(`/api/promotion/events/${eventId}/promote`, { packType, ...options });
     return res.data.data;
   },
 

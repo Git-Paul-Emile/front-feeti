@@ -1,13 +1,16 @@
 /**
  * PromoteEventModal — Flow self-service de promotion d'un événement
- * Étapes : sélection pack → paiement simulé → confirmation
+ * Étapes : sélection pack → choix mode paiement → (paiement immédiat) → confirmation
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 import PromotionAPI, { type PackConfig } from '../services/api/PromotionAPI';
+import { PaymentSelector, type PaymentMethod } from './payment/PaymentSelector';
 import { toast } from 'sonner';
+
+// Récupération de l'email utilisateur via contexte auth
+import { useAuth } from '../hooks/useAuth';
 
 interface PromoteEventModalProps {
   open: boolean;
@@ -16,9 +19,8 @@ interface PromoteEventModalProps {
   onSuccess?: () => void;
 }
 
-type Step = 'select' | 'payment' | 'confirmed';
+type Step = 'select' | 'payment_mode' | 'payment' | 'confirmed';
 
-// Couleurs et labels visuels par pack (sans icône)
 const PACK_STYLE: Record<string, { border: string; header: string; badge: string; label: string }> = {
   OR:     { border: 'border-amber-400',  header: 'bg-amber-50',   badge: 'bg-amber-100 text-amber-800',  label: 'Pack OR' },
   ARGENT: { border: 'border-slate-400',  header: 'bg-slate-50',   badge: 'bg-slate-100 text-slate-700',  label: 'Pack ARGENT' },
@@ -35,12 +37,14 @@ function formatDate(isoDate: string) {
 }
 
 export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEventModalProps) {
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>('select');
   const [configs, setConfigs] = useState<PackConfig[]>([]);
   const [selected, setSelected] = useState<PackConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmed, setConfirmed] = useState<{
     packType: string; pricePaid: number; currency: string;
+    paymentMode: string;
     promotionStartDate: string; promotionEndDate: string; durationDays: number;
   } | null>(null);
 
@@ -56,21 +60,43 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
   }, [open]);
 
   const handleSelect = (cfg: PackConfig) => {
-    if (cfg.slots.available === 0) return; // slot plein : non sélectionnable
+    if (cfg.slots.available === 0) return;
     setSelected(cfg);
   };
 
-  const handlePay = async () => {
+  // Paiement immédiat : déclenché après succès du PaymentSelector
+  const handleImmediatePaymentSuccess = async (transactionId: string, method: PaymentMethod) => {
     if (!selected) return;
     setLoading(true);
     try {
-      const result = await PromotionAPI.purchasePromotion(event.id, selected.type);
-      setConfirmed(result);
+      const result = await PromotionAPI.purchasePromotion(event.id, selected.type, {
+        paymentMode: 'immediate',
+        paymentProvider: method,
+        paymentRef: transactionId,
+      });
+      setConfirmed({ ...result, paymentMode: 'immediate' });
       setStep('confirmed');
       onSuccess?.();
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Erreur lors de l\'activation';
-      toast.error(msg);
+      toast.error(err?.response?.data?.message ?? "Erreur lors de l'activation");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Paiement sur les ventes
+  const handleOnSalesPayment = async () => {
+    if (!selected) return;
+    setLoading(true);
+    try {
+      const result = await PromotionAPI.purchasePromotion(event.id, selected.type, {
+        paymentMode: 'on_sales',
+      });
+      setConfirmed({ ...result, paymentMode: 'on_sales' });
+      setStep('confirmed');
+      onSuccess?.();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Erreur lors de l'activation");
     } finally {
       setLoading(false);
     }
@@ -78,15 +104,18 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
 
   const style = selected ? PACK_STYLE[selected.type] : null;
 
+  const stepTitle: Record<Step, string> = {
+    select:       'Mettre en avant : ' + event.title,
+    payment_mode: 'Choisir le mode de paiement',
+    payment:      'Paiement — ' + (selected ? PACK_STYLE[selected.type]?.label : ''),
+    confirmed:    'Promotion activée',
+  };
+
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold">
-            {step === 'select' && 'Mettre en avant : ' + event.title}
-            {step === 'payment' && 'Récapitulatif & Paiement'}
-            {step === 'confirmed' && 'Promotion activée'}
-          </DialogTitle>
+          <DialogTitle className="text-lg font-bold">{stepTitle[step]}</DialogTitle>
         </DialogHeader>
 
         {/* ── ÉTAPE 1 : Sélection du pack ── */}
@@ -113,15 +142,12 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
                       isSelected ? s?.border + ' shadow-md' : 'border-gray-200',
                     ].join(' ')}
                   >
-                    {/* En-tête pack */}
                     <div className={['px-4 py-3', s?.header].join(' ')}>
                       <div className="flex items-center justify-between">
                         <span className={['text-xs font-semibold px-2 py-0.5 rounded-full', s?.badge].join(' ')}>
                           {s?.label}
                         </span>
-                        {isFull && (
-                          <span className="text-xs text-red-600 font-medium">Complet</span>
-                        )}
+                        {isFull && <span className="text-xs text-red-600 font-medium">Complet</span>}
                       </div>
                       <div className="mt-2">
                         <span className="text-xl font-bold text-gray-900">
@@ -131,7 +157,6 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
                       </div>
                     </div>
 
-                    {/* Corps */}
                     <div className="px-4 py-3 bg-white">
                       <p className="text-xs text-gray-600 mb-3 leading-relaxed">{cfg.description}</p>
                       <ul className="space-y-1">
@@ -142,14 +167,14 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
                           </li>
                         ))}
                       </ul>
-
-                      {/* Slots */}
                       <div className="mt-3 pt-3 border-t border-gray-100">
                         {isFull ? (
                           <SlotFullMessage packType={cfg.type} />
                         ) : (
                           <span className="text-xs text-gray-400">
-                            {cfg.slots.available === 9999 ? 'Places illimitées' : `${cfg.slots.available} place${cfg.slots.available > 1 ? 's' : ''} disponible${cfg.slots.available > 1 ? 's' : ''}`}
+                            {cfg.slots.available === 9999
+                              ? 'Places illimitées'
+                              : `${cfg.slots.available} place${cfg.slots.available > 1 ? 's' : ''} disponible${cfg.slots.available > 1 ? 's' : ''}`}
                           </span>
                         )}
                       </div>
@@ -161,21 +186,19 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
 
             <div className="flex justify-end gap-3 pt-2">
               <Button variant="outline" onClick={onClose}>Annuler</Button>
-              <Button
-                disabled={!selected}
-                onClick={() => setStep('payment')}
-              >
+              <Button disabled={!selected} onClick={() => setStep('payment_mode')}>
                 Continuer
               </Button>
             </div>
           </div>
         )}
 
-        {/* ── ÉTAPE 2 : Paiement simulé ── */}
-        {step === 'payment' && selected && style && (
+        {/* ── ÉTAPE 2 : Choix du mode de paiement ── */}
+        {step === 'payment_mode' && selected && style && (
           <div className="space-y-5">
-            <div className={['rounded-xl border-2 p-5', style.border].join(' ')}>
-              <div className="flex items-center justify-between mb-4">
+            {/* Récap pack sélectionné */}
+            <div className={['rounded-xl border-2 p-4', style.border].join(' ')}>
+              <div className="flex items-center justify-between">
                 <span className={['text-sm font-semibold px-3 py-1 rounded-full', style.badge].join(' ')}>
                   {style.label}
                 </span>
@@ -183,43 +206,79 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
                   {formatPrice(selected.price, selected.currency)}
                 </span>
               </div>
-
-              <div className="space-y-1 text-sm text-gray-700">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Événement</span>
-                  <span className="font-medium truncate max-w-[200px]">{event.title}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Durée</span>
-                  <span>{selected.durationDays} jours</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Paiement</span>
-                  <span className="text-amber-600 font-medium">Simulation (test)</span>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-400">
-                  Le paiement réel sera intégré ultérieurement. Cette simulation active immédiatement le pack.
-                </p>
+              <div className="mt-2 text-sm text-gray-500">
+                Durée : <span className="text-gray-700 font-medium">{selected.durationDays} jours</span>
+                {' · '}Événement : <span className="text-gray-700 font-medium truncate">{event.title}</span>
               </div>
             </div>
 
-            <div className="flex justify-between gap-3">
-              <Button variant="outline" onClick={() => setStep('select')}>Retour</Button>
-              <Button
-                onClick={handlePay}
-                disabled={loading}
-                className="min-w-[160px]"
+            <p className="text-sm font-medium text-gray-700">Comment souhaitez-vous régler ce pack ?</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Option A : Paiement immédiat */}
+              <button
+                onClick={() => setStep('payment')}
+                className="text-left rounded-xl border-2 border-gray-200 hover:border-indigo-400 hover:shadow-md transition-all duration-150 p-5 bg-white"
               >
-                {loading ? 'Activation en cours...' : `Simuler le paiement — ${formatPrice(selected.price, selected.currency)}`}
-              </Button>
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mb-3">
+                  <span className="text-xl">💳</span>
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">Payer maintenant</h3>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Réglez immédiatement via carte bancaire, Mobile Money ou Paystack. Votre événement est mis en avant dès confirmation du paiement.
+                </p>
+              </button>
+
+              {/* Option B : Sur les ventes */}
+              <button
+                onClick={handleOnSalesPayment}
+                disabled={loading}
+                className="text-left rounded-xl border-2 border-gray-200 hover:border-green-400 hover:shadow-md transition-all duration-150 p-5 bg-white disabled:opacity-60"
+              >
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mb-3">
+                  <span className="text-xl">🎟️</span>
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  {loading ? 'Activation...' : 'Payer sur les ventes'}
+                </h3>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Le coût du pack ({formatPrice(selected.price, selected.currency)}) sera déduit automatiquement de vos recettes de vente de billets. Votre événement est mis en avant immédiatement.
+                </p>
+              </button>
+            </div>
+
+            <div className="flex justify-start pt-1">
+              <Button variant="outline" onClick={() => setStep('select')}>Retour</Button>
             </div>
           </div>
         )}
 
-        {/* ── ÉTAPE 3 : Confirmation ── */}
+        {/* ── ÉTAPE 3 : Paiement immédiat via PaymentSelector ── */}
+        {step === 'payment' && selected && (
+          <div className="space-y-4">
+            <div className={['rounded-xl border p-3 flex items-center justify-between', style?.border ?? ''].join(' ')}>
+              <span className={['text-sm font-semibold px-2 py-0.5 rounded-full', style?.badge].join(' ')}>
+                {style?.label}
+              </span>
+              <span className="font-bold text-gray-900">{formatPrice(selected.price, selected.currency)}</span>
+            </div>
+
+            <PaymentSelector
+              amount={selected.price}
+              currency={selected.currency}
+              email={user?.email ?? ''}
+              onSuccess={handleImmediatePaymentSuccess}
+              onError={(err) => toast.error(err)}
+              metadata={{ eventId: event.id, packType: selected.type, type: 'promotion' }}
+            />
+
+            <div className="flex justify-start pt-1">
+              <Button variant="outline" onClick={() => setStep('payment_mode')}>Retour</Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── ÉTAPE 4 : Confirmation ── */}
         {step === 'confirmed' && confirmed && (
           <div className="text-center space-y-5 py-4">
             <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto">
@@ -229,7 +288,9 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
             <div>
               <h3 className="text-lg font-bold text-gray-900 mb-1">Pack activé avec succès</h3>
               <p className="text-sm text-gray-500">
-                Votre événement est maintenant mis en avant sur Feeti.
+                {confirmed.paymentMode === 'on_sales'
+                  ? 'Le coût sera déduit automatiquement de vos ventes de billets.'
+                  : 'Votre événement est maintenant mis en avant sur Feeti.'}
               </p>
             </div>
 
@@ -241,6 +302,12 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
               <div className="flex justify-between">
                 <span className="text-gray-500">Montant</span>
                 <span>{formatPrice(confirmed.pricePaid, confirmed.currency)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Mode de paiement</span>
+                <span className={confirmed.paymentMode === 'on_sales' ? 'text-green-600 font-medium' : 'text-indigo-600 font-medium'}>
+                  {confirmed.paymentMode === 'on_sales' ? 'Sur les ventes' : 'Paiement immédiat'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Début</span>
@@ -260,14 +327,11 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
   );
 }
 
-/** Affiche la date de prochaine libération de slot */
 function SlotFullMessage({ packType }: { packType: string }) {
   const [info, setInfo] = useState<{ daysUntilRelease: number | null } | null>(null);
 
   useEffect(() => {
-    PromotionAPI.getNextSlotRelease(packType)
-      .then(setInfo)
-      .catch(() => {});
+    PromotionAPI.getNextSlotRelease(packType).then(setInfo).catch(() => {});
   }, [packType]);
 
   if (!info) return <span className="text-xs text-gray-400">Calcul en cours...</span>;

@@ -179,6 +179,15 @@ export function OrganizerDashboard({
 
   const handleCreateEvent = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newEvent.title.trim()) { toast.error('Le titre est obligatoire'); return; }
+    if (!newEvent.description.trim()) { toast.error('La description est obligatoire'); return; }
+    if (!newEvent.date) { toast.error('La date est obligatoire'); return; }
+    if (!newEvent.time) { toast.error("L'heure est obligatoire"); return; }
+    if (!newEvent.location.trim()) { toast.error('Le lieu est obligatoire'); return; }
+    if (!newEvent.duration.trim()) { toast.error('La durée estimée est obligatoire'); return; }
+    if (!newEvent.category) { toast.error('La catégorie est obligatoire'); return; }
+    if (!imageFile) { toast.error("L'affiche de l'événement est obligatoire"); return; }
+    if (createTicketTypes.some(t => !t.type.trim())) { toast.error('Le nom de chaque type de billet est obligatoire'); return; }
     const isLiveEvent = newEvent.eventType === 'STREAMING_LIVE' || newEvent.eventType === 'MIXTE';
     if (isLiveEvent && !createLiveConsentAccepted) {
       toast.error('Le consentement pour la diffusion live est obligatoire');
@@ -233,6 +242,15 @@ export function OrganizerDashboard({
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEvent) return;
+    if (!editForm.title.trim()) { toast.error('Le titre est obligatoire'); return; }
+    if (!editForm.description.trim()) { toast.error('La description est obligatoire'); return; }
+    if (!editForm.date) { toast.error('La date est obligatoire'); return; }
+    if (!editForm.time) { toast.error("L'heure est obligatoire"); return; }
+    if (!editForm.location.trim()) { toast.error('Le lieu est obligatoire'); return; }
+    if (!editForm.duration.trim()) { toast.error('La durée estimée est obligatoire'); return; }
+    if (!editForm.category) { toast.error('La catégorie est obligatoire'); return; }
+    if (!editImagePreview) { toast.error("L'affiche de l'événement est obligatoire"); return; }
+    if (editTicketTypes.some(t => !t.type.trim())) { toast.error('Le nom de chaque type de billet est obligatoire'); return; }
     const isLiveEvent = editForm.eventType === 'STREAMING_LIVE' || editForm.eventType === 'MIXTE';
     if (isLiveEvent && !editLiveConsentAccepted) {
       toast.error('Le consentement pour la diffusion live est obligatoire');
@@ -300,68 +318,74 @@ export function OrganizerDashboard({
               <form onSubmit={handleCreateEvent} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="title">Titre de l'événement</Label>
+                    <Label htmlFor="title">Titre de l'événement *</Label>
                     <Input
                       id="title"
                       value={newEvent.title}
                       onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
                       placeholder="Nom de votre événement"
+                      required
                     />
                   </div>
 
                   <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description">Description *</Label>
                     <Textarea
                       id="description"
                       value={newEvent.description}
                       onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
                       placeholder="Décrivez votre événement..."
                       rows={4}
+                      required
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
+                    <Label htmlFor="date">Date *</Label>
                     <Input
                       id="date"
                       type="date"
                       value={newEvent.date}
                       onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
+                      required
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="time">Heure</Label>
+                    <Label htmlFor="time">Heure *</Label>
                     <Input
                       id="time"
                       type="time"
                       value={newEvent.time}
                       onChange={(e) => setNewEvent({...newEvent, time: e.target.value})}
+                      required
                     />
                   </div>
 
                   <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="location">Lieu</Label>
+                    <Label htmlFor="location">Lieu *</Label>
                     <Input
                       id="location"
                       value={newEvent.location}
                       onChange={(e) => setNewEvent({...newEvent, location: e.target.value})}
                       placeholder="Adresse ou nom du lieu"
+                      required
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="duration">Durée estimée</Label>
+                    <Label htmlFor="duration">Durée estimée *</Label>
                     <Input
                       id="duration"
                       value={newEvent.duration}
                       onChange={(e) => setNewEvent({...newEvent, duration: e.target.value})}
                       placeholder="Ex: 2h30, 3 heures..."
+                      required
                     />
                   </div>
 
                   <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="image">Affiche de l'événement</Label>
+                    <Label htmlFor="image">Affiche de l'événement *</Label>
                     <div
                       className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-indigo-400 transition-colors"
                       onClick={() => document.getElementById('image-upload')?.click()}
@@ -429,12 +453,14 @@ export function OrganizerDashboard({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="maxAttendees">Nombre maximum de participants</Label>
+                    <Label htmlFor="maxAttendees">Nombre maximum de participants *</Label>
                     <Input
                       id="maxAttendees"
                       type="number"
+                      min={1}
                       value={newEvent.maxAttendees}
                       onChange={(e) => setNewEvent({...newEvent, maxAttendees: parseInt(e.target.value) || 100})}
+                      required
                     />
                   </div>
 
@@ -691,36 +717,39 @@ export function OrganizerDashboard({
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="edit-title">Titre</Label>
+                  <Label htmlFor="edit-title">Titre *</Label>
                   <Input
                     id="edit-title"
                     value={editForm.title}
                     onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+                    required
                   />
                 </div>
 
                 <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="edit-description">Description</Label>
+                  <Label htmlFor="edit-description">Description *</Label>
                   <Textarea
                     id="edit-description"
                     value={editForm.description}
                     onChange={(e) => setEditForm({...editForm, description: e.target.value})}
                     rows={4}
+                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-date">Date</Label>
+                  <Label htmlFor="edit-date">Date *</Label>
                   <Input
                     id="edit-date"
                     type="date"
                     value={editForm.date}
                     onChange={(e) => setEditForm({...editForm, date: e.target.value})}
+                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-time">Heure</Label>
+                  <Label htmlFor="edit-time">Heure *</Label>
                   <Input
                     id="edit-time"
                     type="time"
@@ -731,26 +760,28 @@ export function OrganizerDashboard({
                 </div>
 
                 <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="edit-location">Lieu</Label>
+                  <Label htmlFor="edit-location">Lieu *</Label>
                   <Input
                     id="edit-location"
                     value={editForm.location}
                     onChange={(e) => setEditForm({...editForm, location: e.target.value})}
+                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-duration">Durée estimée</Label>
+                  <Label htmlFor="edit-duration">Durée estimée *</Label>
                   <Input
                     id="edit-duration"
                     value={editForm.duration}
                     onChange={(e) => setEditForm({...editForm, duration: e.target.value})}
                     placeholder="Ex: 2h30, 3 heures..."
+                    required
                   />
                 </div>
 
                 <div className="md:col-span-2 space-y-2">
-                  <Label>Affiche de l'événement</Label>
+                  <Label>Affiche de l'événement *</Label>
                   <div
                     className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-indigo-400 transition-colors"
                     onClick={() => document.getElementById('edit-image-upload')?.click()}
@@ -809,12 +840,14 @@ export function OrganizerDashboard({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-maxAttendees">Participants max</Label>
+                  <Label htmlFor="edit-maxAttendees">Participants max *</Label>
                   <Input
                     id="edit-maxAttendees"
                     type="number"
+                    min={1}
                     value={editForm.maxAttendees}
                     onChange={(e) => setEditForm({...editForm, maxAttendees: parseInt(e.target.value) || 100})}
+                    required
                   />
                 </div>
 

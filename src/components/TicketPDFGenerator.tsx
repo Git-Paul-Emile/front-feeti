@@ -58,7 +58,7 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-async function buildTicketCanvas(ticket: Ticket): Promise<HTMLCanvasElement> {
+export async function buildTicketCanvas(ticket: Ticket): Promise<HTMLCanvasElement> {
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;

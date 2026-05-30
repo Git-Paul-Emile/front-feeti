@@ -24,6 +24,7 @@ import {
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { toast } from 'sonner';
 import EventsBackendAPI from '../../services/api/EventsBackendAPI';
+import TicketAPI from '../../services/api/TicketAPI';
 
 interface Event {
   id: string;
@@ -82,6 +83,8 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
     }
   }, [event.promotionType, event.promotionStatus]);
   const [selectedTickets, setSelectedTickets] = useState(1);
+  const [userTicketCount, setUserTicketCount] = useState(0);
+  const MAX_TICKETS_PER_EVENT = 3;
   const isFeetiPlayEvent = event.source === 'feetiplay';
   const canWatchNow = event.isLive || !!event.videoUrl || !!event.streamUrl || !!event.isReplay;
   const externalEventUrl = event.externalUrl ?? (FEETIPLAY_URL ? `${FEETIPLAY_URL}/event/${event.id}` : undefined);
@@ -95,6 +98,17 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
     if (!currentUser?.id) return;
     EventsBackendAPI.checkFavorite(event.id)
       .then(setIsFavorited)
+      .catch(() => {});
+  }, [currentUser?.id, event.id, isFeetiPlayEvent]);
+
+  // Charger le nombre de billets déjà achetés par l'utilisateur pour cet événement
+  useEffect(() => {
+    if (!currentUser?.id || isFeetiPlayEvent) return;
+    TicketAPI.getMyTickets()
+      .then(tickets => {
+        const count = tickets.filter(t => t.eventId === event.id).length;
+        setUserTicketCount(count);
+      })
       .catch(() => {});
   }, [currentUser?.id, event.id, isFeetiPlayEvent]);
 
@@ -382,57 +396,86 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
 
                   {isUpcoming && !isSoldOut && (
                     <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Nombre de billets
-                        </label>
-                        <select
-                          value={selectedTickets}
-                          onChange={(e) => setSelectedTickets(Number(e.target.value))}
-                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        >
-                          {[...Array(Math.min(10, availableTickets))].map((_, i) => (
-                            <option key={i + 1} value={i + 1}>
-                              {i + 1} billet{i > 0 ? 's' : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-gray-600">
-                            {selectedTickets} × {formatPrice(event.price, event.currency)}
-                          </span>
-                          <span className="font-medium">
-                            {formatPrice(event.price * selectedTickets, event.currency)}
-                          </span>
-                        </div>
-                        <Separator className="my-2" />
-                        <div className="flex justify-between items-center font-bold">
-                          <span>Total</span>
-                          <span className="text-indigo-600">
-                            {formatPrice(event.price * selectedTickets, event.currency)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <Button
-                        onClick={() => {
-                          if (isFeetiPlayEvent && canWatchNow) {
-                            onStreamWatch(event.id);
-                            return;
+                      {currentUser && !isFeetiPlayEvent && userTicketCount > 0 && (
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-sm text-indigo-700">
+                          Vous avez déjà <strong>{userTicketCount}</strong> billet{userTicketCount > 1 ? 's' : ''} pour cet événement
+                          {userTicketCount >= MAX_TICKETS_PER_EVENT
+                            ? ' (limite atteinte)'
+                            : ` (${MAX_TICKETS_PER_EVENT - userTicketCount} achat${MAX_TICKETS_PER_EVENT - userTicketCount > 1 ? 's' : ''} restant${MAX_TICKETS_PER_EVENT - userTicketCount > 1 ? 's' : ''})`
                           }
-                          onPurchase(event.id);
-                        }}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700"
-                        size="lg"
-                        disabled={!currentUser && !isFeetiPlayEvent}
-                      >
-                        {isFeetiPlayEvent
-                          ? (event.isReplay ? 'Voir le replay' : 'Regarder maintenant')
-                          : (!currentUser ? 'Connectez-vous pour réserver' : 'Réserver maintenant')}
-                      </Button>
+                        </div>
+                      )}
+
+                      {(!currentUser || isFeetiPlayEvent || userTicketCount < MAX_TICKETS_PER_EVENT) && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Nombre de billets
+                            </label>
+                            <select
+                              value={selectedTickets}
+                              onChange={(e) => setSelectedTickets(Number(e.target.value))}
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            >
+                              {[...Array(Math.min(10, availableTickets, MAX_TICKETS_PER_EVENT - userTicketCount))].map((_, i) => (
+                                <option key={i + 1} value={i + 1}>
+                                  {i + 1} billet{i > 0 ? 's' : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm text-gray-600">
+                                {selectedTickets} × {formatPrice(event.price, event.currency)}
+                              </span>
+                              <span className="font-medium">
+                                {formatPrice(event.price * selectedTickets, event.currency)}
+                              </span>
+                            </div>
+                            <Separator className="my-2" />
+                            <div className="flex justify-between items-center font-bold">
+                              <span>Total</span>
+                              <span className="text-indigo-600">
+                                {formatPrice(event.price * selectedTickets, event.currency)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <Button
+                            onClick={() => {
+                              if (isFeetiPlayEvent && canWatchNow) {
+                                onStreamWatch(event.id);
+                                return;
+                              }
+                              if (currentUser && userTicketCount >= MAX_TICKETS_PER_EVENT) {
+                                toast.error(`Limite atteinte : maximum ${MAX_TICKETS_PER_EVENT} billets par événement`);
+                                return;
+                              }
+                              onPurchase(event.id);
+                            }}
+                            className="w-full bg-indigo-600 hover:bg-indigo-700"
+                            size="lg"
+                            disabled={!currentUser && !isFeetiPlayEvent}
+                          >
+                            {isFeetiPlayEvent
+                              ? (event.isReplay ? 'Voir le replay' : 'Regarder maintenant')
+                              : (!currentUser
+                                ? 'Connectez-vous pour réserver'
+                                : userTicketCount > 0
+                                  ? 'Achat supplémentaire'
+                                  : 'Réserver maintenant'
+                              )}
+                          </Button>
+                        </>
+                      )}
+
+                      {currentUser && !isFeetiPlayEvent && userTicketCount >= MAX_TICKETS_PER_EVENT && (
+                        <Button disabled className="w-full" size="lg" variant="outline">
+                          Limite de {MAX_TICKETS_PER_EVENT} billets atteinte
+                        </Button>
+                      )}
 
                       <div className="text-xs text-gray-500 text-center space-y-1">
                         {isFeetiPlayEvent ? (

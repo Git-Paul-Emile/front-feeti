@@ -2046,18 +2046,38 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   }, [realUsers, searchTerm]);
 
   const [eventSearchTerm, setEventSearchTerm] = useState('');
+  const [eventStatusFilter, setEventStatusFilter] = useState<'all' | 'pending' | 'active' | 'archived'>('all');
+
+  const isEventArchived = (event: Event) =>
+    event.status === 'rejected' || (event.status === 'published' && new Date(event.date) < new Date());
 
   const filteredEvents = useMemo(() => {
-    const STATUS_ORDER: Record<string, number> = { draft: 0, published: 1, cancelled: 2, rejected: 3 };
+    const now = new Date();
     const term = eventSearchTerm.toLowerCase();
     return events
-      .filter(event =>
-        (event.title ?? '').toLowerCase().includes(term) ||
-        (event.category ?? '').toLowerCase().includes(term) ||
-        (event.location ?? '').toLowerCase().includes(term)
-      )
-      .sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
-  }, [events, eventSearchTerm]);
+      .filter(event => {
+        const matchesSearch =
+          (event.title ?? '').toLowerCase().includes(term) ||
+          (event.category ?? '').toLowerCase().includes(term) ||
+          (event.location ?? '').toLowerCase().includes(term);
+        if (!matchesSearch) return false;
+        const archived = event.status === 'rejected' || (event.status === 'published' && new Date(event.date) < now);
+        const active   = event.status === 'published' && new Date(event.date) >= now;
+        const pending  = event.status === 'draft';
+        if (eventStatusFilter === 'pending')  return pending;
+        if (eventStatusFilter === 'active')   return active;
+        if (eventStatusFilter === 'archived') return archived;
+        return true;
+      })
+      .sort((a, b) => {
+        const order = (e: Event) => {
+          if (e.status === 'draft') return 0;
+          if (e.status === 'published' && new Date(e.date) >= now) return 1;
+          return 2;
+        };
+        return order(a) - order(b);
+      });
+  }, [events, eventSearchTerm, eventStatusFilter]);
 
   const categoryData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -2738,8 +2758,8 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
 
           {/* Gestion des Événements */}
           <TabsContent value="events" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-4 flex-1">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center space-x-3 flex-1">
                 <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
@@ -2754,9 +2774,43 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                   Actualiser
                 </Button>
               </div>
+              {/* Filtres de statut */}
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  size="sm"
+                  variant={eventStatusFilter === 'all' ? 'default' : 'outline'}
+                  onClick={() => setEventStatusFilter('all')}
+                >
+                  Tous ({events.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={eventStatusFilter === 'pending' ? 'default' : 'outline'}
+                  className={eventStatusFilter === 'pending' ? 'bg-amber-500 hover:bg-amber-600' : 'border-amber-400 text-amber-700 hover:bg-amber-50'}
+                  onClick={() => setEventStatusFilter('pending')}
+                >
+                  En attente ({events.filter(e => e.status === 'draft').length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={eventStatusFilter === 'active' ? 'default' : 'outline'}
+                  className={eventStatusFilter === 'active' ? 'bg-green-600 hover:bg-green-700' : 'border-green-500 text-green-700 hover:bg-green-50'}
+                  onClick={() => setEventStatusFilter('active')}
+                >
+                  En cours ({events.filter(e => e.status === 'published' && new Date(e.date) >= new Date()).length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={eventStatusFilter === 'archived' ? 'default' : 'outline'}
+                  className={eventStatusFilter === 'archived' ? 'bg-gray-500 hover:bg-gray-600' : 'border-gray-400 text-gray-600 hover:bg-gray-50'}
+                  onClick={() => setEventStatusFilter('archived')}
+                >
+                  Archivés ({events.filter(e => e.status === 'rejected' || (e.status === 'published' && new Date(e.date) < new Date())).length})
+                </Button>
+              </div>
             </div>
 
-            {events.filter(e => e.status === 'draft').length > 0 && (
+            {events.filter(e => e.status === 'draft').length > 0 && eventStatusFilter !== 'active' && eventStatusFilter !== 'archived' && (
               <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-300 rounded-lg">
                 <Clock3 className="w-5 h-5 text-amber-600 shrink-0" />
                 <div>
@@ -2772,7 +2826,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
               <CardHeader>
                 <CardTitle>Gestion des Événements</CardTitle>
                 <CardDescription>
-                  {filteredEvents.length} événement(s) au total — {events.filter(e => e.status === 'draft').length} en attente, {events.filter(e => e.status === 'published').length} publiés
+                  {filteredEvents.length} événement(s) affiché(s) — {events.filter(e => e.status === 'draft').length} en attente, {events.filter(e => e.status === 'published' && new Date(e.date) >= new Date()).length} en cours, {events.filter(e => isEventArchived(e)).length} archivés
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -2794,15 +2848,18 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredEvents.map((event) => (
-                        <TableRow key={event.id}>
+                      {filteredEvents.map((event) => {
+                        const archived = isEventArchived(event);
+                        const canAction = event.status === 'draft';
+                        return (
+                        <TableRow key={event.id} className={archived ? 'opacity-60 bg-gray-50' : ''}>
                           <TableCell>
                             <div className="flex items-center space-x-3">
                               {event.image ? (
                                 <img
                                   src={event.image}
                                   alt={event.title}
-                                  className="h-12 w-12 rounded-lg object-cover"
+                                  className={`h-12 w-12 rounded-lg object-cover ${archived ? 'grayscale' : ''}`}
                                 />
                               ) : (
                                 <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center">
@@ -2810,7 +2867,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                                 </div>
                               )}
                               <div>
-                                <div className="font-medium">{event.title}</div>
+                                <div className={`font-medium ${archived ? 'text-gray-500' : ''}`}>{event.title}</div>
                                 <div className="text-sm text-muted-foreground flex items-center space-x-1">
                                   <MapPin className="h-3 w-3" />
                                   <span>{event.location}</span>
@@ -2843,13 +2900,20 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                           <TableCell>
                             <div className="flex flex-col space-y-1">
                               <Badge
-                                variant={event.status === 'published' ? 'default' :
-                                  event.status === 'draft' ? 'secondary' : 'destructive'}
+                                variant={canAction ? 'secondary' : archived ? 'destructive' : 'default'}
+                                className={!archived && !canAction ? 'bg-green-100 text-green-800 border-green-300' : ''}
                               >
-                                {event.status === 'published' ? 'Publié' :
-                                  event.status === 'draft' ? 'Brouillon' :
-                                  event.status === 'cancelled' ? 'Annulé' : event.status}
+                                {event.status === 'draft'     ? 'En attente' :
+                                 event.status === 'published' && !archived ? 'En cours' :
+                                 event.status === 'published' && archived  ? 'Terminé' :
+                                 event.status === 'rejected'  ? 'Rejeté' :
+                                 event.status === 'cancelled' ? 'Annulé' : event.status}
                               </Badge>
+                              {archived && (
+                                <span className="text-xs text-gray-400 italic flex items-center gap-1">
+                                  <FileText className="w-3 h-3" /> Archivé
+                                </span>
+                              )}
                               {event.isLive && (
                                 <Badge className="bg-red-500 text-white text-xs">LIVE</Badge>
                               )}
@@ -2857,7 +2921,6 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-1">
-                              {/* View */}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -2867,8 +2930,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              {/* Approve — only when draft */}
-                              {hasPermission('moderator') && event.status === 'draft' && (
+                              {hasPermission('moderator') && canAction && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -2879,8 +2941,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                                   <CheckCircle className="h-4 w-4" />
                                 </Button>
                               )}
-                              {/* Reject — only when draft */}
-                              {hasPermission('moderator') && event.status === 'draft' && (
+                              {hasPermission('moderator') && canAction && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -2894,7 +2955,8 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                       {filteredEvents.length === 0 && !eventsLoading && (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">

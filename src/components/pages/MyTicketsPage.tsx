@@ -4,6 +4,8 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { ArrowLeft, Ticket, Calendar, MapPin, Clock, Download, QrCode, RefreshCw, RotateCcw, X } from 'lucide-react';
 import { QRCodeGenerator, generateQRDataUrl } from '../QRCodeGenerator';
+import { buildTicketCanvas } from '../TicketPDFGenerator';
+import jsPDF from 'jspdf';
 import TicketAPI, { type BackendTicket } from '../../services/api/TicketAPI';
 import { toast } from 'sonner@2.0.3';
 
@@ -75,61 +77,43 @@ export function MyTicketsPage({ onBack }: MyTicketsPageProps) {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [loadTickets]);
 
-  const handleDownloadPDF = (ticket: BackendTicket) => {
-    const qrDataUrl = generateQRDataUrl(ticket.qrData, 200);
-    const event = ticket.event;
-    const printContent = `
-      <html>
-      <head>
-        <title>Billet - ${event?.title ?? ''}</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
-          .ticket { max-width: 580px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
-          .header { position: relative; background: linear-gradient(135deg, #4338ca, #059669); color: white; padding: 28px 24px; text-align: center; overflow: hidden; }
-          .header-img { width: 100%; height: 140px; object-fit: cover; display: block; }
-          .header h1 { margin: 0 0 6px 0; font-size: 22px; position: relative; z-index: 1; }
-          .header p { margin: 0; opacity: .85; font-size: 14px; position: relative; z-index: 1; }
-          .body { padding: 24px; }
-          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
-          .item { background: #f3f4f6; border-radius: 8px; padding: 12px; }
-          .item .label { font-size: 11px; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .05em; }
-          .item .value { font-weight: 700; font-size: 14px; color: #111; }
-          .qr { border-top: 2px dashed #e5e7eb; margin-top: 16px; padding-top: 20px; text-align: center; }
-          .qr p { margin: 10px 0 0; font-size: 12px; color: #6b7280; }
-          @media print { body { background: white; } .ticket { box-shadow: none; } }
-        </style>
-      </head>
-      <body>
-        <div class="ticket">
-          ${event?.image ? `<img class="header-img" src="${event.image}" alt="${event?.title ?? ''}" />` : ''}
-          <div class="header">
-            <h1>${event?.title ?? 'Événement'}</h1>
-            <p>Billet ${ticket.category} — N° ${ticket.id.slice(-8).toUpperCase()}</p>
-          </div>
-          <div class="body">
-            <div class="grid">
-              <div class="item"><div class="label">Date</div><div class="value">${event?.date ? formatDate(event.date) : '—'}</div></div>
-              <div class="item"><div class="label">Heure</div><div class="value">${event?.time ?? '—'}</div></div>
-              <div class="item"><div class="label">Lieu</div><div class="value">${event?.location ?? '—'}</div></div>
-              <div class="item"><div class="label">Prix</div><div class="value">${formatPrice(ticket.price, ticket.currency)}</div></div>
-              <div class="item"><div class="label">Porteur</div><div class="value">${ticket.holderName}</div></div>
-              <div class="item"><div class="label">Email</div><div class="value">${ticket.holderEmail}</div></div>
-            </div>
-            <div class="qr">
-              <strong>QR Code d'entrée</strong>
-              <img src="${qrDataUrl}" width="180" height="180" style="display:block;margin:12px auto 0" alt="QR Code" />
-              <p>Présentez ce billet à l'entrée de l'événement</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-    const win = window.open('', '_blank');
-    if (win) {
-      win.document.write(printContent);
-      win.document.close();
-      win.print();
+  const handleDownloadPDF = async (ticket: BackendTicket) => {
+    const ev = ticket.event;
+    const qrCode = generateQRDataUrl(ticket.qrData, 300);
+    try {
+      const mapped = {
+        id: ticket.id,
+        orderId: ticket.orderId,
+        eventId: ticket.eventId,
+        eventTitle: ev?.title ?? 'Événement',
+        eventDate: ev?.date ?? '',
+        eventTime: ev?.time ?? '',
+        eventLocation: ev?.location ?? '',
+        eventImage: ev?.image ?? '',
+        category: ticket.category,
+        price: ticket.price,
+        currency: ticket.currency,
+        holderName: ticket.holderName,
+        holderEmail: ticket.holderEmail,
+        qrCode,
+        status: ticket.status as 'valid' | 'used' | 'expired',
+        purchaseDate: ticket.createdAt ?? new Date().toISOString(),
+        timestamp: Date.now(),
+        signature: '',
+      };
+      const canvas = await buildTicketCanvas(mapped);
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const ratio = Math.min((pageW - margin * 2) / canvas.width, (pageH - margin * 2) / canvas.height);
+      const imgW = canvas.width * ratio;
+      const imgH = canvas.height * ratio;
+      pdf.addImage(imgData, 'JPEG', (pageW - imgW) / 2, (pageH - imgH) / 2, imgW, imgH);
+      pdf.save(`billet-${(ev?.title ?? 'ticket').replace(/\s+/g, '-')}-${ticket.id.slice(-8)}.pdf`);
+    } catch {
+      toast.error('Erreur lors de la génération du PDF');
     }
   };
 
@@ -250,7 +234,7 @@ export function MyTicketsPage({ onBack }: MyTicketsPageProps) {
                         onClick={() => handleDownloadPDF(ticket)}
                       >
                         <Download className="w-4 h-4" />
-                        Télécharger PDF
+                        Télécharger
                       </Button>
                       {ticket.status === 'valid' && ev?.id && (
                         <Button

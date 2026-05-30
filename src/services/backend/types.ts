@@ -86,6 +86,7 @@ export interface BackendEvent {
   promotionStatus?: PromotionStatus | null;
   promotionStartDate?: string | null;
   promotionEndDate?: string | null;
+  totalRevenue?: number;
 }
 
 export interface CreateBackendEventInput {

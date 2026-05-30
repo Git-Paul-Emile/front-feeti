@@ -61,6 +61,7 @@ interface Event {
   promotionStatus?: string | null;
   promotionStartDate?: string | null;
   promotionEndDate?: string | null;
+  totalRevenue?: number;
 }
 
 interface OrganizerDashboardProps {
@@ -269,8 +270,8 @@ export function OrganizerDashboard({
     setEditImagePreview('');
   };
 
-  const totalRevenue = organizerEvents.reduce((sum, event) => 
-    sum + (event.price * event.attendees), 0
+  const totalRevenue = organizerEvents.reduce((sum, event) =>
+    sum + (event.totalRevenue ?? event.price * event.attendees), 0
   );
   const totalAttendees = organizerEvents.reduce((sum, event) => sum + event.attendees, 0);
   const upcomingEvents = organizerEvents.filter(event => new Date(event.date) > new Date());

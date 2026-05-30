@@ -6,9 +6,8 @@ import {
   logout as firebaseLogout,
   onAuthChange,
   getIdToken,
-  getCurrentUser
-} from "./firebase-auth";
-import api from "../api/axios";
+} from "../services/firebase-auth";
+import api from "../api/axiosConfig";
 import { firebaseClientErrorToUserMessage } from "../utils/firebaseUserFacingError";
 
 interface AuthUser {

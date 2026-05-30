@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import EventsBackendAPI from '../../services/api/EventsBackendAPI';
+import { EventPromotionBadge, isEventPromotionActive } from '../PromotionBadge';
+import { PromoteEventModal } from '../PromoteEventModal';
 import CategoriesAPI from '../../services/api/CategoriesAPI';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -27,8 +29,6 @@ import {
   Clock,
   Lock,
   Unlock,
-  Star,
-  Clock3,
   CheckCircle2,
   XCircle,
   X,
@@ -37,7 +37,6 @@ import {
 import { toast } from 'sonner';
 import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import FeaturedRequestAPI, { type FeaturedRequest } from '../../services/api/FeaturedRequestAPI';
 
 interface Event {
   id: string;
@@ -54,11 +53,14 @@ interface Event {
   maxAttendees: number;
   isLive: boolean;
   eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
-  isFeatured?: boolean;
   organizer?: string;
   status?: string;
   salesBlocked?: boolean;
   ticketTypes?: string;
+  promotionType?: string | null;
+  promotionStatus?: string | null;
+  promotionStartDate?: string | null;
+  promotionEndDate?: string | null;
 }
 
 interface OrganizerDashboardProps {
@@ -108,16 +110,11 @@ export function OrganizerDashboard({
   // View detail modal state
   const [viewOrgEvent, setViewOrgEvent] = useState<Event | null>(null);
 
+  // Promote modal state
+  const [promoteEvent, setPromoteEvent] = useState<Event | null>(null);
+
   // Delete confirmation state
   const [deleteConfirmEvent, setDeleteConfirmEvent] = useState<Event | null>(null);
-
-  // Featured request state
-  const [featuredRequests, setFeaturedRequests] = useState<FeaturedRequest[]>([]);
-  const [featuredRequestModal, setFeaturedRequestModal] = useState<Event | null>(null);
-  const [featuredMessage, setFeaturedMessage] = useState('');
-  const [featuredLoading, setFeaturedLoading] = useState(false);
-  const [previousRequests, setPreviousRequests] = useState<FeaturedRequest[]>([]);
-  const [visibleNotifications, setVisibleNotifications] = useState<Set<string>>(new Set());
 
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -138,73 +135,17 @@ export function OrganizerDashboard({
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string>('');
 
+  const [featuredRequests, setFeaturedRequests] = useState<Array<{
+    id: string; status: string; adminNote?: string | null;
+    event: { id: string; title: string };
+  }>>([]);
+  const [visibleNotifications, setVisibleNotifications] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     CategoriesAPI.getAll()
       .then(cats => setCategories(cats.map(c => c.name)))
       .catch(() => setCategories([]));
-    FeaturedRequestAPI.getMyRequests()
-      .then(requests => {
-        // Vérifier les changements de statut pour afficher des notifications
-        if (previousRequests.length > 0) {
-          requests.forEach(newReq => {
-            const oldReq = previousRequests.find(r => r.id === newReq.id);
-            if (oldReq && oldReq.status !== newReq.status && oldReq.status === 'pending') {
-              const notificationKey = `featured-notification-${newReq.id}-${newReq.status}`;
-              const alreadyShown = localStorage.getItem(notificationKey);
-              if (!alreadyShown) {
-                if (newReq.status === 'approved') {
-                  toast.success(`🎉 "${newReq.event.title}" a été approuvé pour la mise en avant !`, {
-                    duration: 2000,
-                    id: `featured-${newReq.id}-approved`
-                  });
-                  setVisibleNotifications(prev => new Set(prev).add(newReq.id));
-                } else if (newReq.status === 'rejected') {
-                  toast.error(`❌ "${newReq.event.title}" a été rejeté pour la mise en avant.`, {
-                    duration: 2000,
-                    id: `featured-${newReq.id}-rejected`
-                  });
-                  setVisibleNotifications(prev => new Set(prev).add(newReq.id));
-                }
-                localStorage.setItem(notificationKey, 'shown');
-              }
-            }
-          });
-        }
-        setPreviousRequests(requests);
-        setFeaturedRequests(requests);
-      })
-      .catch(() => {});
   }, []);
-
-  // Auto-hide notifications after 10 seconds
-  useEffect(() => {
-    if (visibleNotifications.size > 0) {
-      const timer = setTimeout(() => {
-        setVisibleNotifications(new Set());
-      }, 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [visibleNotifications]);
-
-  const getFeaturedRequestStatus = (eventId: string) => {
-    return featuredRequests.find(r => r.event.id === eventId);
-  };
-
-  const handleSubmitFeaturedRequest = useCallback(async () => {
-    if (!featuredRequestModal) return;
-    setFeaturedLoading(true);
-    try {
-      const req = await FeaturedRequestAPI.submitRequest(featuredRequestModal.id, featuredMessage || undefined);
-      setFeaturedRequests(prev => [...prev.filter(r => r.event.id !== featuredRequestModal.id), req]);
-      toast.success('Demande de mise en avant envoyée à l\'admin');
-      setFeaturedRequestModal(null);
-      setFeaturedMessage('');
-    } catch (err: any) {
-      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de l\'envoi de la demande'));
-    } finally {
-      setFeaturedLoading(false);
-    }
-  }, [featuredRequestModal, featuredMessage]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -1185,27 +1126,20 @@ export function OrganizerDashboard({
                           >
                             {event.status === 'published' ? 'Publié' : 'Brouillon'}
                           </Badge>
-                          {/* Badge mise en avant */}
-                          {(() => {
-                            const req = getFeaturedRequestStatus(event.id);
-                            if (event.isFeatured) return (
-                              <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1">
-                                <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" /> En avant
-                              </Badge>
-                            );
-                            if (req?.status === 'pending') return (
-                              <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
-                                <Clock3 className="w-3 h-3" /> En attente
-                              </Badge>
-                            );
-                            if (req?.status === 'rejected') return (
-                              <Badge className="bg-red-100 text-red-800 flex items-center gap-1">
-                                <XCircle className="w-3 h-3" /> Refusé
-                              </Badge>
-                            );
-                            return null;
-                          })()}
+                          {isEventPromotionActive(event) && event.promotionType && (
+                            <EventPromotionBadge promotionType={event.promotionType as any} size="sm" />
+                          )}
                         </div>
+
+                        {/* Bouton Mettre en avant — visible uniquement si publié et sans pack actif */}
+                        {event.status === 'published' && !isEventPromotionActive(event) && (
+                          <button
+                            onClick={() => setPromoteEvent(event)}
+                            className="w-full mb-2 py-1.5 text-xs font-semibold rounded-lg border border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
+                          >
+                            Mettre en avant
+                          </button>
+                        )}
                         {event.attendees > 0 && (
                           <div className="mb-2 flex items-center gap-1 text-xs text-orange-600 bg-orange-50 rounded px-2 py-1">
                             <Users className="w-3 h-3" />
@@ -1222,30 +1156,6 @@ export function OrganizerDashboard({
                             <Eye className="w-4 h-4 mr-1" />
                             Voir
                           </Button>
-                          {/* Bouton Mettre en avant — seulement si publié et pas encore featured */}
-                          {event.status === 'published' && !event.isFeatured && (() => {
-                            const req = getFeaturedRequestStatus(event.id);
-                            if (req?.status === 'pending') return (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled
-                                className="text-gray-400 border-gray-200 cursor-not-allowed"
-                              >
-                                Demande en cours...
-                              </Button>
-                            );
-                            return (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => { setFeaturedRequestModal(event); setFeaturedMessage(''); }}
-                                className="text-yellow-600 hover:text-yellow-700 border-yellow-300"
-                              >
-                                {req?.status === 'rejected' ? 'Renvoyer la demande' : 'Mettre en avant'}
-                              </Button>
-                            );
-                          })()}
                           <Button
                             variant="outline"
                             size="sm"
@@ -1577,43 +1487,20 @@ export function OrganizerDashboard({
         }}
       />
 
-      {/* Modal demande de mise en avant */}
-      <Dialog open={!!featuredRequestModal} onOpenChange={(open: boolean) => { if (!open) { setFeaturedRequestModal(null); setFeaturedMessage(''); } }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              Demander la mise en avant
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Votre événement <span className="font-semibold">{featuredRequestModal?.title}</span> sera soumis à l'administrateur pour apparaître dans le slider principal.
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="featured-message">Message pour l'admin (optionnel)</Label>
-              <Textarea
-                id="featured-message"
-                placeholder="Expliquez pourquoi cet événement mérite d'être mis en avant..."
-                value={featuredMessage}
-                onChange={(e) => setFeaturedMessage(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setFeaturedRequestModal(null); setFeaturedMessage(''); }}>
-              Annuler
-            </Button>
-            <Button
-              onClick={handleSubmitFeaturedRequest}
-              disabled={featuredLoading}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white"
-            >
-              {featuredLoading ? 'Envoi...' : 'Envoyer la demande'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Modal de promotion self-service */}
+      {promoteEvent && (
+        <PromoteEventModal
+          open={!!promoteEvent}
+          onClose={() => setPromoteEvent(null)}
+          event={{ id: promoteEvent.id, title: promoteEvent.title }}
+          onSuccess={() => {
+            setPromoteEvent(null);
+            // Rafraîchir la liste pour afficher le badge
+            window.location.reload();
+          }}
+        />
+      )}
+
     </div>
   );
 }

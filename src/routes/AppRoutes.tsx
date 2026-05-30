@@ -37,7 +37,6 @@ function adaptEvent(e: BackendEvent) {
     isLive: e.isLive,
     vipPrice: e.vipPrice,
     countryCode: e.countryCode,
-    isFeatured: e.isFeatured ?? false,
     isFavorite: e.isFavorite ?? false,
     createdAt: e.createdAt,
     organizer: e.organizer?.name || 'Organisateur',
@@ -145,6 +144,7 @@ const EventDetailPage        = lazy(() => import('../components/pages/EventDetai
 const TicketPurchasePage     = lazy(() => import('../components/pages/TicketPurchasePage').then(m => ({ default: m.TicketPurchasePage })));
 const TicketVerificationPage = lazy(() => import('../components/pages/TicketVerificationPage').then(m => ({ default: m.TicketVerificationPage })));
 const OrganizerDashboard     = lazy(() => import('../components/pages/OrganizerDashboard').then(m => ({ default: m.OrganizerDashboard })));
+const EstablishmentOwnerSection = lazy(() => import('../components/pages/EstablishmentOwnerSection').then(m => ({ default: m.EstablishmentOwnerSection })));
 const OrganizerEventDashboard= lazy(() => import('../components/pages/OrganizerEventDashboard').then(m => ({ default: m.OrganizerEventDashboard })));
 const AdminDashboard         = lazy(() => import('../components/pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const BackOfficeDashboard    = lazy(() => import('../components/pages/BackOfficeDashboard').then(m => ({ default: m.BackOfficeDashboard })));
@@ -165,7 +165,6 @@ const EnvoleePage            = lazy(() => import('../components/pages/EnvoleePag
 const LoisirsPage            = lazy(() => import('../components/pages/LoisirsPage').then(m => ({ default: m.LoisirsPage })));
 const BarNightPage           = lazy(() => import('../components/pages/BarNightPage').then(m => ({ default: m.BarNightPage })));
 const EstablishmentDetailPage= lazy(() => import('../components/pages/EstablishmentDetailPage').then(m => ({ default: m.EstablishmentDetailPage })));
-const EventSubmissionPage    = lazy(() => import('../components/pages/EventSubmissionPage').then(m => ({ default: m.EventSubmissionPage })));
 const LegalPages             = lazy(() => import('../components/pages/LegalPages').then(m => ({ default: m.LegalPages })));
 const TermsOfServicePage     = lazy(() => import('../components/pages/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
 const PrivacyPolicyPage      = lazy(() => import('../components/pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
@@ -198,7 +197,7 @@ const PAGE_ROUTES: Record<string, string> = {
   'user-dashboard': '/dashboard', 'organizer-dashboard': '/organizer',
   'admin-dashboard': '/admin', 'back-office': '/back-office',
   login: '/login', replay: '/replay', streaming: '/streaming',
-  'ticket-verification': '/verify', 'submit-event': '/submit-event',
+  'ticket-verification': '/verify',
   legal: '/legal/terms',
   'my-tickets': '/dashboard',
   'my-favorites': '/favorites',
@@ -263,7 +262,7 @@ function Layout() {
     if (from && from !== '/') { navigate(from, { replace: true }); return; }
     const isAdminLike = user.adminRole && !['user', 'organizer', 'controller'].includes(user.adminRole);
     if (user.role === 'controller') { navigate('/controller', { replace: true }); return; }
-    navigate(user.role === 'organizer' ? '/organizer' : '/dashboard', { replace: true });
+    navigate(user.role === 'organizer' ? '/organizer' : user.role === 'establishment_owner' ? '/establishment' : '/dashboard', { replace: true });
   }, [login, navigate, location.state]);
 
   const handleLogout = useCallback(async () => {
@@ -920,7 +919,7 @@ function LoginRoute() {
     const from = (location.state as any)?.from?.pathname;
     if (from && from !== '/') { navigate(from, { replace: true }); return; }
     if (user.role === 'controller') { navigate('/controller', { replace: true }); return; }
-    navigate(user.role === 'organizer' ? '/organizer' : '/dashboard', { replace: true });
+    navigate(user.role === 'organizer' ? '/organizer' : user.role === 'establishment_owner' ? '/establishment' : '/dashboard', { replace: true });
   };
 
   const handleRegister = async (data: RegisterData) => {
@@ -1065,7 +1064,6 @@ export function AppRoutes() {
         <Route path="/leisure/loisirs"    element={<LoisirsPage onBack={() => {}} />} />
         <Route path="/leisure/bar-night"  element={<BarNightPage onBack={() => {}} />} />
         <Route path="/leisure/establishment/:id" element={<EstablishmentRoute />} />
-        <Route path="/submit-event"       element={<EventSubmissionPage onBack={() => {}} currentUser={null} />} />
         <Route path="/legal/terms"        element={<TermsOfServicePage />} />
         <Route path="/legal/privacy"      element={<PrivacyPolicyPage />} />
         <Route path="/legal/cookies"      element={<CookiePolicyPage />} />
@@ -1083,6 +1081,11 @@ export function AppRoutes() {
           <Route path="/events/:id/buy"   element={<PaymentRoute />} />
           <Route path="/favorites"        element={<MyFavoritesRoute />} />
           <Route path="/feeti-na-feeti"   element={<FeetiNaFeetiRoute />} />
+        </Route>
+
+        {/* Routes protégées — propriétaire d'établissement */}
+        <Route element={<ProtectedRoute requiredRole="establishment_owner" />}>
+          <Route path="/establishment" element={<EstablishmentOwnerSection />} />
         </Route>
 
         {/* Routes protégées — organisateur */}

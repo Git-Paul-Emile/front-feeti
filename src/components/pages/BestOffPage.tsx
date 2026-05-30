@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, Star, Filter, SlidersHorizontal, Sparkles, Crown } from 'lucide-react';
+import { ArrowLeft, SlidersHorizontal, Sparkles, Crown } from 'lucide-react';
 import { BestOffEventCard } from '../BestOffEventCard';
-import { CategorySelector } from '../CategorySelector';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { isEventPromotionActive } from '../PromotionBadge';
 
 // Types
 interface Event {
@@ -22,6 +22,10 @@ interface Event {
   maxAttendees: number;
   isLive: boolean;
   organizer: string;
+  promotionType?: string | null;
+  promotionStatus?: string | null;
+  promotionStartDate?: string | null;
+  promotionEndDate?: string | null;
 }
 
 interface BestOffPageProps {
@@ -31,38 +35,41 @@ interface BestOffPageProps {
   onBack: () => void;
 }
 
+// Rang par type de pack pour le tri
+const PROMO_RANK: Record<string, number> = { OR: 4, ARGENT: 3, BRONZE: 2, LITE: 1 };
+
 export function BestOffPage({ events, onEventSelect, onPurchase, onBack }: BestOffPageProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'popularity' | 'date' | 'price'>('popularity');
+  const [sortBy, setSortBy] = useState<'rank' | 'date' | 'price'>('rank');
 
-  // Critères pour identifier les événements Best Off
-  const bestOffEvents = useMemo(() => {
-    return events.filter(event => {
-      // Critères pour être "Best Off":
-      // 1. Plus de 500 participants OU prix > 50€ OU événement live
-      // 2. Organisateur premium
-      // 3. Catégories populaires
-      const isPopular = event.attendees > 500 || event.price > 50 || event.isLive;
-      const isPremiumOrganizer = ['MusicEvents Pro', 'TechEvents', 'Paris Fashion Group', 'PSG Officiel'].includes(event.organizer);
-      const isPremiumCategory = ['Music', 'Fashion', 'Sport', 'Technology'].includes(event.category);
-      
-      return isPopular || isPremiumOrganizer || isPremiumCategory;
-    });
-  }, [events]);
+  // Seuls les événements avec un pack promotionnel actif
+  const promoEvents = useMemo(() =>
+    events.filter(event => isEventPromotionActive(event)),
+    [events]
+  );
 
-  // Filtrage par catégorie
+  // Catégories disponibles parmi les événements promus
+  const availableCategories = useMemo(() => {
+    const cats = Array.from(new Set(promoEvents.map(e => e.category).filter(Boolean))).sort();
+    return cats;
+  }, [promoEvents]);
+
+  // Filtrage + tri
   const filteredEvents = useMemo(() => {
-    let filtered = bestOffEvents;
-    
-    if (selectedCategory && selectedCategory !== 'Tous') {
-      filtered = filtered.filter(event => event.category === selectedCategory);
+    let filtered = promoEvents;
+
+    if (selectedCategory) {
+      filtered = filtered.filter(e => e.category === selectedCategory);
     }
 
-    // Tri
-    return filtered.sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       switch (sortBy) {
-        case 'popularity':
-          return b.attendees - a.attendees;
+        case 'rank': {
+          const rankA = a.promotionType ? (PROMO_RANK[a.promotionType] ?? 0) : 0;
+          const rankB = b.promotionType ? (PROMO_RANK[b.promotionType] ?? 0) : 0;
+          if (rankB !== rankA) return rankB - rankA;
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        }
         case 'date':
           return new Date(a.date).getTime() - new Date(b.date).getTime();
         case 'price':
@@ -71,23 +78,16 @@ export function BestOffPage({ events, onEventSelect, onPurchase, onBack }: BestO
           return 0;
       }
     });
-  }, [bestOffEvents, selectedCategory, sortBy]);
-
-  const handleWishlist = (eventId: string) => {
-    // Mock wishlist functionality
-    console.log('Added to wishlist:', eventId);
-  };
+  }, [promoEvents, selectedCategory, sortBy]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header Premium */}
       <div className="bg-gradient-to-r from-[#4338ca] via-[#de0035] to-[#059669] relative overflow-hidden">
-        {/* Background Pattern */}
         <div className="absolute inset-0 bg-black/10" />
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
-        
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          {/* Navigation Back */}
           <button
             onClick={onBack}
             className="flex items-center gap-2 text-white/90 hover:text-white mb-8 transition-colors"
@@ -96,7 +96,6 @@ export function BestOffPage({ events, onEventSelect, onPurchase, onBack }: BestO
             <span className="text-sm font-medium">Retour</span>
           </button>
 
-          {/* Title Section */}
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
               <Crown className="w-8 h-8 text-amber-300" />
@@ -105,17 +104,16 @@ export function BestOffPage({ events, onEventSelect, onPurchase, onBack }: BestO
               </h1>
               <Sparkles className="w-8 h-8 text-amber-300" />
             </div>
-            
+
             <p className="text-white/90 text-lg md:text-xl max-w-2xl mx-auto mb-8">
-              Découvrez notre sélection d'événements premium et exclusifs. 
-              Les expériences les plus recherchées de Feeti.
+              Sélection d'événements mis en avant par Feeti — packs OR, ARGENT, BRONZE et LITE.
             </p>
 
             {/* Stats */}
             <div className="flex items-center justify-center gap-8 text-white/80">
               <div className="text-center">
                 <div className="text-2xl font-bold text-white">{filteredEvents.length}</div>
-                <div className="text-sm">Événements Premium</div>
+                <div className="text-sm">Événements promus</div>
               </div>
               <div className="w-px h-12 bg-white/20" />
               <div className="text-center">
@@ -127,70 +125,69 @@ export function BestOffPage({ events, onEventSelect, onPurchase, onBack }: BestO
               <div className="w-px h-12 bg-white/20" />
               <div className="text-center">
                 <div className="text-2xl font-bold text-white">
-                  {Math.round(filteredEvents.reduce((acc, e) => acc + e.attendees, 0) / filteredEvents.length)}
+                  {promoEvents.filter(e => e.promotionType === 'OR').length}
                 </div>
-                <div className="text-sm">Participants Moy.</div>
+                <div className="text-sm">Pack OR</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filters & Controls */}
+      {/* Filters */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
-            {/* Category Selector */}
-            <div className="flex-1 w-full lg:w-auto">
-              <CategorySelector
-                selectedCategory={selectedCategory}
-                onCategorySelect={setSelectedCategory}
-                categories={['Tous', 'Music', 'Fashion', 'Sport', 'Technology', 'Art']}
-              />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+
+            {/* Filtre catégorie */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedCategory('')}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  !selectedCategory
+                    ? 'bg-[#000441] text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Tous
+              </button>
+              {availableCategories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(selectedCategory === cat ? '' : cat)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    selectedCategory === cat
+                      ? 'bg-[#000441] text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
 
-            {/* Sort Controls */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">Trier par:</span>
-              </div>
-              
+            {/* Tri */}
+            <div className="flex items-center gap-3 shrink-0">
+              <SlidersHorizontal className="w-4 h-4 text-gray-500" />
               <div className="flex gap-2">
-                {[
-                  { key: 'popularity', label: 'Popularité', icon: Star },
-                  { key: 'date', label: 'Date', icon: null },
-                  { key: 'price', label: 'Prix', icon: null }
-                ].map(({ key, label, icon: Icon }) => (
+                {([
+                  { key: 'rank',  label: 'Par pack' },
+                  { key: 'date',  label: 'Date' },
+                  { key: 'price', label: 'Prix' },
+                ] as const).map(({ key, label }) => (
                   <Button
                     key={key}
-                    variant={sortBy === key ? "default" : "outline"}
+                    variant={sortBy === key ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setSortBy(key as any)}
-                    className="flex items-center gap-1"
+                    onClick={() => setSortBy(key)}
                   >
-                    {Icon && <Icon className="w-3 h-3" />}
-                    <span className="hidden sm:inline">{label}</span>
+                    {label}
                   </Button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Active Filters */}
-          {selectedCategory && selectedCategory !== 'Tous' && (
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-              <span className="text-sm text-gray-600">Filtres actifs:</span>
-              <Badge 
-                variant="secondary" 
-                className="gap-1 cursor-pointer"
-                onClick={() => setSelectedCategory('')}
-              >
-                {selectedCategory}
-                <button className="ml-1 hover:bg-gray-300 rounded-full p-0.5">×</button>
-              </Badge>
-            </div>
-          )}
         </div>
       </div>
 
@@ -200,50 +197,40 @@ export function BestOffPage({ events, onEventSelect, onPurchase, onBack }: BestO
           <div className="text-center py-16">
             <Crown className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              Aucun événement Best Off trouvé
+              Aucun événement promu{selectedCategory ? ` dans "${selectedCategory}"` : ''}
             </h3>
             <p className="text-gray-500 mb-6">
-              Essayez de modifier vos filtres pour découvrir plus d'événements premium.
+              {selectedCategory
+                ? 'Essayez une autre catégorie.'
+                : "Aucun événement n'a de pack promotionnel actif pour le moment."}
             </p>
-            <Button 
-              onClick={() => {
-                setSelectedCategory('');
-                setSortBy('popularity');
-              }}
-              className="bg-gradient-to-r from-[#4338ca] to-[#de0035] hover:from-[#3730a3] hover:to-[#b91c3c]"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Réinitialiser les filtres
-            </Button>
+            {selectedCategory && (
+              <Button variant="outline" onClick={() => setSelectedCategory('')}>
+                Voir toutes les catégories
+              </Button>
+            )}
           </div>
         ) : (
           <>
-            {/* Results Header */}
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {filteredEvents.length} Événement{filteredEvents.length > 1 ? 's' : ''} Premium
+                  {filteredEvents.length} événement{filteredEvents.length > 1 ? 's' : ''} en avant
                 </h2>
                 <p className="text-gray-600 mt-1">
-                  {selectedCategory && selectedCategory !== 'Tous' 
-                    ? `Catégorie: ${selectedCategory}` 
-                    : 'Toutes catégories'
-                  } • Trié par {
-                    sortBy === 'popularity' ? 'popularité' : 
-                    sortBy === 'date' ? 'date' : 'prix'
-                  }
+                  {selectedCategory || 'Toutes catégories'} · trié{' '}
+                  {sortBy === 'rank' ? 'par pack' : sortBy === 'date' ? 'par date' : 'par prix'}
                 </p>
               </div>
             </div>
 
-            {/* Events Grid */}
             <div className="best-off-grid">
               {filteredEvents.map((event) => (
                 <BestOffEventCard
                   key={event.id}
                   event={event}
                   onPurchase={onPurchase}
-                  onWishlist={handleWishlist}
+                  onWishlist={() => {}}
                   onEventSelect={onEventSelect}
                 />
               ))}
@@ -252,33 +239,22 @@ export function BestOffPage({ events, onEventSelect, onPurchase, onBack }: BestO
         )}
       </div>
 
-      {/* CTA Section */}
+      {/* CTA */}
       {filteredEvents.length > 0 && (
         <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
             <Sparkles className="w-12 h-12 text-amber-400 mx-auto mb-6" />
-            <h3 className="text-3xl font-bold mb-4">
-              Vous cherchez d'autres événements ?
-            </h3>
+            <h3 className="text-3xl font-bold mb-4">Vous cherchez d'autres événements ?</h3>
             <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
-              Explorez tous nos événements ou créez votre propre événement premium sur Feeti.
+              Explorez tous nos événements ou créez votre propre événement sur Feeti.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                onClick={() => onBack()}
-                size="lg"
-                className="bg-white text-gray-900 hover:bg-gray-100"
-              >
-                Voir tous les événements
-              </Button>
-              <Button 
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white hover:text-gray-900"
-              >
-                Créer un événement
-              </Button>
-            </div>
+            <Button
+              onClick={onBack}
+              size="lg"
+              className="bg-white text-gray-900 hover:bg-gray-100"
+            >
+              Voir tous les événements
+            </Button>
           </div>
         </div>
       )}

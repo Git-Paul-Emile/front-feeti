@@ -17,8 +17,8 @@ export function LoisirsAlaUneSection({ onNavigate }: LoisirsAlaUneSectionProps) 
     const fetchItems = (lat?: number, lng?: number) => {
       LeisureAPI.getItems({ lat, lng })
         .then(items => {
+          // Loisirs visibles : offre PRO/PREMIUM ou pack actif (spec PDF)
           const visible = items.filter(i => i.status === 'published' && (
-            i.isFeatured ||
             i.leisureOfferType === 'PREMIUM' ||
             i.leisureOfferType === 'PRO' ||
             isLeisurePackActive(i)

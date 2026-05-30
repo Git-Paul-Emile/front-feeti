@@ -27,7 +27,6 @@ export interface Event {
   organizerId: string;
   organizer?: { name: string };
   status: 'draft' | 'published' | 'cancelled' | 'completed';
-  isFeatured?: boolean;
   salesBlocked?: boolean;
   createdAt: string;
   updatedAt: string;

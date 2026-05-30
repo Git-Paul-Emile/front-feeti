@@ -7,6 +7,7 @@ import { ArrowLeft, Heart, Calendar, MapPin, Users, RefreshCw } from 'lucide-rea
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import EventsBackendAPI, { type BackendEvent } from '../../services/api/EventsBackendAPI';
 import LeisureAPI, { type LeisureItem } from '../../services/api/LeisureAPI';
+import { LeisurePromotionBadge, isLeisurePackActive } from '../PromotionBadge';
 import { toast } from 'sonner';
 
 function formatDate(dateStr: string) {
@@ -241,7 +242,14 @@ export function MyFavoritesPage() {
                               <h3 className="font-semibold text-gray-900 truncate">{item.name}</h3>
                               <p className="text-sm text-indigo-600 mt-0.5">{item.category?.name}</p>
                             </div>
-                            {item.isFeatured && <Badge className="flex-shrink-0 bg-amber-500 text-white text-xs">Recommandé</Badge>}
+                            {(item.leisureOfferType === 'PREMIUM' || item.leisureOfferType === 'PRO' || isLeisurePackActive(item)) && (
+                              <LeisurePromotionBadge
+                                offerType={item.leisureOfferType as any}
+                                packType={item.leisurePackType as any}
+                                packStatus={item.leisurePackStatus}
+                                size="sm"
+                              />
+                            )}
                           </div>
                           <div className="flex flex-wrap gap-3 mt-2 text-sm text-gray-500">
                             <span className="flex items-center gap-1">

@@ -67,10 +67,11 @@ import DealsBackendAPI, { type BackendDeal, type DealInput, type DealCategory } 
 import LeisureAPI, { type LeisureItem as BackendLeisureItem, type LeisureCategory as BackendLeisureCategory, type LeisureItemInput } from '../../services/api/LeisureAPI';
 import BlogAPI, { type BlogPost as ApiBlogPost, type BlogCategory as ApiBlogCategory, type BlogStats, parseTags } from '../../services/api/BlogAPI';
 import { BookOpen } from 'lucide-react';
-import FeaturedRequestAPI, { type FeaturedRequest } from '../../services/api/FeaturedRequestAPI';
 import DeliveryAPI, { type DeliveryZone, type DeliveryCity } from '../../services/api/DeliveryAPI';
 import CountryAPI, { type Country } from '../../services/api/CountryAPI';
 import SettingsAPI, { type PlatformSettings } from '../../services/api/SettingsAPI';
+import PromotionAPI, { type PackConfig, type PromotionPurchase, type AdminPromotionStats } from '../../services/api/PromotionAPI';
+import type { EstablishmentPricing, EstablishmentSubscription as EOwnerSubscription, DealPayment as EOwnerDealPayment } from '../../services/api/EstablishmentOwnerAPI';
 
 type Event = BackendEvent;
 
@@ -83,6 +84,557 @@ const EVENT_PROMO_CONFIG: Record<EventPromotionType, { label: string; color: str
   BRONZE: { label: 'Pack BRONZE', color: 'bg-orange-400 text-white',       limit: 10,    duration: '30 à 45 jours' },
   LITE:   { label: 'Pack LITE',   color: 'bg-blue-100 text-blue-800',      limit: 9999,  duration: '15 à 30 jours' },
 };
+
+// ── Suivi des achats de promotion (self-service) ──────────────────────────────
+function PromotionSuiviTab() {
+  const [purchases, setPurchases] = useState<PromotionPurchase[]>([]);
+  const [stats, setStats] = useState<AdminPromotionStats | null>(null);
+  const [filterPack, setFilterPack] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [deactivating, setDeactivating] = useState<string | null>(null);
+
+  const load = () => {
+    setLoading(true);
+    Promise.all([
+      PromotionAPI.adminGetPromotions({ packType: filterPack || undefined, status: filterStatus || undefined }),
+      PromotionAPI.adminGetStats(),
+    ])
+      .then(([res, s]) => { setPurchases(res.data); setStats(s); })
+      .catch(() => toast.error('Erreur de chargement'))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [filterPack, filterStatus]);
+
+  const handleDeactivate = async (id: string) => {
+    setDeactivating(id);
+    try {
+      await PromotionAPI.adminDeactivate(id, 'Désactivé manuellement par l\'admin');
+      toast.success('Promotion désactivée');
+      load();
+    } catch {
+      toast.error('Erreur lors de la désactivation');
+    } finally {
+      setDeactivating(null);
+    }
+  };
+
+  const formatPrice = (n: number) => new Intl.NumberFormat('fr-FR').format(n) + ' FCFA';
+  const formatDate = (s: string) => new Date(s).toLocaleDateString('fr-FR');
+
+  const PACK_BADGE: Record<string, string> = {
+    OR: 'bg-amber-100 text-amber-800', ARGENT: 'bg-slate-100 text-slate-700',
+    BRONZE: 'bg-orange-100 text-orange-800', LITE: 'bg-blue-100 text-blue-700',
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Stats */}
+      {stats && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-xs text-gray-500">Revenus total</p>
+              <p className="text-xl font-bold text-gray-900">{formatPrice(stats.totalRevenue)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-xs text-gray-500">Ce mois</p>
+              <p className="text-xl font-bold text-gray-900">{formatPrice(stats.monthRevenue)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-xs text-gray-500">Actives en cours</p>
+              <p className="text-xl font-bold text-gray-900">{stats.activePurchases}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-xs text-gray-500">Répartition</p>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {stats.byPack.map(b => (
+                  <span key={b.packType} className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${PACK_BADGE[b.packType] ?? ''}`}>
+                    {b.packType} ×{b.count}
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Filtres */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <select
+          value={filterPack}
+          onChange={e => setFilterPack(e.target.value)}
+          className="text-sm border rounded-lg px-3 py-1.5 bg-white text-gray-700"
+        >
+          <option value="">Tous les packs</option>
+          {['OR', 'ARGENT', 'BRONZE', 'LITE'].map(p => (
+            <option key={p} value={p}>Pack {p}</option>
+          ))}
+        </select>
+        <select
+          value={filterStatus}
+          onChange={e => setFilterStatus(e.target.value)}
+          className="text-sm border rounded-lg px-3 py-1.5 bg-white text-gray-700"
+        >
+          <option value="">Tous les statuts</option>
+          <option value="completed">Actif</option>
+          <option value="cancelled">Annulé</option>
+          <option value="refunded">Remboursé</option>
+        </select>
+        <Button variant="outline" size="sm" onClick={load}>Actualiser</Button>
+      </div>
+
+      {/* Tableau */}
+      {loading ? (
+        <div className="text-center py-8 text-gray-400">Chargement...</div>
+      ) : purchases.length === 0 ? (
+        <div className="text-center py-12 text-gray-400">Aucune promotion trouvée</div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-gray-200">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-600 text-xs uppercase tracking-wide">
+              <tr>
+                <th className="text-left px-4 py-3">Événement</th>
+                <th className="text-left px-4 py-3">Organisateur</th>
+                <th className="text-left px-4 py-3">Pack</th>
+                <th className="text-left px-4 py-3">Montant</th>
+                <th className="text-left px-4 py-3">Période</th>
+                <th className="text-left px-4 py-3">Statut</th>
+                <th className="text-left px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {purchases.map(p => {
+                const now = new Date();
+                const endDate = new Date(p.promotionEndDate);
+                const isExpired = endDate < now;
+                const daysLeft = isExpired ? 0 : Math.ceil((endDate.getTime() - now.getTime()) / 86400000);
+
+                return (
+                  <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-gray-900 line-clamp-1">
+                        {p.event?.title ?? p.eventId}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div>
+                        <p className="font-medium text-gray-800">{p.organizer?.name}</p>
+                        <p className="text-xs text-gray-400">{p.organizer?.email}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${PACK_BADGE[p.packType] ?? ''}`}>
+                        {p.packType}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-medium">{formatPrice(p.pricePaid)}</td>
+                    <td className="px-4 py-3">
+                      <div className="text-xs text-gray-600">
+                        <div>{formatDate(p.promotionStartDate)}</div>
+                        <div className="text-gray-400">→ {formatDate(p.promotionEndDate)}</div>
+                        {!isExpired && p.status === 'completed' && (
+                          <div className="text-green-600 font-medium">{daysLeft}j restant{daysLeft > 1 ? 's' : ''}</div>
+                        )}
+                        {isExpired && <div className="text-gray-400">Expiré</div>}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        p.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        p.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {p.status === 'completed' ? 'Actif' : p.status === 'cancelled' ? 'Annulé' : p.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {p.status === 'completed' && !isExpired && (
+                        <button
+                          onClick={() => handleDeactivate(p.id)}
+                          disabled={deactivating === p.id}
+                          className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50"
+                        >
+                          {deactivating === p.id ? 'En cours...' : 'Désactiver'}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Configuration des packs (prix, description, avantages) ───────────────────
+function PackConfigTab() {
+  const [configs, setConfigs] = useState<PackConfig[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<PackConfig | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    price: 0, description: '', advantages: [] as string[], durationDays: 30,
+  });
+  const [newAdvantage, setNewAdvantage] = useState('');
+
+  useEffect(() => {
+    PromotionAPI.adminGetPackConfigs()
+      .then(setConfigs)
+      .catch(() => toast.error('Erreur de chargement des configs'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const openEdit = (cfg: PackConfig) => {
+    setEditing(cfg);
+    setForm({
+      price: cfg.price,
+      description: cfg.description,
+      advantages: [...cfg.advantages],
+      durationDays: cfg.durationDays,
+    });
+    setNewAdvantage('');
+  };
+
+  const handleSave = async () => {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      const updated = await PromotionAPI.adminUpdatePackConfig(editing.type, form);
+      setConfigs(prev => prev.map(c => c.type === editing.type ? updated : c));
+      setEditing(null);
+      toast.success(`Pack ${editing.type} mis à jour`);
+    } catch {
+      toast.error('Erreur lors de la sauvegarde');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addAdvantage = () => {
+    if (!newAdvantage.trim()) return;
+    setForm(f => ({ ...f, advantages: [...f.advantages, newAdvantage.trim()] }));
+    setNewAdvantage('');
+  };
+
+  const removeAdvantage = (i: number) => {
+    setForm(f => ({ ...f, advantages: f.advantages.filter((_, idx) => idx !== i) }));
+  };
+
+  const PACK_BORDER: Record<string, string> = {
+    OR: 'border-amber-400', ARGENT: 'border-slate-400', BRONZE: 'border-orange-400', LITE: 'border-blue-400',
+  };
+  const PACK_BADGE: Record<string, string> = {
+    OR: 'bg-amber-100 text-amber-800', ARGENT: 'bg-slate-100 text-slate-700',
+    BRONZE: 'bg-orange-100 text-orange-800', LITE: 'bg-blue-100 text-blue-700',
+  };
+
+  if (loading) return <div className="text-center py-8 text-gray-400">Chargement...</div>;
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-gray-500">
+        Configurez le prix, la description commerciale et les avantages de chaque pack.
+        Ces informations sont affichées aux organisateurs lors de l'achat.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {configs.map(cfg => (
+          <div key={cfg.type} className={`rounded-xl border-2 p-5 ${PACK_BORDER[cfg.type] ?? 'border-gray-200'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <span className={`text-sm font-semibold px-3 py-1 rounded-full ${PACK_BADGE[cfg.type] ?? ''}`}>
+                Pack {cfg.type}
+              </span>
+              <button
+                onClick={() => openEdit(cfg)}
+                className="text-xs text-gray-500 hover:text-gray-800 font-medium border border-gray-200 rounded-lg px-3 py-1 transition-colors"
+              >
+                Modifier
+              </button>
+            </div>
+            <p className="text-xl font-bold text-gray-900 mb-1">
+              {new Intl.NumberFormat('fr-FR').format(cfg.price)} {cfg.currency}
+            </p>
+            <p className="text-xs text-gray-500 mb-1">{cfg.durationDays} jours</p>
+            <p className="text-sm text-gray-600 mb-3 leading-relaxed">{cfg.description || <em className="text-gray-400">Aucune description</em>}</p>
+            <ul className="space-y-1">
+              {cfg.advantages.map((a, i) => (
+                <li key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span>{a}</span>
+                </li>
+              ))}
+              {cfg.advantages.length === 0 && (
+                <li className="text-xs text-gray-400 italic">Aucun avantage défini</li>
+              )}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* Modal d'édition */}
+      <Dialog open={!!editing} onOpenChange={v => !v && setEditing(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifier Pack {editing?.type}</DialogTitle>
+          </DialogHeader>
+          {editing && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Prix (FCFA)</Label>
+                  <Input
+                    type="number"
+                    value={form.price}
+                    onChange={e => setForm(f => ({ ...f, price: parseInt(e.target.value) || 0 }))}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Durée (jours)</Label>
+                  <Input
+                    type="number"
+                    value={form.durationDays}
+                    onChange={e => setForm(f => ({ ...f, durationDays: parseInt(e.target.value) || 1 }))}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Description commerciale</Label>
+                <Textarea
+                  value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  className="mt-1 text-sm"
+                  rows={3}
+                  placeholder="Texte affiché aux organisateurs lors du choix du pack..."
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs mb-2 block">Avantages</Label>
+                <ul className="space-y-1 mb-3">
+                  {form.advantages.map((a, i) => (
+                    <li key={i} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5">
+                      <span className="text-green-500 text-xs">✓</span>
+                      <span className="text-sm flex-1">{a}</span>
+                      <button
+                        onClick={() => removeAdvantage(i)}
+                        className="text-red-400 hover:text-red-600 text-xs font-medium"
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex gap-2">
+                  <Input
+                    value={newAdvantage}
+                    onChange={e => setNewAdvantage(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addAdvantage())}
+                    placeholder="Ajouter un avantage..."
+                    className="text-sm"
+                  />
+                  <Button variant="outline" size="sm" onClick={addAdvantage}>Ajouter</Button>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => setEditing(null)}>Annuler</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? 'Sauvegarde...' : 'Enregistrer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ── Composant gestion des promotions Bon Plans ───────────────────────────────
+function DealPromotionsTab({ deals }: { deals: BackendDeal[] }) {
+  const [slots, setSlots] = useState<Array<{ type: string; limit: number; used: number; available: number }>>([]);
+  const [selectedDeal, setSelectedDeal] = useState<BackendDeal | null>(null);
+  const [promoForm, setPromoForm] = useState({
+    promotionType: '' as EventPromotionType | '',
+    promotionStatus: 'active' as 'active' | 'inactive',
+    promotionStartDate: '',
+    promotionEndDate: '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    AdminAPI.getDealPromotionSlots().then(setSlots).catch(() => {});
+  }, []);
+
+  const openPromo = (deal: BackendDeal) => {
+    setSelectedDeal(deal);
+    setPromoForm({
+      promotionType: (deal.promotionType as EventPromotionType) || '',
+      promotionStatus: deal.promotionStatus === 'active' ? 'active' : 'inactive',
+      promotionStartDate: deal.promotionStartDate ? deal.promotionStartDate.slice(0, 10) : '',
+      promotionEndDate: deal.promotionEndDate ? deal.promotionEndDate.slice(0, 10) : '',
+    });
+  };
+
+  const handleSavePromo = async () => {
+    if (!selectedDeal) return;
+    setSaving(true);
+    try {
+      await AdminAPI.updateDealPromotion(selectedDeal.id, {
+        promotionType: promoForm.promotionType || null,
+        promotionStatus: promoForm.promotionStatus,
+        promotionStartDate: promoForm.promotionStartDate || null,
+        promotionEndDate: promoForm.promotionEndDate || null,
+      });
+      toast.success('Promotion bon plan mise à jour');
+      setSelectedDeal(null);
+      AdminAPI.getDealPromotionSlots().then(setSlots).catch(() => {});
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Erreur lors de la mise à jour');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const PACK_BADGE: Record<string, string> = {
+    OR: 'bg-amber-100 text-amber-800', ARGENT: 'bg-slate-100 text-slate-700',
+    BRONZE: 'bg-orange-100 text-orange-800', LITE: 'bg-blue-100 text-blue-700',
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Gestion des promotions Bon Plans</CardTitle>
+          <CardDescription>Attribuer un pack promotionnel à un bon plan pour le mettre en avant sur la homepage</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Jauges slots */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {slots.map(slot => (
+              <div key={slot.type} className="bg-gray-50 rounded-xl p-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${PACK_BADGE[slot.type] ?? ''}`}>
+                    {slot.type}
+                  </span>
+                  <span className="text-xs text-gray-500">{slot.used}/{slot.limit === 9999 ? '∞' : slot.limit}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                  <div
+                    className="bg-indigo-500 h-1.5 rounded-full transition-all"
+                    style={{ width: slot.limit === 9999 ? '10%' : `${Math.min(100, (slot.used / slot.limit) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Liste des deals */}
+          <div className="space-y-2">
+            {deals.filter(d => d.status === 'published').map(deal => {
+              const isActive = deal.promotionStatus === 'active';
+              return (
+                <div key={deal.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{deal.title}</p>
+                    <p className="text-xs text-gray-500">{deal.merchantName} · -{deal.discount}%</p>
+                  </div>
+                  <div className="flex items-center gap-3 ml-3">
+                    {isActive && deal.promotionType && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${PACK_BADGE[deal.promotionType] ?? ''}`}>
+                        {deal.promotionType}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => openPromo(deal)}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 font-medium border border-indigo-200 rounded-lg px-3 py-1"
+                    >
+                      {isActive ? 'Modifier' : 'Promouvoir'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Dialog promotion */}
+      <Dialog open={!!selectedDeal} onOpenChange={v => !v && setSelectedDeal(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pack promotionnel — {selectedDeal?.title}</DialogTitle>
+          </DialogHeader>
+          {selectedDeal && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-xs mb-1 block">Type de pack</Label>
+                <Select
+                  value={promoForm.promotionType || 'none'}
+                  onValueChange={v => setPromoForm(f => ({ ...f, promotionType: v === 'none' ? '' : v as EventPromotionType }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucun pack</SelectItem>
+                    {(['OR', 'ARGENT', 'BRONZE', 'LITE'] as EventPromotionType[]).map(t => (
+                      <SelectItem key={t} value={t}>Pack {t} — {EVENT_PROMO_CONFIG[t].duration}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {promoForm.promotionType && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs mb-1 block">Début</Label>
+                      <Input type="date" value={promoForm.promotionStartDate}
+                        onChange={e => setPromoForm(f => ({ ...f, promotionStartDate: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label className="text-xs mb-1 block">Fin</Label>
+                      <Input type="date" value={promoForm.promotionEndDate}
+                        onChange={e => setPromoForm(f => ({ ...f, promotionEndDate: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1 block">Statut</Label>
+                    <Select value={promoForm.promotionStatus}
+                      onValueChange={v => setPromoForm(f => ({ ...f, promotionStatus: v as 'active' | 'inactive' }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Actif</SelectItem>
+                        <SelectItem value="inactive">Inactif</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => setSelectedDeal(null)}>Annuler</Button>
+            <Button onClick={handleSavePromo} disabled={saving}>
+              {saving ? 'Sauvegarde...' : 'Enregistrer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 // ── Composant gestion des promotions ─────────────────────────────────────────
 function PromotionsTab({ events }: { events: Event[] }) {
@@ -608,6 +1160,8 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   const [eventsLoading, setEventsLoading] = useState(false);
   const [isViewEventOpen, setIsViewEventOpen] = useState(false);
   const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
+  const [rejectingEvent, setRejectingEvent] = useState<Event | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   // Real users from backend
   const [realUsers, setRealUsers] = useState<AdminUser[]>([]);
@@ -1009,7 +1563,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   const [leisureForm, setLeisureForm] = useState<LeisureItemInput>({
     name: '', description: '', categorySlug: '', location: '', address: '', phone: '',
     website: '', priceRange: '', openingHours: '', image: '', features: '[]', tags: '[]',
-    status: 'published', countryCode: '', isFeatured: false,
+    status: 'published', countryCode: '',
   });
   const [leisureFormLoading, setLeisureFormLoading] = useState(false);
   const [leisureImageFile, setLeisureImageFile] = useState<File | null>(null);
@@ -1034,7 +1588,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
 
   const openCreateLeisure = () => {
     setEditingLeisureItem(null);
-    setLeisureForm({ name: '', description: '', categorySlug: leisureCategories[0]?.slug ?? '', location: '', address: '', phone: '', website: '', priceRange: '', openingHours: '', image: '', features: '[]', tags: '[]', status: 'published', countryCode: '', isFeatured: false });
+    setLeisureForm({ name: '', description: '', categorySlug: leisureCategories[0]?.slug ?? '', location: '', address: '', phone: '', website: '', priceRange: '', openingHours: '', image: '', features: '[]', tags: '[]', status: 'published', countryCode: '' });
     setLeisureImageFile(null);
     setLeisureImagePreview('');
     setIsLeisureFormOpen(true);
@@ -1042,7 +1596,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
 
   const openEditLeisure = (item: BackendLeisureItem) => {
     setEditingLeisureItem(item);
-    setLeisureForm({ name: item.name, description: item.description, categorySlug: item.categorySlug, location: item.location, address: item.address ?? '', phone: item.phone ?? '', website: item.website ?? '', priceRange: item.priceRange ?? '', openingHours: item.openingHours ?? '', image: item.image, features: item.features, tags: item.tags, status: item.status, countryCode: item.countryCode ?? '', isFeatured: item.isFeatured });
+    setLeisureForm({ name: item.name, description: item.description, categorySlug: item.categorySlug, location: item.location, address: item.address ?? '', phone: item.phone ?? '', website: item.website ?? '', priceRange: item.priceRange ?? '', openingHours: item.openingHours ?? '', image: item.image, features: item.features, tags: item.tags, status: item.status, countryCode: item.countryCode ?? '' });
     setLeisureImageFile(null);
     setLeisureImagePreview(item.image || '');
     setIsLeisureFormOpen(true);
@@ -1239,10 +1793,6 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
     } catch (err: any) { toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la suppression')); }
   };
 
-  // Featured requests
-  const [featuredRequests, setFeaturedRequests] = useState<FeaturedRequest[]>([]);
-  const [featuredRequestsLoading, setFeaturedRequestsLoading] = useState(false);
-
   // Livraison
   const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
   const [deliveryCities, setDeliveryCities] = useState<DeliveryCity[]>([]);
@@ -1328,62 +1878,54 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   const [cityForm, setCityForm] = useState({ name: '', countryCode: '', zoneId: '' });
   const [editingCity, setEditingCity] = useState<DeliveryCity | null>(null);
   const [deliveryTab, setDeliveryTab] = useState<'zones' | 'cities'>('zones');
-  const [featuredAdminNote, setFeaturedAdminNote] = useState('');
-  const [featuredProcessingId, setFeaturedProcessingId] = useState<string | null>(null);
 
-  const loadFeaturedRequests = async () => {
-    setFeaturedRequestsLoading(true);
+  // ── Tarification établissements ──────────────────────────────────────────────
+  const [estPricing, setEstPricing] = useState<EstablishmentPricing>({ establishmentAnnualFee: 50000, bonplanCreationFee: 5000, subscriptionDurationDays: 365, currency: 'FCFA' });
+  const [estPricingSaving, setEstPricingSaving] = useState(false);
+  const [estPricingLoaded, setEstPricingLoaded] = useState(false);
+
+  const loadEstPricing = async () => {
     try {
-      const data = await FeaturedRequestAPI.getAllRequests();
-      setFeaturedRequests(data);
-    } catch {
-      toast.error('Erreur lors du chargement des demandes de mise en avant');
-    } finally {
-      setFeaturedRequestsLoading(false);
-    }
+      const res = await axiosInstance.get('/api/admin/platform-pricing');
+      setEstPricing(res.data.data);
+      setEstPricingLoaded(true);
+    } catch { /* silently use defaults */ }
   };
 
-  const handleApproveFeaturedRequest = async (requestId: string) => {
-    setFeaturedProcessingId(requestId);
+  const handleSaveEstPricing = async () => {
+    setEstPricingSaving(true);
     try {
-      await FeaturedRequestAPI.approve(requestId, featuredAdminNote || undefined);
-      setFeaturedRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'approved', adminNote: featuredAdminNote } : r));
-      setFeaturedAdminNote('');
-      toast.success('Demande approuvée — événement mis en avant');
+      await axiosInstance.put('/api/admin/platform-pricing', estPricing);
+      toast.success('Tarification mise à jour');
     } catch (err: any) {
-      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de l\'approbation'));
-    } finally {
-      setFeaturedProcessingId(null);
-    }
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la sauvegarde'));
+    } finally { setEstPricingSaving(false); }
   };
 
-  const handleRejectFeaturedRequest = async (requestId: string) => {
-    setFeaturedProcessingId(requestId);
+  // ── Abonnements établissements (admin) ───────────────────────────────────────
+  const [adminSubs, setAdminSubs] = useState<EOwnerSubscription[]>([]);
+  const [adminSubsLoading, setAdminSubsLoading] = useState(false);
+
+  const loadAdminSubs = async () => {
+    setAdminSubsLoading(true);
     try {
-      await FeaturedRequestAPI.reject(requestId, featuredAdminNote || undefined);
-      setFeaturedRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'rejected', adminNote: featuredAdminNote } : r));
-      setFeaturedAdminNote('');
-      toast.success('Demande rejetée');
-    } catch (err: any) {
-      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors du rejet'));
-    } finally {
-      setFeaturedProcessingId(null);
-    }
+      const res = await axiosInstance.get('/api/admin/subscriptions');
+      setAdminSubs(res.data.data ?? []);
+    } catch { /* silently fail */ }
+    finally { setAdminSubsLoading(false); }
   };
 
-  const handleStopFeatured = async (requestId: string, eventId: string) => {
-    setFeaturedProcessingId(requestId);
+  // ── Paiements Bon Plans (admin) ──────────────────────────────────────────────
+  const [adminDealPayments, setAdminDealPayments] = useState<EOwnerDealPayment[]>([]);
+  const [adminDealPaymentsLoading, setAdminDealPaymentsLoading] = useState(false);
+
+  const loadAdminDealPayments = async () => {
+    setAdminDealPaymentsLoading(true);
     try {
-      await EventsBackendAPI.toggleHighlight(eventId, { isFeatured: false });
-      setFeaturedRequests(prev => prev.map(r =>
-        r.id === requestId ? { ...r, status: 'rejected' as const, adminNote: 'Mise en avant stoppée par l\'admin' } : r
-      ));
-      toast.success('Mise en avant stoppée');
-    } catch (err: any) {
-      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de l\'arrêt'));
-    } finally {
-      setFeaturedProcessingId(null);
-    }
+      const res = await axiosInstance.get('/api/admin/deal-payments');
+      setAdminDealPayments(res.data.data ?? []);
+    } catch { /* silently fail */ }
+    finally { setAdminDealPaymentsLoading(false); }
   };
 
   const loadDeliveryData = async () => {
@@ -1412,7 +1954,6 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
     loadBlogPosts();
     loadBlogCategories();
     loadBlogStats();
-    loadFeaturedRequests();
     loadDeliveryData();
     loadEventCategories();
     loadSalesTrends();
@@ -1560,12 +2101,11 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
           writeOrganizerNotification(event, 'approved');
           toast.success(`Événement "${event.title}" approuvé et publié`);
           break;
-        case 'reject':
-          await AdminAPI.updateEventStatus(event.id, 'rejected');
-          setEvents(prev => prev.map(e => e.id === event.id ? { ...e, status: 'rejected' } : e));
-          writeOrganizerNotification(event, 'rejected');
-          toast.success(`Événement "${event.title}" rejeté`);
+        case 'reject': {
+          setRejectingEvent(event);
+          setRejectionReason('');
           break;
+        }
         case 'delete':
           await EventsBackendAPI.deleteEvent(event.id);
           setEvents(prev => prev.filter(e => e.id !== event.id));
@@ -1579,8 +2119,50 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
     }
   };
 
+  const handleConfirmReject = async () => {
+    if (!rejectingEvent) return;
+    try {
+      await AdminAPI.updateEventStatus(rejectingEvent.id, 'rejected', rejectionReason);
+      setEvents(prev => prev.map(e => e.id === rejectingEvent.id ? { ...e, status: 'rejected' } : e));
+      writeOrganizerNotification(rejectingEvent, 'rejected');
+      toast.success(`Événement "${rejectingEvent.title}" rejeté`);
+    } catch (err: any) {
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors du rejet'));
+    } finally {
+      setRejectingEvent(null);
+      setRejectionReason('');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Dialog — raison du rejet */}
+      <Dialog open={!!rejectingEvent} onOpenChange={(open) => { if (!open) { setRejectingEvent(null); setRejectionReason(''); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rejeter l'événement</DialogTitle>
+            <DialogDescription>
+              Indiquez la raison du rejet pour <strong>{rejectingEvent?.title}</strong>. L'organisateur pourra la consulter.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Label htmlFor="rejection-reason">Raison du rejet</Label>
+            <Textarea
+              id="rejection-reason"
+              className="mt-2"
+              placeholder="Ex : informations insuffisantes, date incorrecte..."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRejectingEvent(null); setRejectionReason(''); }}>Annuler</Button>
+            <Button variant="destructive" onClick={handleConfirmReject} disabled={!rejectionReason.trim()}>Confirmer le rejet</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -1654,15 +2236,6 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
               <MapPin className="w-4 h-4" />
               <span className="hidden sm:inline">Loisirs</span>
             </TabsTrigger>
-            <TabsTrigger value="featured-requests" className="flex items-center space-x-2 relative data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
-              <Star className="w-4 h-4" />
-              <span className="hidden sm:inline">Mise en avant</span>
-              {featuredRequests.filter(r => r.status === 'pending').length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                  {featuredRequests.filter(r => r.status === 'pending').length}
-                </span>
-              )}
-            </TabsTrigger>
             <TabsTrigger value="delivery" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
               <Truck className="w-4 h-4" />
               <span className="hidden sm:inline">Livraison</span>
@@ -1671,9 +2244,33 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
               <Star className="w-4 h-4" />
               <span className="hidden sm:inline">Promotions</span>
             </TabsTrigger>
+            <TabsTrigger value="promo-suivi" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+              <TrendingUp className="w-4 h-4" />
+              <span className="hidden sm:inline">Suivi promos</span>
+            </TabsTrigger>
+            <TabsTrigger value="pack-config" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+              <Tag className="w-4 h-4" />
+              <span className="hidden sm:inline">Config packs</span>
+            </TabsTrigger>
+            <TabsTrigger value="deal-promos" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+              <Gift className="w-4 h-4" />
+              <span className="hidden sm:inline">Promos Bons Plans</span>
+            </TabsTrigger>
             <TabsTrigger value="leisure-promos" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
               <MapPin className="w-4 h-4" />
               <span className="hidden sm:inline">Promos Loisirs</span>
+            </TabsTrigger>
+            <TabsTrigger value="establishment-pricing" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none" onClick={() => { if (!estPricingLoaded) loadEstPricing(); }}>
+              <DollarSign className="w-4 h-4" />
+              <span className="hidden sm:inline">Tarification</span>
+            </TabsTrigger>
+            <TabsTrigger value="subscriptions" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none" onClick={loadAdminSubs}>
+              <CheckCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Abonnements</span>
+            </TabsTrigger>
+            <TabsTrigger value="deal-payments" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none" onClick={loadAdminDealPayments}>
+              <CreditCard className="w-4 h-4" />
+              <span className="hidden sm:inline">Paiements BP</span>
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center space-x-2 data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
               <Settings className="w-4 h-4" />
@@ -3449,6 +4046,33 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                     <Label>Description *</Label>
                     <Textarea value={dealForm.description} onChange={e => setDealForm(f => ({ ...f, description: e.target.value }))} placeholder="Description détaillée" rows={3} />
                   </div>
+                  <div className="md:col-span-2 space-y-2">
+                    <Label>Établissement lié (optionnel)</Label>
+                    <Select
+                      value={(dealForm as any).leisureItemId || 'none'}
+                      onValueChange={(v: string) => {
+                        const itemId = v === 'none' ? undefined : v;
+                        const found = leisureItems.find((li: BackendLeisureItem) => li.id === itemId);
+                        setDealForm(f => ({
+                          ...f,
+                          leisureItemId: itemId,
+                          merchantName: found ? found.name : f.merchantName,
+                          location: found ? found.location : f.location,
+                          image: found && found.image ? found.image : f.image,
+                        }));
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un établissement (auto-remplit marchand/lieu)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Aucun (saisie manuelle)</SelectItem>
+                        {leisureItems.map((li: BackendLeisureItem) => (
+                          <SelectItem key={li.id} value={li.id}>{li.name} — {li.location}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-2">
                     <Label>Marchand *</Label>
                     <Input value={dealForm.merchantName} onChange={e => setDealForm(f => ({ ...f, merchantName: e.target.value }))} placeholder="Nom du marchand" />
@@ -3901,10 +4525,6 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex items-center gap-2 pt-6">
-                      <Switch checked={leisureForm.isFeatured} onCheckedChange={(v: boolean) => setLeisureForm(f => ({ ...f, isFeatured: v }))} />
-                      <Label>En vedette</Label>
-                    </div>
                   </div>
                 </div>
                 <DialogFooter>
@@ -3999,11 +4619,6 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                             <p className="font-medium">{viewingLeisureItem.rating} / 5 ({viewingLeisureItem.reviewCount ?? 0} avis)</p>
                           </div>
                         )}
-                        {viewingLeisureItem.isFeatured && (
-                          <div className="col-span-2">
-                            <Badge className="bg-amber-100 text-amber-700 border-0">En vedette</Badge>
-                          </div>
-                        )}
                       </div>
 
                       <div className="space-y-1">
@@ -4062,7 +4677,6 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>{item.status === 'published' ? 'Publié' : 'Brouillon'}</Badge>
-                              {item.isFeatured && <Badge className="bg-amber-100 text-amber-700">Vedette</Badge>}
                             </div>
                           </div>
                         </div>
@@ -4371,9 +4985,251 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
             <PromotionsTab events={events} />
           </TabsContent>
 
+          {/* ── Suivi des achats self-service ────────────────────────────────── */}
+          <TabsContent value="promo-suivi" className="space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Suivi des promotions</h2>
+              <p className="text-sm text-gray-500">Historique de tous les achats de packs promotionnels par les organisateurs.</p>
+            </div>
+            <PromotionSuiviTab />
+          </TabsContent>
+
+          {/* ── Configuration des packs (prix, desc, avantages) ─────────────── */}
+          <TabsContent value="pack-config" className="space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Configuration des packs</h2>
+              <p className="text-sm text-gray-500">Définissez le prix, la durée, la description et les avantages de chaque pack affiché aux organisateurs.</p>
+            </div>
+            <PackConfigTab />
+          </TabsContent>
+
+          {/* ── Promotions Bon Plans ─────────────────────────────────────────── */}
+          <TabsContent value="deal-promos" className="space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Promotions Bon Plans</h2>
+              <p className="text-sm text-gray-500">Attribuez un pack promotionnel à un bon plan pour le positionner dans le slider homepage.</p>
+            </div>
+            <DealPromotionsTab deals={deals} />
+          </TabsContent>
+
           {/* ── Gestion des promotions loisirs ──────────────────────────────── */}
           <TabsContent value="leisure-promos" className="space-y-6">
             <LeisurePromotionsTab />
+          </TabsContent>
+
+          {/* ── Tarification établissements ────────────────────────────────── */}
+          <TabsContent value="establishment-pricing" className="space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Tarification — Propriétaires d'établissement</h2>
+              <p className="text-sm text-gray-500">Définissez les frais d'abonnement annuel et de création de bon plan.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-indigo-600" />
+                    Frais d'abonnement
+                  </CardTitle>
+                  <CardDescription>Montant payé annuellement par le propriétaire pour chaque établissement inscrit.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Abonnement annuel</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={estPricing.establishmentAnnualFee}
+                        onChange={e => setEstPricing(p => ({ ...p, establishmentAnnualFee: Number(e.target.value) }))}
+                      />
+                      <span className="flex items-center text-sm text-gray-500 whitespace-nowrap">{estPricing.currency}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Durée abonnement (jours)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={estPricing.subscriptionDurationDays}
+                      onChange={e => setEstPricing(p => ({ ...p, subscriptionDurationDays: Number(e.target.value) }))}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Gift className="w-5 h-5 text-red-500" />
+                    Frais de bon plan
+                  </CardTitle>
+                  <CardDescription>Montant payé à chaque publication d'un bon plan par un propriétaire d'établissement.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Frais par bon plan</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={estPricing.bonplanCreationFee}
+                        onChange={e => setEstPricing(p => ({ ...p, bonplanCreationFee: Number(e.target.value) }))}
+                      />
+                      <span className="flex items-center text-sm text-gray-500 whitespace-nowrap">{estPricing.currency}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Devise</Label>
+                    <Select value={estPricing.currency} onValueChange={(v: string) => setEstPricing(p => ({ ...p, currency: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="FCFA">FCFA</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSaveEstPricing}
+                disabled={estPricingSaving}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                {estPricingSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Enregistrer la tarification
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* ── Abonnements établissements ────────────────────────────────── */}
+          <TabsContent value="subscriptions" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Abonnements Établissements</h2>
+                <p className="text-sm text-gray-500">{adminSubs.length} abonnement{adminSubs.length !== 1 ? 's' : ''} au total</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={loadAdminSubs} disabled={adminSubsLoading}>
+                <RefreshCw className={`w-4 h-4 ${adminSubsLoading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+            <Card>
+              <CardContent className="p-0">
+                {adminSubsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                  </div>
+                ) : adminSubs.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <CheckCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="font-medium">Aucun abonnement</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Établissement</TableHead>
+                        <TableHead>Propriétaire (ID)</TableHead>
+                        <TableHead>Début</TableHead>
+                        <TableHead>Fin</TableHead>
+                        <TableHead>Montant</TableHead>
+                        <TableHead>Méthode</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Réf. paiement</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {adminSubs.map(sub => (
+                        <TableRow key={sub.id}>
+                          <TableCell className="font-medium">{sub.leisureItem?.name ?? sub.leisureItemId}</TableCell>
+                          <TableCell className="text-xs font-mono text-gray-500">{sub.userId.slice(0, 8)}…</TableCell>
+                          <TableCell className="text-sm">{new Date(sub.startDate).toLocaleDateString('fr-FR')}</TableCell>
+                          <TableCell className="text-sm">{new Date(sub.endDate).toLocaleDateString('fr-FR')}</TableCell>
+                          <TableCell className="font-semibold text-indigo-600">{new Intl.NumberFormat('fr-FR').format(sub.amount)} {sub.currency}</TableCell>
+                          <TableCell className="text-sm capitalize">{sub.paymentMethod ?? '—'}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              sub.status === 'active' ? 'bg-green-100 text-green-800 border-0' :
+                              sub.status === 'expired' ? 'bg-gray-100 text-gray-600 border-0' :
+                              sub.status === 'cancelled' ? 'bg-red-100 text-red-700 border-0' :
+                              'bg-yellow-100 text-yellow-800 border-0'
+                            }>
+                              {sub.status === 'active' ? 'Actif' : sub.status === 'expired' ? 'Expiré' : sub.status === 'cancelled' ? 'Annulé' : 'En attente'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs font-mono text-gray-400">{sub.paymentRef?.slice(0, 12) ?? '—'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Paiements Bon Plans ───────────────────────────────────────── */}
+          <TabsContent value="deal-payments" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Paiements Bon Plans</h2>
+                <p className="text-sm text-gray-500">{adminDealPayments.length} paiement{adminDealPayments.length !== 1 ? 's' : ''} au total</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={loadAdminDealPayments} disabled={adminDealPaymentsLoading}>
+                <RefreshCw className={`w-4 h-4 ${adminDealPaymentsLoading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+            <Card>
+              <CardContent className="p-0">
+                {adminDealPaymentsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                  </div>
+                ) : adminDealPayments.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Gift className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="font-medium">Aucun paiement de bon plan</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Bon Plan</TableHead>
+                        <TableHead>Établissement</TableHead>
+                        <TableHead>Propriétaire (ID)</TableHead>
+                        <TableHead>Montant</TableHead>
+                        <TableHead>Méthode</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Réf. paiement</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {adminDealPayments.map(dp => (
+                        <TableRow key={dp.id}>
+                          <TableCell className="font-medium max-w-[160px] truncate">{dp.deal?.title ?? <span className="text-gray-400 italic">En attente</span>}</TableCell>
+                          <TableCell className="text-sm">{dp.leisureItem?.name ?? dp.leisureItemId.slice(0, 8)}</TableCell>
+                          <TableCell className="text-xs font-mono text-gray-500">{dp.userId.slice(0, 8)}…</TableCell>
+                          <TableCell className="font-semibold text-indigo-600">{new Intl.NumberFormat('fr-FR').format(dp.amount)} {dp.currency}</TableCell>
+                          <TableCell className="text-sm capitalize">{dp.paymentMethod ?? '—'}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              dp.status === 'paid' ? 'bg-green-100 text-green-800 border-0' :
+                              dp.status === 'failed' ? 'bg-red-100 text-red-700 border-0' :
+                              'bg-yellow-100 text-yellow-800 border-0'
+                            }>
+                              {dp.status === 'paid' ? 'Payé' : dp.status === 'failed' ? 'Échoué' : 'En attente'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-500">{new Date(dp.createdAt).toLocaleDateString('fr-FR')}</TableCell>
+                          <TableCell className="text-xs font-mono text-gray-400">{dp.paymentRef?.slice(0, 12) ?? '—'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Paramètres et Sécurité */}
@@ -4620,275 +5476,6 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-          {/* ── Demandes de mise en avant ─────────────────────────────────── */}
-          <TabsContent value="featured-requests" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Demandes de mise en avant</h2>
-                <p className="text-gray-500 text-sm mt-1">
-                  Approuvez ou rejetez les demandes des organisateurs pour le slider principal.
-                </p>
-              </div>
-              <Button variant="outline" size="sm" onClick={loadFeaturedRequests} disabled={featuredRequestsLoading}>
-                <RefreshCw className={`w-4 h-4 mr-2 ${featuredRequestsLoading ? 'animate-spin' : ''}`} />
-                Actualiser
-              </Button>
-            </div>
-
-            {featuredRequestsLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-              </div>
-            ) : featuredRequests.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-gray-500">
-                  <Star className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>Aucune demande de mise en avant pour l'instant.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-6">
-                {['pending', 'approved', 'rejected'].map(statusFilter => {
-                  const filtered = featuredRequests.filter(r => r.status === statusFilter);
-                  if (filtered.length === 0) return null;
-                  return (
-                    <div key={statusFilter}>
-                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        {statusFilter === 'pending' && <><Clock3 className="w-4 h-4 text-blue-500" /> En attente ({filtered.length})</>}
-                        {statusFilter === 'approved' && <><CheckCircle className="w-4 h-4 text-green-500" /> Approuvées ({filtered.length})</>}
-                        {statusFilter === 'rejected' && <><XCircle className="w-4 h-4 text-red-500" /> Rejetées ({filtered.length})</>}
-                      </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {filtered.map(req => (
-                          <Card key={req.id} className={`border-l-4 overflow-hidden w-[400px] ${
-                            req.status === 'pending' ? 'border-l-blue-400' :
-                            req.status === 'approved' ? 'border-l-green-400' : 'border-l-red-400'
-                          }`}>
-                            <CardContent className="p-0">
-                              {/* Image pleine largeur */}
-                              {req.event.image && (
-                                <div className="relative w-full h-36 overflow-hidden">
-                                  <img
-                                    src={req.event.image}
-                                    alt={req.event.title}
-                                    className="w-full h-full object-cover"
-                                  />
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                                  <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
-                                    <h4 className="text-white font-bold text-sm leading-tight truncate">{req.event.title}</h4>
-                                    <div className="flex gap-1 flex-shrink-0">
-                                      {req.event.isLive && <Badge className="bg-red-600 text-white text-xs">LIVE</Badge>}
-                                      <Badge className={
-                                        req.status === 'pending' ? 'bg-blue-500 text-white' :
-                                        req.status === 'approved' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-                                      }>
-                                        {req.status === 'pending' ? 'En attente' : req.status === 'approved' ? 'Approuvé' : 'Rejeté'}
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="p-4 space-y-3">
-                                {/* Détails de l'événement */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                  <div className="flex items-center gap-2 text-gray-600">
-                                    <Calendar className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-                                    <div>
-                                      <p className="text-xs text-gray-400">Date</p>
-                                      <p className="font-medium">{new Date(req.event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-gray-600">
-                                    <MapPin className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-                                    <div>
-                                      <p className="text-xs text-gray-400">Lieu</p>
-                                      <p className="font-medium truncate">{req.event.location}</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-gray-600">
-                                    <DollarSign className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-                                    <div>
-                                      <p className="text-xs text-gray-400">Prix</p>
-                                      <p className="font-medium">{req.event.price === 0 ? 'Gratuit' : `${new Intl.NumberFormat('fr-FR').format(req.event.price)} ${req.event.currency}`}</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-gray-600">
-                                    <Users className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-                                    <div>
-                                      <p className="text-xs text-gray-400">Participants</p>
-                                      <p className="font-medium">{req.event.attendees} / {req.event.maxAttendees}</p>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Description */}
-                                {req.event.description && (
-                                  <p className="text-sm text-gray-600 line-clamp-2">{req.event.description}</p>
-                                )}
-
-                                {/* Organisateur */}
-                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                                    <span className="text-indigo-700 font-bold text-sm">{req.organizer?.name?.charAt(0)}</span>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-sm text-gray-900">{req.organizer?.name}</p>
-                                    <p className="text-xs text-gray-500">{req.organizer?.email}{req.organizer?.phone && ` · ${req.organizer.phone}`}</p>
-                                  </div>
-                                  <p className="text-xs text-gray-400 flex-shrink-0">
-                                    Soumis le {new Date(req.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
-                                  </p>
-                                </div>
-
-                                {/* Message de l'organisateur */}
-                                {req.message && (
-                                  <div className="border-l-2 border-indigo-300 pl-3">
-                                    <p className="text-xs text-gray-400 mb-1">Message de l'organisateur</p>
-                                    <p className="text-sm text-gray-700 italic">"{req.message}"</p>
-                                  </div>
-                                )}
-
-                                {/* Note admin si déjà traitée */}
-                                {req.adminNote && (
-                                  <div className={`border-l-2 pl-3 ${req.status === 'approved' ? 'border-green-400' : 'border-red-400'}`}>
-                                    <p className="text-xs text-gray-400 mb-1">Réponse admin</p>
-                                    <p className="text-sm text-gray-700">{req.adminNote}</p>
-                                  </div>
-                                )}
-
-                                {/* Boutons Approuver / Rejeter */}
-                                {req.status === 'pending' && (
-                                  <div className="flex gap-3 pt-2 border-t border-gray-100">
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <button
-                                          type="button"
-                                          className="flex-1 h-11 font-semibold rounded-md flex items-center justify-center gap-2 text-sm"
-                                          style={{ backgroundColor: '#16a34a', color: '#ffffff' }}
-                                        >
-                                          <CheckCircle className="w-4 h-4" /> Approuver
-                                        </button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Approuver la mise en avant</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            L'événement <strong>{req.event.title}</strong> sera affiché dans le slider principal.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <div className="py-2">
-                                          <Label htmlFor={`note-approve-${req.id}`}>Message pour l'organisateur (optionnel)</Label>
-                                          <Textarea
-                                            id={`note-approve-${req.id}`}
-                                            placeholder="Ex: Félicitations ! Votre événement sera mis en avant..."
-                                            value={featuredAdminNote}
-                                            onChange={e => setFeaturedAdminNote(e.target.value)}
-                                            rows={2}
-                                            className="mt-1"
-                                          />
-                                        </div>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel onClick={() => setFeaturedAdminNote('')}>Annuler</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            className="bg-green-600 hover:bg-green-700 text-white"
-                                            onClick={() => handleApproveFeaturedRequest(req.id)}
-                                            disabled={featuredProcessingId === req.id}
-                                          >
-                                            {featuredProcessingId === req.id ? 'Traitement...' : 'Confirmer l\'approbation'}
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button
-                                          variant="outline"
-                                          className="flex-1 h-11 font-semibold"
-                                          style={{ color: '#dc2626', borderColor: '#fca5a5' }}
-                                        >
-                                          <XCircle className="w-4 h-4 mr-2" /> Rejeter
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Rejeter la demande</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            La demande pour <strong>{req.event.title}</strong> sera rejetée. L'organisateur pourra en soumettre une nouvelle.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <div className="py-2">
-                                          <Label htmlFor={`note-reject-${req.id}`}>Motif du rejet (optionnel)</Label>
-                                          <Textarea
-                                            id={`note-reject-${req.id}`}
-                                            placeholder="Ex: L'événement ne correspond pas aux critères..."
-                                            value={featuredAdminNote}
-                                            onChange={e => setFeaturedAdminNote(e.target.value)}
-                                            rows={2}
-                                            className="mt-1"
-                                          />
-                                        </div>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel onClick={() => setFeaturedAdminNote('')}>Annuler</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            className="bg-red-600 hover:bg-red-700"
-                                            onClick={() => handleRejectFeaturedRequest(req.id)}
-                                            disabled={featuredProcessingId === req.id}
-                                          >
-                                            {featuredProcessingId === req.id ? 'Traitement...' : 'Confirmer le rejet'}
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  </div>
-                                )}
-
-                                {/* Bouton Stopper la mise en avant */}
-                                {req.status === 'approved' && (
-                                  <div className="pt-2 border-t border-gray-100">
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <button
-                                          type="button"
-                                          className="w-full h-10 rounded-md font-semibold text-sm flex items-center justify-center gap-2"
-                                          style={{ backgroundColor: '#f97316', color: '#ffffff' }}
-                                        >
-                                          <XCircle className="w-4 h-4" /> Stopper la mise en avant
-                                        </button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Stopper la mise en avant</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            L'événement <strong>{req.event.title}</strong> sera retiré du slider principal.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            className="bg-orange-500 hover:bg-orange-600"
-                                            onClick={() => handleStopFeatured(req.id, req.event.id)}
-                                            disabled={featuredProcessingId === req.id}
-                                          >
-                                            {featuredProcessingId === req.id ? 'Traitement...' : 'Confirmer'}
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  </div>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </TabsContent>
 
         </Tabs>

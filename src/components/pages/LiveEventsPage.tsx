@@ -26,7 +26,6 @@ interface Event {
   attendees: number;
   maxAttendees: number;
   isLive: boolean;
-  isFeatured?: boolean;
   organizer: string;
   promotionType?: string | null;
   promotionStatus?: string | null;
@@ -221,17 +220,14 @@ export function LiveEventsPage({
     });
   }, [selectedCategory, liveEvents]);
 
+  // Pack OR → Hero Banner (zone principale selon spec PDF)
   const featuredFilteredEvents = useMemo(() =>
-    filteredEvents.filter(e =>
-      e.isFeatured || (isEventPromotionActive(e) && e.promotionType === 'OR')
-    ),
+    filteredEvents.filter(e => isEventPromotionActive(e) && e.promotionType === 'OR'),
     [filteredEvents]
   );
 
   const nonFeaturedFilteredEvents = useMemo(() =>
-    filteredEvents.filter(e =>
-      !e.isFeatured && !(isEventPromotionActive(e) && e.promotionType === 'OR')
-    ),
+    filteredEvents.filter(e => !(isEventPromotionActive(e) && e.promotionType === 'OR')),
     [filteredEvents]
   );
 

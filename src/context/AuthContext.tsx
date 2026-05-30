@@ -19,8 +19,8 @@ export interface AppUser {
   name: string;
   email: string;
   phone?: string | null;
-  role: "user" | "organizer" | "controller";
-  adminRole?: "super_admin" | "admin" | "moderator" | "support" | "organizer" | "controller" | "user";
+  role: "user" | "organizer" | "controller" | "establishment_owner";
+  adminRole?: "super_admin" | "admin" | "moderator" | "support" | "organizer" | "controller" | "user" | "establishment_owner";
   interests: string[];
 }
 
@@ -46,9 +46,11 @@ function mapToAppUser(authUser: AuthUser): AppUser {
   const isAdminLike = (adminRoles as readonly string[]).includes(authUser.role);
   const isOrganizerLike = authUser.role === "organizer" || isAdminLike;
   const isController = authUser.role === "controller";
+  const isEstablishmentOwner = authUser.role === "establishment_owner";
 
   let role: AppUser["role"] = "user";
   if (isController) role = "controller";
+  else if (isEstablishmentOwner) role = "establishment_owner";
   else if (isOrganizerLike) role = "organizer";
 
   return {

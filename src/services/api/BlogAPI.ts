@@ -101,6 +101,7 @@ const BlogAPI = {
     sort?: string;
     page?: number;
     limit?: number;
+    isFeatured?: boolean;
   }): Promise<BlogPostsResponse> {
     const res = await api.get('/api/blog/posts', { params });
     return res.data.data as BlogPostsResponse;

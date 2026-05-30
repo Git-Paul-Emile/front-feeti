@@ -25,6 +25,9 @@ import { BonPlanCard } from '../BonPlanCard';
 import { toast } from 'sonner';
 import DealsBackendAPI, { type BackendDeal, type DealFilters, type DealCategory } from '../../services/api/DealsBackendAPI';
 import EventsBackendAPI, { type BackendEvent } from '../../services/api/EventsBackendAPI';
+import { isEventPromotionActive, isDealPromotionActive } from '../PromotionBadge';
+
+const DEAL_PROMO_RANK: Record<string, number> = { OR: 4, ARGENT: 3, BRONZE: 2, LITE: 1 };
 
 interface BonPlan {
   id: string;
@@ -44,6 +47,10 @@ interface BonPlan {
   maxQuantity?: number;
   rating?: number;
   reviewCount?: number;
+  promotionType?: string | null;
+  promotionStatus?: string | null;
+  promotionStartDate?: string | null;
+  promotionEndDate?: string | null;
 }
 
 interface BonPlanListPageProps {
@@ -93,7 +100,29 @@ function backendDealToBonPlan(d: BackendDeal): BonPlan {
     maxQuantity: d.maxQuantity ?? undefined,
     rating: d.rating ?? undefined,
     reviewCount: d.reviewCount ?? undefined,
+    promotionType: d.promotionType ?? null,
+    promotionStatus: d.promotionStatus ?? null,
+    promotionStartDate: d.promotionStartDate ?? null,
+    promotionEndDate: d.promotionEndDate ?? null,
   };
+}
+
+/** Trie les deals : promus par rang de pack en tête, puis populaires, puis le reste */
+function sortByPromoThenPopular(list: BonPlan[]): BonPlan[] {
+  return [...list].sort((a, b) => {
+    const aActive = isDealPromotionActive(a);
+    const bActive = isDealPromotionActive(b);
+    if (aActive && !bActive) return -1;
+    if (!aActive && bActive) return 1;
+    if (aActive && bActive) {
+      const rA = DEAL_PROMO_RANK[a.promotionType ?? ''] ?? 0;
+      const rB = DEAL_PROMO_RANK[b.promotionType ?? ''] ?? 0;
+      if (rB !== rA) return rB - rA;
+    }
+    if (a.isPopular && !b.isPopular) return -1;
+    if (!a.isPopular && b.isPopular) return 1;
+    return 0;
+  });
 }
 
 export function BonPlanListPage({ onBack, initialFilter, onDealSelect }: BonPlanListPageProps) {
@@ -126,7 +155,7 @@ export function BonPlanListPage({ onBack, initialFilter, onDealSelect }: BonPlan
       .then(cats => setDealCategories(cats.map(c => ({ slug: c.slug, name: c.name }))))
       .catch(() => {});
     EventsBackendAPI.getAllEvents()
-      .then(evts => setSliderEvents(evts.filter(e => e.status === 'published' && e.isFeatured)))
+      .then(evts => setSliderEvents(evts.filter(e => e.status === 'published' && isEventPromotionActive(e) && e.promotionType === 'OR')))
       .catch(() => {});
   }, []);
 
@@ -154,7 +183,8 @@ export function BonPlanListPage({ onBack, initialFilter, onDealSelect }: BonPlan
     setLoading(true);
     DealsBackendAPI.getDeals(buildFilters(1))
       .then(({ data, meta }) => {
-        setPlans(data.map(backendDealToBonPlan));
+        const mapped = data.map(backendDealToBonPlan);
+        setPlans(sortBy === 'popularity' ? sortByPromoThenPopular(mapped) : mapped);
         setTotal(meta.total);
         setHasMore(meta.hasMore);
       })
@@ -167,7 +197,9 @@ export function BonPlanListPage({ onBack, initialFilter, onDealSelect }: BonPlan
     setLoadingMore(true);
     DealsBackendAPI.getDeals(buildFilters(nextPage))
       .then(({ data, meta }) => {
-        setPlans(prev => [...prev, ...data.map(backendDealToBonPlan)]);
+        const mapped = data.map(backendDealToBonPlan);
+        const newItems = sortBy === 'popularity' ? sortByPromoThenPopular(mapped) : mapped;
+        setPlans(prev => [...prev, ...newItems]);
         setHasMore(meta.hasMore);
         setPage(nextPage);
       })

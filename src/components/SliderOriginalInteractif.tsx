@@ -1,7 +1,7 @@
 import { useState, useEffect, memo, useMemo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Ticket, Heart, Play } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { EventPromotionBadge, isEventPromotionActive } from './PromotionBadge';
+import { isEventPromotionActive } from './PromotionBadge';
 
 // Nombre maximum d'événements visibles simultanément dans le slider
 const MAX_SLIDE_VISIBLE = 5;
@@ -25,7 +25,6 @@ interface Event {
   attendees: number;
   maxAttendees: number;
   isLive: boolean;
-  isFeatured?: boolean;
   isFavorite?: boolean;
   organizer: string;
   promotionType?: string | null;
@@ -52,18 +51,12 @@ const SliderOriginalInteractif = memo(function SliderOriginalInteractif({
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
 
-  // Événements visibles dans le slider :
-  // - isFeatured (marqué admin) OU Pack OR actif (accès automatique hero banner per PDF spec)
-  // Seul OR a accès au slider principal — ARGENT/BRONZE/LITE ont leurs propres zones
-  const PROMO_SLIDER_RANK: Record<string, number> = { OR: 4 };
-
+  // Slider principal — Pack OR exclusivement (Hero Banner, PDF spec)
+  // ARGENT → ArgentSlider, BRONZE → LiveThisMonthSection, LITE → listing normal
   const allFeaturedEvents = useMemo(() =>
     events
-      .filter(e => e.isFeatured || (isEventPromotionActive(e) && e.promotionType === 'OR'))
+      .filter(e => isEventPromotionActive(e) && e.promotionType === 'OR')
       .sort((a, b) => {
-        const rankA = isEventPromotionActive(a) && a.promotionType ? (PROMO_SLIDER_RANK[a.promotionType] ?? 0) : 0;
-        const rankB = isEventPromotionActive(b) && b.promotionType ? (PROMO_SLIDER_RANK[b.promotionType] ?? 0) : 0;
-        if (rankB !== rankA) return rankB - rankA;
         if (a.isLive && !b.isLive) return -1;
         if (!a.isLive && b.isLive) return 1;
         return new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -180,7 +173,7 @@ const SliderOriginalInteractif = memo(function SliderOriginalInteractif({
   }
 
   return (
-    <div className="bg-[#f8f8f8] relative w-full h-[520px] sm:h-[620px] lg:h-[720px] xl:h-[770px] overflow-hidden slider-original-container" data-name="SLIDER SHOW INTERACTIF">
+    <div className="bg-[#f8f8f8] relative w-full h-screen min-h-screen max-h-screen overflow-hidden slider-original-container" data-name="SLIDER SHOW INTERACTIF">
       {/* Background Images Stack */}
       <div className="absolute inset-0 w-full h-full slider-performance-mode">
         {sliderEvents.map((event, index) => (
@@ -234,18 +227,6 @@ const SliderOriginalInteractif = memo(function SliderOriginalInteractif({
       <div className="absolute inset-0 z-20 flex items-center">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl">
-            {/* Badge promotion + Organizer */}
-            <div className="mb-3 sm:mb-4 hero-text-reveal flex items-center gap-3 flex-wrap">
-              {isEventPromotionActive(currentEvent) && currentEvent.promotionType && (
-                <EventPromotionBadge
-                  promotionType={currentEvent.promotionType as any}
-                  size="md"
-                />
-              )}
-              <p className="text-white/80 text-sm sm:text-base font-medium tracking-wide uppercase best-off-text-enhanced">
-                {currentEvent.organizer}
-              </p>
-            </div>
 
             {/* Title */}
             <div className="mb-4 sm:mb-6 hero-text-reveal-delayed">

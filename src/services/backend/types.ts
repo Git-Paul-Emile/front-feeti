@@ -73,7 +73,6 @@ export interface BackendEvent {
   salesBlocked: boolean;
   eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
   isLive: boolean;
-  isFeatured: boolean;
   isFavorite: boolean;
   status: string;
   streamUrl?: string;
@@ -122,10 +121,8 @@ export interface CatalogEventsProvider {
   uploadImage(file: File): Promise<string>;
   getMyEvents(): Promise<BackendEvent[]>;
   getAllEvents(countryCode?: string): Promise<BackendEvent[]>;
-  getFeaturedEvents(countryCode?: string): Promise<BackendEvent[]>;
   getEventById(id: string): Promise<BackendEvent>;
   getAllEventsAdmin(): Promise<BackendEvent[]>;
-  toggleHighlight(id: string, data: { isFeatured?: boolean; isFavorite?: boolean }): Promise<BackendEvent>;
   createEvent(data: CreateBackendEventInput): Promise<BackendEvent>;
   deleteEvent(id: string): Promise<void>;
   updateEvent(id: string, data: Partial<CreateBackendEventInput>): Promise<BackendEvent>;

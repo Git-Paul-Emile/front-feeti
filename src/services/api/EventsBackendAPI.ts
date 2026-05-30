@@ -28,20 +28,12 @@ const EventsBackendAPI = {
     return backendGateway.catalogEvents.getAllEvents(countryCode);
   },
 
-  getFeaturedEvents(countryCode?: string): Promise<BackendEvent[]> {
-    return backendGateway.catalogEvents.getFeaturedEvents(countryCode);
-  },
-
   getEventById(id: string): Promise<BackendEvent> {
     return backendGateway.catalogEvents.getEventById(id);
   },
 
   getAllEventsAdmin(): Promise<BackendEvent[]> {
     return backendGateway.catalogEvents.getAllEventsAdmin();
-  },
-
-  toggleHighlight(id: string, data: { isFeatured?: boolean; isFavorite?: boolean }): Promise<BackendEvent> {
-    return backendGateway.catalogEvents.toggleHighlight(id, data);
   },
 
   createEvent(data: CreateEventInput): Promise<BackendEvent> {

@@ -6,7 +6,6 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Tag } from './Tag';
 import { LiveEventCard } from './LiveEventCard';
 import { SocialShareButton } from './SocialShareButton';
-import { EventPromotionBadge, isEventPromotionActive } from './PromotionBadge';
 
 interface Event {
   id: string;
@@ -57,13 +56,6 @@ function EventImage({ event }: { event: Event }) {
       {/* Gradient overlay for better text readability */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
       
-      {/* Top left: badge promotion */}
-      {isEventPromotionActive(event) && event.promotionType && (
-        <div className="absolute top-4 left-4">
-          <EventPromotionBadge promotionType={event.promotionType as any} size="sm" />
-        </div>
-      )}
-
       {/* Top right badges and share button */}
       <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
         {/* Share button */}

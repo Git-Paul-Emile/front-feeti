@@ -469,7 +469,7 @@ export function UserDashboard({}: UserDashboardProps) {
                 <p className="text-gray-600 mb-6">
                   Découvrez nos événements et réservez vos premiers billets
                 </p>
-                <Button onClick={() => window.location.reload()}>
+                <Button onClick={() => navigate('/events')}>
                   Explorer les événements
                 </Button>
               </div>

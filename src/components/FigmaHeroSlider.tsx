@@ -1,1 +1,0 @@
-// Ce fichier a été supprimé car le slider n'était pas satisfaisant

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../ui/badge';
 import { Search, Filter, Calendar, MapPin, DollarSign, Monitor, X } from 'lucide-react';
 import { SliderOriginalInteractif } from '../SliderOriginalInteractif';
+import { isEventPromotionActive } from '../PromotionBadge';
 
 interface Event {
   id: string;
@@ -23,7 +24,6 @@ interface Event {
   maxAttendees: number;
   eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
   isLive: boolean;
-  isFeatured?: boolean;
   isFavorite?: boolean;
   createdAt?: string;
   organizer: string;
@@ -128,8 +128,8 @@ export function EventsListPage({
       if (typeFilter === 'live'      && !hasStreaming)  return false;
       if (typeFilter === 'in-person' &&  (event.isLive || event.eventType === 'STREAMING_LIVE')) return false;
 
-      // À la une
-      if (showFeaturedOnly && !event.isFeatured) return false;
+      // À la une (pack promotionnel actif)
+      if (showFeaturedOnly && !isEventPromotionActive(event)) return false;
 
       // Ce mois-ci
       if (showMonthOnly) {

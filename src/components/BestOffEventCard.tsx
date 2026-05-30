@@ -2,7 +2,6 @@ import { Heart, ShoppingCart, Calendar, MapPin, Star } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { SocialShareButton } from './SocialShareButton';
 import svgPaths from "../imports/svg-hfsthgh8or";
-import { EventPromotionBadge, isEventPromotionActive } from './PromotionBadge';
 
 interface Event {
   id: string;
@@ -57,13 +56,9 @@ function EventImage({ event }: { event: Event }) {
       
       {/* Badge promotion dynamique */}
       <div className="absolute top-6 left-6">
-        {isEventPromotionActive(event) && event.promotionType ? (
-          <EventPromotionBadge promotionType={event.promotionType as any} size="sm" />
-        ) : (
-          <div className="flex items-center bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1.5 rounded-full text-[10px] best-off-badge-enhanced shadow-lg backdrop-blur-sm bg-opacity-95">
-            BEST OFF
-          </div>
-        )}
+        <div className="flex items-center bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1.5 rounded-full text-[10px] best-off-badge-enhanced shadow-lg backdrop-blur-sm bg-opacity-95">
+          BEST OFF
+        </div>
       </div>
 
       {/* Top right section */}

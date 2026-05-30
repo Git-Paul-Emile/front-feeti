@@ -64,8 +64,8 @@ const AdminAPI = {
     await api.delete(`/api/admin/users/${userId}`);
   },
 
-  async updateEventStatus(eventId: string, status: string): Promise<void> {
-    await api.patch(`/api/admin/events/${eventId}/status`, { status });
+  async updateEventStatus(eventId: string, status: string, rejectionReason?: string): Promise<void> {
+    await api.patch(`/api/admin/events/${eventId}/status`, { status, rejectionReason });
   },
 
   async getTicketsStats(): Promise<TicketStats> {
@@ -102,6 +102,20 @@ const AdminAPI = {
 
   async getAuditIntegrity(): Promise<AuditIntegrity> {
     const res = await api.get('/reporting/audit/integrity');
+    return res.data.data;
+  },
+
+  async updateDealPromotion(dealId: string, data: {
+    promotionType?: string | null;
+    promotionStatus?: string;
+    promotionStartDate?: string | null;
+    promotionEndDate?: string | null;
+  }): Promise<void> {
+    await api.patch(`/api/admin/deals/${dealId}/promotion`, data);
+  },
+
+  async getDealPromotionSlots(): Promise<Array<{ type: string; limit: number; used: number; available: number }>> {
+    const res = await api.get('/api/admin/deal-promotion-slots');
     return res.data.data;
   },
 };

@@ -155,6 +155,39 @@ export function isEventPromotionActive(event: {
   return true;
 }
 
+// Helper: est-ce qu'un deal a une promotion active ?
+export function isDealPromotionActive(deal: {
+  promotionType?: string | null;
+  promotionStatus?: string | null;
+  promotionStartDate?: string | null;
+  promotionEndDate?: string | null;
+}): boolean {
+  if (!deal.promotionType || deal.promotionStatus !== 'active') return false;
+  const now = new Date();
+  if (deal.promotionStartDate && new Date(deal.promotionStartDate) > now) return false;
+  if (deal.promotionEndDate && new Date(deal.promotionEndDate) < now) return false;
+  return true;
+}
+
+// Badge pour les deals promus (même visuel que les événements, libellé adapté)
+const DEAL_BADGE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
+  OR:     { label: 'Bon plan Premium', bg: 'bg-gradient-to-r from-yellow-400 to-amber-500', text: 'text-white' },
+  ARGENT: { label: 'Bon plan recommandé', bg: 'bg-gradient-to-r from-slate-300 to-slate-400', text: 'text-slate-900' },
+  BRONZE: { label: 'Bon plan en vedette', bg: 'bg-gradient-to-r from-orange-400 to-amber-600', text: 'text-white' },
+  LITE:   { label: 'Sponsorisé', bg: 'bg-blue-100', text: 'text-blue-700' },
+};
+
+export function DealPromotionBadge({ promotionType, size = 'sm' }: { promotionType: string; size?: 'sm' | 'md' }) {
+  const config = DEAL_BADGE_CONFIG[promotionType];
+  if (!config) return null;
+  const padding = size === 'sm' ? 'px-2 py-1 text-[10px]' : 'px-3 py-1.5 text-xs';
+  return (
+    <span className={`inline-flex items-center rounded-full font-semibold shadow-md ${config.bg} ${config.text} ${padding}`}>
+      {config.label}
+    </span>
+  );
+}
+
 // Helper: est-ce qu'un loisir a un pack actif ?
 export function isLeisurePackActive(item: {
   leisurePackType?: string | null;

@@ -31,13 +31,6 @@ export class ExpressCatalogEventsProvider implements CatalogEventsProvider {
     return res.data.data;
   }
 
-  async getFeaturedEvents(countryCode?: string): Promise<BackendEvent[]> {
-    const params: Record<string, string> = { featured: "true" };
-    if (countryCode) params.country = countryCode;
-    const res = await api.get("/api/events", { params });
-    return res.data.data;
-  }
-
   async getEventById(id: string): Promise<BackendEvent> {
     try {
       const res = await api.get(`/api/events/${id}`);
@@ -56,14 +49,6 @@ export class ExpressCatalogEventsProvider implements CatalogEventsProvider {
 
   async getAllEventsAdmin(): Promise<BackendEvent[]> {
     const res = await api.get("/api/admin/events");
-    return res.data.data;
-  }
-
-  async toggleHighlight(
-    id: string,
-    data: { isFeatured?: boolean; isFavorite?: boolean }
-  ): Promise<BackendEvent> {
-    const res = await api.patch(`/api/admin/events/${id}/highlight`, data);
     return res.data.data;
   }
 

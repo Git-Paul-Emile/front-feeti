@@ -26,15 +26,13 @@ export function LoisirsADecouvrirSection({ onNavigate }: LoisirsADecouvrirSectio
       LeisureAPI.getItems({ lat, lng })
         .then(allItems => {
           // PDF spec :
-          // PREMIUM offre annuaire → section "À découvrir"
+          // PREMIUM + PRO → "Loisirs à la une" (LoisirsAlaUneSection) — pas ici
           // VISIBILITE_ACCUEIL pack → bannière homepage + "À découvrir"
-          // BOOST → homepage + carrousel loisirs
-          // CAMPAGNE_PREMIUM → homepage + slider + section recommandée
+          // BOOST              pack → homepage + carrousel loisirs
+          // CAMPAGNE_PREMIUM   pack → homepage + slider + section recommandée
+          // Cette section n'affiche QUE les packs ponctuels actifs (7j)
           const filtered = allItems.filter(i =>
-            i.status === 'published' && (
-              i.leisureOfferType === 'PREMIUM' ||
-              isLeisurePackActive(i) // VISIBILITE_ACCUEIL + BOOST + CAMPAGNE_PREMIUM
-            )
+            i.status === 'published' && isLeisurePackActive(i)
           );
           // Pack actif passe avant offre seule
           const PACK_RANK: Record<string, number> = { CAMPAGNE_PREMIUM: 3, BOOST: 2, VISIBILITE_ACCUEIL: 1 };

@@ -25,6 +25,7 @@ import {
 interface BonPlanDetailPageProps {
   dealId?: string;
   onBack: () => void;
+  onEstablishmentClick?: (id: string) => void;
 }
 
 function parseTags(json: string): string[] {
@@ -66,7 +67,7 @@ function renderStars(rating: number) {
   ));
 }
 
-export function BonPlanDetailPage({ dealId, onBack }: BonPlanDetailPageProps) {
+export function BonPlanDetailPage({ dealId, onBack, onEstablishmentClick }: BonPlanDetailPageProps) {
   const [deal, setDeal] = useState<BackendDeal | null>(null);
   const [loading, setLoading] = useState(true);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -305,6 +306,26 @@ export function BonPlanDetailPage({ dealId, onBack }: BonPlanDetailPageProps) {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Lien établissement (si lié) */}
+        {deal.leisureItem && (
+          <Card className="border-green-100 bg-green-50/40 cursor-pointer hover:bg-green-50 transition-colors"
+            onClick={() => deal.leisureItem && onEstablishmentClick?.(deal.leisureItem.id)}>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                  <ImageWithFallback src={deal.leisureItem.image} alt={deal.leisureItem.name} className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-green-700 font-medium uppercase tracking-wide">Établissement proposant l'offre</p>
+                  <p className="font-semibold text-gray-900">{deal.leisureItem.name}</p>
+                  <p className="text-xs text-gray-500">{deal.leisureItem.address ?? deal.leisureItem.location}</p>
+                </div>
+                <Globe className="w-4 h-4 text-green-600 flex-shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Contact / Merchant */}

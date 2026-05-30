@@ -5,6 +5,8 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
+import { EventPromotionBadge, isEventPromotionActive } from '../PromotionBadge';
+import PromotionAPI, { type PackConfig } from '../../services/api/PromotionAPI';
 import {
   Calendar,
   MapPin,
@@ -45,6 +47,10 @@ interface Event {
   source?: 'feeti2' | 'feetiplay';
   isReplay?: boolean;
   externalUrl?: string;
+  promotionType?: string | null;
+  promotionStatus?: string | null;
+  promotionStartDate?: string | null;
+  promotionEndDate?: string | null;
 }
 
 const FEETIPLAY_URL = ((import.meta as any).env?.VITE_FEETIPLAY_URL ?? '').trim();
@@ -62,6 +68,19 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
   const location = useLocation();
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [packConfig, setPackConfig] = useState<PackConfig | null>(null);
+
+  // Charger la config du pack si l'événement a une promotion active
+  useEffect(() => {
+    if (isEventPromotionActive(event) && event.promotionType) {
+      PromotionAPI.getPackConfigs()
+        .then(configs => {
+          const cfg = configs.find(c => c.type === event.promotionType);
+          setPackConfig(cfg ?? null);
+        })
+        .catch(() => {});
+    }
+  }, [event.promotionType, event.promotionStatus]);
   const [selectedTickets, setSelectedTickets] = useState(1);
   const isFeetiPlayEvent = event.source === 'feetiplay';
   const canWatchNow = event.isLive || !!event.videoUrl || !!event.streamUrl || !!event.isReplay;
@@ -178,12 +197,15 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
                 alt={event.title}
                 className="w-full h-64 md:h-96 object-cover rounded-xl"
               />
-              {event.isLive && (
-                <Badge className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1">
-                  <Eye className="w-4 h-4 mr-2" />
-                  EN DIRECT
-                </Badge>
-              )}
+              {/* Badges superposés en haut à gauche */}
+              <div className="absolute top-4 left-4 flex flex-col gap-2">
+                {event.isLive && (
+                  <Badge className="bg-red-600 text-white px-3 py-1">
+                    <Eye className="w-4 h-4 mr-2" />
+                    EN DIRECT
+                  </Badge>
+                )}
+              </div>
               <Badge
                 variant="secondary"
                 className="absolute top-4 right-4 bg-white/90 text-gray-700"
@@ -194,6 +216,26 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
 
             {/* Event Info */}
             <div className="bg-white rounded-xl p-6 border border-gray-200">
+
+              {/* Bandeau promotion actif */}
+              {isEventPromotionActive(event) && event.promotionType && (
+                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <EventPromotionBadge promotionType={event.promotionType as any} size="sm" />
+                    <span className="text-sm font-medium text-amber-800">Événement mis en avant</span>
+                  </div>
+                  {packConfig && packConfig.advantages.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {packConfig.advantages.map((adv, i) => (
+                        <span key={i} className="text-xs bg-white border border-amber-200 text-amber-700 rounded-full px-2 py-0.5">
+                          {adv}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">

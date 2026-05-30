@@ -1,7 +1,7 @@
 import { memo, useMemo, useCallback } from 'react';
 import { SEO } from '../SEO';
 import { EventCard } from '../EventCard';
-import { EventPromotionBadge, isEventPromotionActive } from '../PromotionBadge';
+import { isEventPromotionActive } from '../PromotionBadge';
 import { SliderOriginalInteractif } from '../SliderOriginalInteractif';
 import { ArgentSlider } from '../ArgentSlider';
 import { CategorySelector } from '../CategorySelector';
@@ -12,6 +12,7 @@ import { LoisirsAlaUneSection } from '../LoisirsAlaUneSection';
 import { LoisirsADecouvrirSection } from '../LoisirsADecouvrirSection';
 import { ReplayBonPlansSection } from '../ReplayBonPlansSection';
 import { BonPlanEvasionSection } from '../BonPlanEvasionSection';
+import { FeeticheSection } from '../FeeticheSection';
 
 import { Zap, Shield, Smartphone } from 'lucide-react';
 import svgPaths from "../../imports/svg-oz78jhj51j";
@@ -30,7 +31,6 @@ interface Event {
   attendees: number;
   maxAttendees: number;
   isLive: boolean;
-  isFeatured?: boolean;
   isFavorite?: boolean;
   organizer: string;
   tags?: string[];
@@ -50,21 +50,14 @@ interface HomePageProps {
 }
 
 const HomePage = memo(function HomePage({ events, onEventSelect, onNavigate, onStreamWatch, onPurchase, onWishlist }: HomePageProps) {
-  // Événements live pour la section "En live ce mois"
-  const liveEvents = useMemo(() => events.filter(e => e.isLive), [events]);
-
-  // Événements "À la une" : isFeatured OU promotion active (OR/ARGENT/BRONZE)
-  // Tri : 1. rang promo desc, 2. date événement asc (PDF spec)
-  const FEATURED_PROMO_RANK: Record<string, number> = { OR: 4, ARGENT: 3, BRONZE: 2, LITE: 1 };
+  // Chaque pack a sa position dédiée sur la homepage :
+  // OR → Hero Slider | ARGENT → ArgentSlider | BRONZE → "Événements à la une" | LITE → listing renforcé
+  // "Événements à la une" = Pack BRONZE uniquement
+  // OR → Hero Slider | ARGENT → ArgentSlider | BRONZE → grille ci-dessous | LITE → listing renforcé
   const featuredEvents = useMemo(() =>
     events
-      .filter(e => e.isFeatured || isEventPromotionActive(e))
-      .sort((a, b) => {
-        const rankA = isEventPromotionActive(a) && a.promotionType ? (FEATURED_PROMO_RANK[a.promotionType] ?? 0) : 0;
-        const rankB = isEventPromotionActive(b) && b.promotionType ? (FEATURED_PROMO_RANK[b.promotionType] ?? 0) : 0;
-        if (rankB !== rankA) return rankB - rankA;
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      }),
+      .filter(e => isEventPromotionActive(e) && e.promotionType === 'BRONZE')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     [events]
   );
 
@@ -120,9 +113,9 @@ const HomePage = memo(function HomePage({ events, onEventSelect, onNavigate, onS
         onSearch={handleSearch}
       />
 
-      {/* Live This Month Section */}
+      {/* Live This Month Section — reçoit tous les events, filtre STREAMING/MIXTE/LIVE en interne */}
       <LiveThisMonthSection
-        events={liveEvents}
+        events={events}
         onEventSelect={onEventSelect}
         onPurchase={onPurchase}
         onStreamWatch={onStreamWatch}
@@ -173,21 +166,15 @@ const HomePage = memo(function HomePage({ events, onEventSelect, onNavigate, onS
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {featuredEvents.slice(0, 3).map((event) => (
-              <div key={event.id} className="relative">
-                {isEventPromotionActive(event) && event.promotionType && (
-                  <div className="absolute top-3 left-3 z-10">
-                    <EventPromotionBadge promotionType={event.promotionType as any} size="sm" />
-                  </div>
-                )}
-                <EventCard
-                  event={event}
-                  onSelect={onEventSelect}
-                  onPurchase={onPurchase}
-                  onStreamWatch={onStreamWatch}
-                  onWishlist={handleWishlist}
-                  variant="best-off"
-                />
-              </div>
+              <EventCard
+                key={event.id}
+                event={event}
+                onSelect={onEventSelect}
+                onPurchase={onPurchase}
+                onStreamWatch={onStreamWatch}
+                onWishlist={handleWishlist}
+                variant="best-off"
+              />
             ))}
           </div>
         </div>
@@ -253,6 +240,9 @@ const HomePage = memo(function HomePage({ events, onEventSelect, onNavigate, onS
 
       {/* Bon Plan Evasion Section */}
       <BonPlanEvasionSection onNavigate={onNavigate} />
+
+      {/* Féétiche — Articles blog à la une */}
+      <FeeticheSection onNavigate={onNavigate} />
 
       {/* Replay Bon Plans Section */}
       <ReplayBonPlansSection onNavigate={onNavigate} />

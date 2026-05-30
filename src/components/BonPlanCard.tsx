@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { DiscountBadge } from './DiscountBadge';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { SocialShareButton } from './SocialShareButton';
+import { isDealPromotionActive, DealPromotionBadge } from './PromotionBadge';
 
 interface BonPlan {
   id: string;
@@ -24,6 +25,11 @@ interface BonPlan {
   maxQuantity?: number;
   rating?: number;
   reviewCount?: number;
+  // Champs promotion
+  promotionType?: string | null;
+  promotionStatus?: string | null;
+  promotionStartDate?: string | null;
+  promotionEndDate?: string | null;
 }
 
 interface BonPlanCardProps {
@@ -154,14 +160,19 @@ export function BonPlanCard({
           </div>
 
           {/* Top badges */}
-          <div className="absolute top-4 left-4 flex gap-2">
-            {plan.isPopular && (
-              <Badge className="bg-red-500 text-white border-0">
-                <Star className="w-3 h-3 mr-1" />
-                Populaire
-              </Badge>
+          <div className="absolute top-4 left-4 flex flex-col gap-1.5">
+            {isDealPromotionActive(plan) && plan.promotionType && (
+              <DealPromotionBadge promotionType={plan.promotionType} size="sm" />
             )}
-            <DiscountBadge discount={plan.discount} />
+            <div className="flex gap-2">
+              {plan.isPopular && (
+                <Badge className="bg-red-500 text-white border-0">
+                  <Star className="w-3 h-3 mr-1" />
+                  Populaire
+                </Badge>
+              )}
+              <DiscountBadge discount={plan.discount} />
+            </div>
           </div>
 
           {/* Action buttons top right */}
@@ -323,19 +334,24 @@ export function BonPlanCard({
         </div>
 
         {/* Top badges */}
-        <div className="absolute top-6 left-6 flex gap-2">
-          {plan.isPopular && (
-            <Badge className="bg-red-500 text-white border-0 shadow-lg">
-              <Star className="w-3 h-3 mr-1" />
-              Populaire
-            </Badge>
+        <div className="absolute top-6 left-6 flex flex-col gap-1.5">
+          {isDealPromotionActive(plan) && plan.promotionType && (
+            <DealPromotionBadge promotionType={plan.promotionType} size="md" />
           )}
-          {isExpiringSoon && (
-            <Badge variant="destructive" className="bg-orange-600 border-0 animate-pulse shadow-lg">
-              <Clock className="w-3 h-3 mr-1" />
-              Urgent
-            </Badge>
-          )}
+          <div className="flex gap-2">
+            {plan.isPopular && (
+              <Badge className="bg-red-500 text-white border-0 shadow-lg">
+                <Star className="w-3 h-3 mr-1" />
+                Populaire
+              </Badge>
+            )}
+            {isExpiringSoon && (
+              <Badge variant="destructive" className="bg-orange-600 border-0 animate-pulse shadow-lg">
+                <Clock className="w-3 h-3 mr-1" />
+                Urgent
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Share button top right */}

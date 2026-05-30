@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Tag, MapPin } from 'lucide-react';
 import DealsBackendAPI, { type BackendDeal } from '../services/api/DealsBackendAPI';
+import { isDealPromotionActive, DealPromotionBadge } from './PromotionBadge';
+
+const PROMO_RANK: Record<string, number> = { OR: 4, ARGENT: 3, BRONZE: 2, LITE: 1 };
 
 interface TousNosBonPlansSectionProps {
   onNavigate: (page: string, params?: any) => void;
@@ -18,8 +21,26 @@ export function TousNosBonPlansSection({ onNavigate }: TousNosBonPlansSectionPro
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-    DealsBackendAPI.getDeals({ sortBy: 'popularity', limit: 10 })
-      .then(res => setSliderDeals(res.data.filter(d => d.status === 'published' && d.isPopular)))
+    DealsBackendAPI.getDeals({ sortBy: 'popularity', limit: 20 })
+      .then(res => {
+        const published = res.data.filter(d => d.status === 'published');
+        // Promus en tête (triés par rang pack), puis populaires, puis le reste
+        const sorted = [...published].sort((a, b) => {
+          const aActive = isDealPromotionActive(a);
+          const bActive = isDealPromotionActive(b);
+          if (aActive && !bActive) return -1;
+          if (!aActive && bActive) return 1;
+          if (aActive && bActive) {
+            const rA = PROMO_RANK[a.promotionType ?? ''] ?? 0;
+            const rB = PROMO_RANK[b.promotionType ?? ''] ?? 0;
+            if (rB !== rA) return rB - rA;
+          }
+          if (a.isPopular && !b.isPopular) return -1;
+          if (!a.isPopular && b.isPopular) return 1;
+          return 0;
+        });
+        setSliderDeals(sorted.slice(0, 10));
+      })
       .catch(() => {});
   }, []);
 
@@ -73,6 +94,12 @@ export function TousNosBonPlansSection({ onNavigate }: TousNosBonPlansSectionPro
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#03033b]/85 via-[#16bda0]/35 to-transparent" />
 
+          {/* Badge promotion pack */}
+          {isDealPromotionActive(currentDeal) && currentDeal.promotionType && (
+            <div className="absolute top-4 left-4 z-10">
+              <DealPromotionBadge promotionType={currentDeal.promotionType} size="md" />
+            </div>
+          )}
           {/* Badge réduction */}
           {currentDeal.discount > 0 && (
             <div className="absolute top-4 right-4 z-10 bg-[#de0035] text-white font-bold text-xl px-4 py-2 rounded-xl shadow-lg">

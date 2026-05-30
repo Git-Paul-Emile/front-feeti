@@ -44,7 +44,6 @@ import {
   ArrowLeft,
   Upload,
   Image as ImageIcon,
-  Star,
   Heart
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
@@ -103,14 +102,12 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
       .catch(() => setCategories([]));
   }, []);
 
-  // Toggle featured / favorite
-  const handleToggleHighlight = async (eventId: string, field: 'isFeatured' | 'isFavorite', current: boolean) => {
+  // Toggle favorite
+  const handleToggleFavorite = async (eventId: string) => {
     try {
-      const updated = await EventsBackendAPI.toggleHighlight(eventId, { [field]: !current });
-      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, ...updated } : e));
-      toast.success(field === 'isFeatured'
-        ? (!current ? 'Événement mis en avant !' : 'Événement retiré de la une')
-        : (!current ? 'Événement ajouté aux favoris !' : 'Événement retiré des favoris'));
+      const result = await EventsBackendAPI.toggleFavorite(eventId);
+      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, isFavorite: result.isFavorited } : e));
+      toast.success(result.isFavorited ? 'Événement ajouté aux favoris !' : 'Événement retiré des favoris');
     } catch {
       toast.error('Erreur lors de la mise à jour');
     }
@@ -515,9 +512,6 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
                       {event.isLive && (
                         <Badge className="bg-red-500 text-white">LIVE</Badge>
                       )}
-                      {event.isFeatured && (
-                        <Badge className="bg-amber-400 text-white">À la une</Badge>
-                      )}
                       {event.isFavorite && (
                         <Badge className="bg-pink-500 text-white">Favori</Badge>
                       )}
@@ -527,15 +521,8 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
                     <div className="flex items-center justify-end gap-1">
                       <Button
                         variant="ghost" size="sm"
-                        title={event.isFeatured ? 'Retirer de la une' : 'Mettre à la une'}
-                        onClick={() => handleToggleHighlight(event.id, 'isFeatured', event.isFeatured ?? false)}
-                      >
-                        <Star className={`w-4 h-4 ${event.isFeatured ? 'fill-amber-400 text-amber-400' : 'text-gray-400'}`} />
-                      </Button>
-                      <Button
-                        variant="ghost" size="sm"
                         title={event.isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                        onClick={() => handleToggleHighlight(event.id, 'isFavorite', event.isFavorite ?? false)}
+                        onClick={() => handleToggleFavorite(event.id)}
                       >
                         <Heart className={`w-4 h-4 ${event.isFavorite ? 'fill-pink-500 text-pink-500' : 'text-gray-400'}`} />
                       </Button>

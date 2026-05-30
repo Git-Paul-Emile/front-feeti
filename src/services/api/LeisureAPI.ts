@@ -29,14 +29,13 @@ export interface LeisureItem {
   tags: string;     // JSON array string
   status: string;
   countryCode?: string;
-  isFeatured: boolean;
   latitude?: number;
   longitude?: number;
   createdById: string;
   createdBy?: { id: string; name: string; email: string };
   createdAt: string;
   updatedAt: string;
-  // Système mise en avant loisirs
+  // Système promotion loisirs
   leisureOfferType?: LeisureOfferType | null;
   leisurePackType?: LeisurePackType | null;
   leisurePackStatus?: string | null;
@@ -61,7 +60,6 @@ export interface LeisureItemInput {
   tags?: string;
   status?: string;
   countryCode?: string;
-  isFeatured?: boolean;
 }
 
 const LeisureAPI = {

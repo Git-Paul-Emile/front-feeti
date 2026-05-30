@@ -1,5 +1,15 @@
 import api from '../../routes/axiosConfig';
 
+export interface DealLeisureItem {
+  id: string;
+  name: string;
+  image: string;
+  address?: string;
+  location: string;
+  phone?: string;
+  website?: string;
+}
+
 export interface BackendDeal {
   id: string;
   title: string;
@@ -13,6 +23,10 @@ export interface BackendDeal {
   image: string;
   isPopular: boolean;
   merchantName: string;
+  promotionType?: string | null;
+  promotionStatus?: string | null;
+  promotionStartDate?: string | null;
+  promotionEndDate?: string | null;
   tags: string; // JSON string
   availableQuantity?: number;
   maxQuantity?: number;
@@ -23,6 +37,8 @@ export interface BackendDeal {
   contactWebsite?: string;
   status: string;
   countryCode?: string;
+  leisureItemId?: string;
+  leisureItem?: DealLeisureItem;
   createdById: string;
   createdBy?: { id: string; name: string; email: string };
   createdAt: string;
@@ -68,6 +84,7 @@ export interface DealInput {
   contactWebsite?: string;
   status?: string;
   countryCode?: string;
+  leisureItemId?: string;
 }
 
 export interface DealCategory {
@@ -144,6 +161,11 @@ const DealsBackendAPI = {
 
   async deleteDealCategory(id: string): Promise<void> {
     await api.delete(`/api/admin/deal-categories/${id}`);
+  },
+
+  async getDealsByEstablishment(leisureItemId: string): Promise<BackendDeal[]> {
+    const res = await api.get(`/api/deals/establishment/${leisureItemId}`);
+    return res.data.data;
   },
 };
 

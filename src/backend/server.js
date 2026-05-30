@@ -36,7 +36,6 @@ app.use('/api/tickets', require('./routes/tickets'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/ticket-generation', require('./routes/ticket-generation'));
 app.use('/api/streaming', require('./routes/streaming-access'));
-app.use('/api/event-submissions', require('./routes/event-submissions'));
 
 // Health check
 app.get('/health', (req, res) => {

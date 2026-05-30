@@ -8,7 +8,7 @@ const PageLoader = () => (
 );
 
 interface ProtectedRouteProps {
-  requiredRole?: 'organizer' | 'admin' | 'controller';
+  requiredRole?: 'organizer' | 'admin' | 'controller' | 'establishment_owner';
 }
 
 export function ProtectedRoute({ requiredRole }: ProtectedRouteProps) {
@@ -26,6 +26,10 @@ export function ProtectedRoute({ requiredRole }: ProtectedRouteProps) {
   }
 
   if (requiredRole === 'organizer' && user.role !== 'organizer') {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (requiredRole === 'establishment_owner' && user.role !== 'establishment_owner') {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

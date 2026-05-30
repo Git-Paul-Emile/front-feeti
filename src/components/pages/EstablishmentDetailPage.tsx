@@ -8,6 +8,8 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { toast } from 'sonner';
 import LeisureAPI, { type LeisureItem } from '../../services/api/LeisureAPI';
 import { useAuth } from '../../context/AuthContext';
+import DealsBackendAPI, { type BackendDeal } from '../../services/api/DealsBackendAPI';
+import { Gift, Percent } from 'lucide-react';
 
 interface EstablishmentDetailPageProps {
   onBack: () => void;
@@ -24,6 +26,7 @@ export function EstablishmentDetailPage({ onBack, establishmentId }: Establishme
   const [item, setItem] = useState<LeisureItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [deals, setDeals] = useState<BackendDeal[]>([]);
 
   useEffect(() => {
     if (!establishmentId) { setLoading(false); return; }
@@ -31,6 +34,9 @@ export function EstablishmentDetailPage({ onBack, establishmentId }: Establishme
       .then(setItem)
       .catch(() => setItem(null))
       .finally(() => setLoading(false));
+    DealsBackendAPI.getDealsByEstablishment(establishmentId)
+      .then(setDeals)
+      .catch(() => setDeals([]));
   }, [establishmentId]);
 
   useEffect(() => {
@@ -195,6 +201,51 @@ export function EstablishmentDetailPage({ onBack, establishmentId }: Establishme
               {features.map((f, i) => (
                 <Badge key={i} variant="outline" className="text-sm px-3 py-1">{f}</Badge>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Bons plans en cours */}
+        {deals.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Gift className="w-5 h-5 text-red-500" />
+              Bons plans en cours ({deals.length})
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {deals.map(deal => {
+                const daysLeft = Math.max(0, Math.ceil((new Date(deal.validUntil).getTime() - Date.now()) / 86400000));
+                return (
+                  <Card key={deal.id} className="overflow-hidden border-red-100 hover:shadow-md transition-shadow">
+                    <div className="flex">
+                      {deal.image && (
+                        <div className="w-20 shrink-0">
+                          <ImageWithFallback src={deal.image} alt={deal.title} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <CardContent className="p-3 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-medium text-sm text-gray-900 leading-tight line-clamp-2">{deal.title}</p>
+                          <Badge className="bg-red-100 text-red-700 shrink-0 text-xs">
+                            <Percent className="w-3 h-3 mr-0.5" />{deal.discount}%
+                          </Badge>
+                        </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="text-sm font-bold text-gray-900">
+                            {new Intl.NumberFormat('fr-FR').format(deal.discountedPrice)} FCFA
+                          </span>
+                          <span className="text-xs text-gray-400 line-through">
+                            {new Intl.NumberFormat('fr-FR').format(deal.originalPrice)}
+                          </span>
+                        </div>
+                        {daysLeft > 0 && (
+                          <p className="text-xs text-amber-600 mt-0.5">{daysLeft} jour{daysLeft > 1 ? 's' : ''} restant{daysLeft > 1 ? 's' : ''}</p>
+                        )}
+                      </CardContent>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         )}

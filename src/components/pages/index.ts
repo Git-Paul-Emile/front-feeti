@@ -24,5 +24,4 @@ export { BackOfficeDashboard } from './BackOfficeDashboard'; // Firebase Back Of
 export { ReplayPage } from './ReplayPage';
 export { LiveEventsPage } from './LiveEventsPage';
 export { EstablishmentDetailPage } from './EstablishmentDetailPage';
-export { EventSubmissionPage } from './EventSubmissionPage';
 export { OrganizerEventDashboard } from './OrganizerEventDashboard';

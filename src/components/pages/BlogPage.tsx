@@ -55,6 +55,7 @@ export function BlogPage({ onBack, onPostSelect, onNavigate, initialCategory = '
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [featuredPosts, setFeaturedPosts] = useState<BlogPost[]>([]);
 
   const fetchPosts = useCallback(async (reset = false) => {
     setIsLoading(true);
@@ -83,6 +84,10 @@ export function BlogPage({ onBack, onPostSelect, onNavigate, initialCategory = '
 
   useEffect(() => {
     BlogAPI.getCategories().then(setCategories).catch(() => {});
+    // Fetch featured posts independamment (épinglés en haut, toujours visibles)
+    BlogAPI.getPosts({ isFeatured: true, limit: 3, sort: 'date' })
+      .then(res => setFeaturedPosts(res.posts))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -167,18 +172,24 @@ export function BlogPage({ onBack, onPostSelect, onNavigate, initialCategory = '
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Featured Post */}
-        {featuredPost && selectedCategory === 'all' && !searchQuery && (
+        {/* Articles à la une — épinglés en haut, indépendants des filtres */}
+        {featuredPosts.length > 0 && selectedCategory === 'all' && !searchQuery && (
           <div className="mb-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-              <Star className="w-6 h-6 text-yellow-500 mr-2" />
-              Article à la une
-            </h2>
-            <FigmaBlogCard
-              post={toCardPost(featuredPost)}
-              onReadMore={handlePostSelect}
-              variant="featured"
-            />
+            <div className="flex items-center gap-2 mb-6">
+              <span className="w-1.5 h-6 rounded-full bg-amber-400 inline-block" />
+              <h2 className="text-2xl font-bold text-gray-900">À la une</h2>
+            </div>
+            <div className={featuredPosts.length === 1 ? '' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'}>
+              {featuredPosts.map((post, idx) => (
+                <div key={post.id} className={idx === 0 && featuredPosts.length > 1 ? 'md:col-span-2' : ''}>
+                  <FigmaBlogCard
+                    post={toCardPost(post)}
+                    onReadMore={handlePostSelect}
+                    variant={idx === 0 ? 'featured' : 'default'}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

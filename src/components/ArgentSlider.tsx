@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Ticket, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { EventPromotionBadge, isEventPromotionActive } from './PromotionBadge';
+import { isEventPromotionActive } from './PromotionBadge';
 
 interface Event {
   id: string;
@@ -81,7 +81,6 @@ export function ArgentSlider({ events, onPurchase }: ArgentSliderProps) {
       <div className="max-w-7xl mx-auto">
         {/* Label section */}
         <div className="flex items-center gap-3 mb-3">
-          <EventPromotionBadge promotionType="ARGENT" size="md" />
           <span className="text-sm text-gray-500 font-medium">Événements recommandés</span>
         </div>
 

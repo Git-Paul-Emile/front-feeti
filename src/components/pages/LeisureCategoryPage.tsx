@@ -8,6 +8,7 @@ import { Dialog, DialogContent } from '../ui/dialog';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { toast } from 'sonner';
 import LeisureAPI, { type LeisureItem } from '../../services/api/LeisureAPI';
+import { LeisurePromotionBadge, isLeisurePackActive } from '../PromotionBadge';
 import { useAuth } from '../../context/AuthContext';
 import { useCountry } from '../../context/CountryContext';
 
@@ -169,9 +170,14 @@ export function LeisureCategoryPage({ categorySlug, pageTitle, heroBg }: Leisure
                           </svg>
                         </button>
                       </div>
-                      {item.isFeatured && (
+                      {(item.leisureOfferType === 'PREMIUM' || item.leisureOfferType === 'PRO' || isLeisurePackActive(item)) && (
                         <div className="absolute top-4 left-4">
-                          <Badge className="bg-amber-500 text-white">Recommandé</Badge>
+                          <LeisurePromotionBadge
+                            offerType={item.leisureOfferType as any}
+                            packType={item.leisurePackType as any}
+                            packStatus={item.leisurePackStatus}
+                            size="sm"
+                          />
                         </div>
                       )}
                       {item.rating && (
@@ -195,9 +201,14 @@ export function LeisureCategoryPage({ categorySlug, pageTitle, heroBg }: Leisure
               {/* Image only */}
               <div className="relative h-[240px] flex-shrink-0 rounded-t-[24px] overflow-hidden">
                 <ImageWithFallback src={detailItem.image} alt={detailItem.name} className="w-full h-full object-cover" />
-                {detailItem.isFeatured && (
+                {(detailItem.leisureOfferType === 'PREMIUM' || detailItem.leisureOfferType === 'PRO' || isLeisurePackActive(detailItem)) && (
                   <div className="absolute top-4 left-4">
-                    <Badge className="bg-amber-500 text-white">Recommandé</Badge>
+                    <LeisurePromotionBadge
+                      offerType={detailItem.leisureOfferType as any}
+                      packType={detailItem.leisurePackType as any}
+                      packStatus={detailItem.leisurePackStatus}
+                      size="sm"
+                    />
                   </div>
                 )}
                 <button

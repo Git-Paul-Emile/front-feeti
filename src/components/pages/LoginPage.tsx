@@ -12,6 +12,52 @@ import { resetPassword } from '../../services/firebase-auth';
 import { CategoryTab, getCategoryIcon } from '../CategorySelector';
 import CountryAPI, { type Country } from '../../services/api/CountryAPI';
 
+const CITIES_BY_COUNTRY: Record<string, string[]> = {
+  'Congo': ['Brazzaville', 'Pointe-Noire', 'Dolisie', 'Nkayi', 'Ouesso', 'Impfondo', 'Madingou', 'Owando', 'Sibiti', 'Mossendjo'],
+  'République du Congo': ['Brazzaville', 'Pointe-Noire', 'Dolisie', 'Nkayi', 'Ouesso', 'Impfondo', 'Madingou', 'Owando', 'Sibiti', 'Mossendjo'],
+  'RDC': ['Kinshasa', 'Lubumbashi', 'Mbuji-Mayi', 'Kananga', 'Kisangani', 'Goma', 'Bukavu', 'Bunia', 'Matadi', 'Kolwezi'],
+  'République Démocratique du Congo': ['Kinshasa', 'Lubumbashi', 'Mbuji-Mayi', 'Kananga', 'Kisangani', 'Goma', 'Bukavu', 'Bunia', 'Matadi', 'Kolwezi'],
+  'Cameroun': ['Yaoundé', 'Douala', 'Garoua', 'Bafoussam', 'Bamenda', 'Maroua', 'Nkongsamba', 'Ngaoundéré', 'Bertoua'],
+  'Gabon': ['Libreville', 'Port-Gentil', 'Franceville', 'Oyem', 'Moanda', 'Mouila', 'Lambaréné', 'Tchibanga'],
+  "Côte d'Ivoire": ['Abidjan', 'Bouaké', 'Daloa', 'San-Pédro', 'Yamoussoukro', 'Divo', 'Man', 'Gagnoa', 'Korhogo'],
+  'Sénégal': ['Dakar', 'Thiès', 'Kaolack', 'Saint-Louis', 'Ziguinchor', 'Mbour', 'Diourbel', 'Tambacounda'],
+  'Mali': ['Bamako', 'Sikasso', 'Ségou', 'Mopti', 'Kayes', 'Gao', 'Koutiala', 'Kidal'],
+  'Burkina Faso': ['Ouagadougou', 'Bobo-Dioulasso', 'Koudougou', 'Banfora', 'Ouahigouya', 'Kaya'],
+  'Niger': ['Niamey', 'Zinder', 'Maradi', 'Agadez', 'Dosso', 'Tahoua', 'Diffa'],
+  'Tchad': ["N'Djamena", 'Moundou', 'Sarh', 'Abéché', 'Kélo', 'Bongor'],
+  'Centrafrique': ['Bangui', 'Bimbo', 'Carnot', 'Bambari', 'Bangassou', 'Berberati'],
+  'Togo': ['Lomé', 'Sokodé', 'Kara', 'Atakpamé', 'Bassar', 'Tsévié'],
+  'Bénin': ['Cotonou', 'Porto-Novo', 'Parakou', 'Abomey', 'Natitingou', 'Bohicon'],
+  'Guinée': ['Conakry', 'Nzérékoré', 'Kankan', 'Kindia', 'Labé', 'Boké'],
+  'Guinée Équatoriale': ['Malabo', 'Bata', 'Ebebiyín', 'Aconibe', 'Evinayong'],
+  'Angola': ['Luanda', 'Huambo', 'Lobito', 'Benguela', 'Kuito', 'Lubango'],
+  'France': ['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier', 'Bordeaux', 'Lille'],
+  'Belgique': ['Bruxelles', 'Anvers', 'Gand', 'Liège', 'Bruges', 'Namur'],
+};
+
+const DIAL_CODES_BY_COUNTRY: Record<string, string> = {
+  'Congo': '+242',
+  'République du Congo': '+242',
+  'RDC': '+243',
+  'République Démocratique du Congo': '+243',
+  'Cameroun': '+237',
+  'Gabon': '+241',
+  "Côte d'Ivoire": '+225',
+  'Sénégal': '+221',
+  'Mali': '+223',
+  'Burkina Faso': '+226',
+  'Niger': '+227',
+  'Tchad': '+235',
+  'Centrafrique': '+236',
+  'Togo': '+228',
+  'Bénin': '+229',
+  'Guinée': '+224',
+  'Guinée Équatoriale': '+240',
+  'Angola': '+244',
+  'France': '+33',
+  'Belgique': '+32',
+};
+
 const EVENT_CATEGORIES = [
   { slug: 'musique',     label: 'Musique' },
   { slug: 'concert',     label: 'Concert' },
@@ -54,7 +100,7 @@ interface RegisterFields {
   phone?: string;
   password: string;
   confirmPassword: string;
-  role: 'user' | 'organizer';
+  role: 'user' | 'organizer' | 'establishment_owner';
   country: string;
   city: string;
   acceptTerms: boolean;
@@ -475,12 +521,21 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
     handleSubmit,
     watch,
     setError,
+    setValue,
     getValues,
     formState: { errors },
   } = useForm<RegisterFields>({ mode: 'onBlur' });
 
   const roleValue = watch('role');
   const passwordValue = watch('password');
+  const countryValue = watch('country');
+  const availableCities = CITIES_BY_COUNTRY[countryValue] ?? [];
+  const selectedCountry = countries.find(c => c.name === countryValue);
+  const dialCode = DIAL_CODES_BY_COUNTRY[countryValue] ?? '';
+
+  useEffect(() => {
+    setValue('city', '');
+  }, [countryValue, setValue]);
 
   const toggleInterest = (slug: string) => {
     setSelectedInterests(prev =>
@@ -494,7 +549,7 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
       // Passer à l'étape 2 pour choisir les intérêts
       setStep(2);
     } else {
-      // Organisateur : inscription directe sans intérêts
+      // Organisateur / Propriétaire établissement : inscription directe sans intérêts
       await submitRegistration(data, []);
     }
   };
@@ -597,8 +652,19 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
       {/* Téléphone */}
       <div>
         <div className={inputClass(!!errors.phone)}>
-          <DrapeauCongo />
-          <span className="text-[#adb3bc] text-[18.35px] font-medium tracking-[-0.734px] font-['Inter',sans-serif] ml-2">+242</span>
+          {selectedCountry ? (
+            <>
+              <span className="text-[22px] leading-none">{selectedCountry.flag}</span>
+              <span className="text-[#adb3bc] text-[18.35px] font-medium tracking-[-0.734px] font-['Inter',sans-serif] ml-2">
+                {dialCode || ''}
+              </span>
+            </>
+          ) : (
+            <>
+              <DrapeauCongo />
+              <span className="text-[#adb3bc] text-[18.35px] font-medium tracking-[-0.734px] font-['Inter',sans-serif] ml-2">+242</span>
+            </>
+          )}
           <div className="h-[34px] w-px bg-[#C0A9ED] opacity-50 mx-2" />
           <input
             type="tel"
@@ -608,7 +674,7 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
             {...register('phone', {
               validate: (v) => {
                 if (!v) return true;
-                return /^[0-9]{8,9}$/.test(v) || 'Numéro invalide (8-9 chiffres sans indicatif)';
+                return /^[0-9]{6,15}$/.test(v) || 'Numéro invalide (chiffres uniquement, sans indicatif)';
               },
             })}
           />
@@ -620,13 +686,16 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
       <div>
         <div className={inputClass(!!errors.country)}>
           <select
-            className="w-full bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',sans-serif] [&>option]:text-black"
+            className="w-full bg-transparent text-white text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',sans-serif]"
+            style={{ colorScheme: 'dark' }}
             {...register('country', { required: 'Le pays est requis' })}
             defaultValue=""
           >
-            <option value="" disabled>Votre pays</option>
+            <option value="" disabled style={{ background: '#1e1b4b', color: '#adb3bc' }}>Votre pays</option>
             {countries.map(c => (
-              <option key={c.code} value={c.name}>{c.flag} {c.name}</option>
+              <option key={c.code} value={c.name} style={{ background: '#1e1b4b', color: '#ffffff' }}>
+                {c.flag} {c.name}
+              </option>
             ))}
           </select>
         </div>
@@ -636,16 +705,30 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
       {/* Ville */}
       <div>
         <div className={inputClass(!!errors.city)}>
-          <input
-            type="text"
-            placeholder="Votre ville"
-            autoComplete="address-level2"
-            className="w-full bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',sans-serif]"
-            {...register('city', {
-              required: 'La ville est requise',
-              minLength: { value: 2, message: 'Minimum 2 caractères' },
-            })}
-          />
+          {availableCities.length > 0 ? (
+            <select
+              className="w-full bg-transparent text-white text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',sans-serif]"
+              style={{ colorScheme: 'dark' }}
+              {...register('city', { required: 'La ville est requise' })}
+              defaultValue=""
+            >
+              <option value="" disabled style={{ background: '#1e1b4b', color: '#adb3bc' }}>Votre ville</option>
+              {availableCities.map(city => (
+                <option key={city} value={city} style={{ background: '#1e1b4b', color: '#ffffff' }}>{city}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              placeholder="Votre ville"
+              autoComplete="address-level2"
+              className="w-full bg-transparent text-white placeholder:text-[#adb3bc] text-[18px] tracking-[-0.72px] border-none outline-none font-['Inter',sans-serif]"
+              {...register('city', {
+                required: 'La ville est requise',
+                minLength: { value: 2, message: 'Minimum 2 caractères' },
+              })}
+            />
+          )}
         </div>
         <FieldError message={errors.city?.message} />
       </div>
@@ -686,7 +769,7 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
       <div>
         <p className="text-white/70 text-[14px] font-['Inter',sans-serif] mb-2">Je suis :</p>
         <div className="flex gap-3">
-          {(['user', 'organizer'] as const).map((r) => {
+          {(['user', 'organizer', 'establishment_owner'] as const).map((r) => {
             const isSelected = roleValue === r;
             return (
               <label
@@ -709,7 +792,7 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
                   {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#0e0434]" />}
                 </span>
                 <span className="text-[15px] font-['Inter',sans-serif]">
-                  {r === 'user' ? 'Participant' : 'Organisateur'}
+                  {r === 'user' ? 'Participant' : r === 'organizer' ? 'Organisateur' : 'Propriétaire établ.'}
                 </span>
               </label>
             );

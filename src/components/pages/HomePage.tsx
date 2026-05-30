@@ -12,7 +12,6 @@ import { LoisirsAlaUneSection } from '../LoisirsAlaUneSection';
 import { LoisirsADecouvrirSection } from '../LoisirsADecouvrirSection';
 import { ReplayBonPlansSection } from '../ReplayBonPlansSection';
 import { BonPlanEvasionSection } from '../BonPlanEvasionSection';
-import { FeeticheSection } from '../FeeticheSection';
 
 import { Zap, Shield, Smartphone } from 'lucide-react';
 import svgPaths from "../../imports/svg-oz78jhj51j";
@@ -240,9 +239,6 @@ const HomePage = memo(function HomePage({ events, onEventSelect, onNavigate, onS
 
       {/* Bon Plan Evasion Section */}
       <BonPlanEvasionSection onNavigate={onNavigate} />
-
-      {/* Féétiche — Articles blog à la une */}
-      <FeeticheSection onNavigate={onNavigate} />
 
       {/* Replay Bon Plans Section */}
       <ReplayBonPlansSection onNavigate={onNavigate} />

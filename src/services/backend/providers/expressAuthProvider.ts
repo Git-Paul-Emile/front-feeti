@@ -32,6 +32,7 @@ function rethrowUserFacing(e: unknown): never {
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
 const PENDING_GOOGLE_TOKEN_KEY = "feeti2_google_pending_token";
+const PENDING_GOOGLE_NAME_KEY  = "feeti2_google_pending_name";
 const PENDING_GOOGLE_REDIRECT_KEY = "feeti2_google_redirect_pending";
 
 export class ExpressAuthProvider implements AuthProvider {
@@ -105,8 +106,14 @@ export class ExpressAuthProvider implements AuthProvider {
         };
         window.sessionStorage.removeItem(PENDING_GOOGLE_REDIRECT_KEY);
 
+        const savePendingGoogle = (token: string, name?: string) => {
+          window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, token);
+          if (name) window.sessionStorage.setItem(PENDING_GOOGLE_NAME_KEY, name);
+          else window.sessionStorage.removeItem(PENDING_GOOGLE_NAME_KEY);
+        };
+
         if (info?.isNewUser) {
-          window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, idToken);
+          savePendingGoogle(idToken, prefill.name);
           return { requiresCompletion: true, prefill };
         }
 
@@ -116,12 +123,18 @@ export class ExpressAuthProvider implements AuthProvider {
         } catch (err) {
           if (err instanceof ApiError && err.status === 404) {
             // Profil backend absent (inscription précédemment abandonnée)
-            window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, idToken);
+            savePendingGoogle(idToken, prefill.name);
             return { requiresCompletion: true, prefill };
           }
           throw err;
         }
       }
+
+      const savePendingGoogle = (token: string, name?: string) => {
+        window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, token);
+        if (name) window.sessionStorage.setItem(PENDING_GOOGLE_NAME_KEY, name);
+        else window.sessionStorage.removeItem(PENDING_GOOGLE_NAME_KEY);
+      };
 
       // Essayer d'abord la popup
       let popupResult;
@@ -151,7 +164,7 @@ export class ExpressAuthProvider implements AuthProvider {
       };
 
       if (info?.isNewUser) {
-        window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, idToken);
+        savePendingGoogle(idToken, prefill.name);
         return { requiresCompletion: true, prefill };
       }
 
@@ -161,7 +174,7 @@ export class ExpressAuthProvider implements AuthProvider {
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) {
           // Profil backend absent (inscription précédemment abandonnée)
-          window.sessionStorage.setItem(PENDING_GOOGLE_TOKEN_KEY, idToken);
+          savePendingGoogle(idToken, prefill.name);
           return { requiresCompletion: true, prefill };
         }
         throw err;
@@ -179,6 +192,7 @@ export class ExpressAuthProvider implements AuthProvider {
     try {
       const user = await AuthAPI.registerProfile(data, idToken);
       window.sessionStorage.removeItem(PENDING_GOOGLE_TOKEN_KEY);
+      window.sessionStorage.removeItem(PENDING_GOOGLE_NAME_KEY);
       return user;
     } catch (e) {
       rethrowUserFacing(e);

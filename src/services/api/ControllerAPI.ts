@@ -59,6 +59,12 @@ const ControllerAPI = {
     await api.delete(`/api/controller/events/${eventId}/controllers/${controllerId}`);
   },
 
+  /** Modifier les infos d'un contrôleur (nom, téléphone, mot de passe) */
+  async update(eventId: string, controllerId: string, data: { name?: string; phone?: string; password?: string }): Promise<{ id: string; name: string; email: string; phone?: string }> {
+    const res = await api.patch<{ data: any }>(`/api/controller/events/${eventId}/controllers/${controllerId}`, data);
+    return res.data.data!;
+  },
+
   // ── Contrôleur : son dashboard ────────────────────────────────────────────
 
   /** Événements assignés au contrôleur connecté */

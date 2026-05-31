@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import axiosInstance from '../../api/axiosConfig';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
 import EventsBackendAPI from '../../services/api/EventsBackendAPI';
 import { EventPromotionBadge, isEventPromotionActive } from '../PromotionBadge';
 import { PromoteEventModal } from '../PromoteEventModal';
@@ -142,10 +146,37 @@ export function OrganizerDashboard({
   }>>([]);
   const [visibleNotifications, setVisibleNotifications] = useState<Set<string>>(new Set());
 
+  const [tendances, setTendances] = useState<Array<{
+    mois: string; label: string; totalTTC: number; net: number; count: number;
+  }>>([]);
+  const [revenusParEvent, setRevenusParEvent] = useState<Array<{
+    eventId: string;
+    eventTitle: string;
+    billets: number;
+    montantTTC: number;
+    netOrganisateur: number;
+    formatted: { net: string; ttc: string };
+  }>>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
+
   useEffect(() => {
     CategoriesAPI.getAll()
       .then(cats => setCategories(cats.map(c => c.name)))
       .catch(() => setCategories([]));
+  }, []);
+
+  useEffect(() => {
+    setStatsLoading(true);
+    Promise.all([
+      axiosInstance.get('/reporting/tendances?mois=6'),
+      axiosInstance.get('/reporting/dashboard'),
+    ])
+      .then(([tendancesRes, dashRes]) => {
+        setTendances(tendancesRes.data.data ?? []);
+        setRevenusParEvent(dashRes.data.data?.revenusParEvenement ?? []);
+      })
+      .catch(() => {})
+      .finally(() => setStatsLoading(false));
   }, []);
 
   const formatDate = (dateStr: string) => {
@@ -166,6 +197,16 @@ export function OrganizerDashboard({
       style: 'currency',
       currency: currency
     }).format(price);
+  };
+
+  const formatRevenue = (amount: number, currency: string) => {
+    if (currency === 'FCFA') {
+      return new Intl.NumberFormat('fr-FR').format(amount) + ' FCFA';
+    }
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: currency
+    }).format(amount);
   };
 
   const handleToggleSales = useCallback(async (event: Event) => {
@@ -1150,15 +1191,15 @@ export function OrganizerDashboard({
                             {formatPrice(event.price, event.currency)}
                           </span>
                           <span className="text-sm text-gray-600">
-                            {formatPrice(event.price * event.attendees, event.currency)} revenus
+                            {formatRevenue(event.totalRevenue ?? event.price * event.attendees, event.currency)} revenus
                           </span>
                         </div>
                         <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
                           <Badge
-                            variant={event.status === 'published' ? 'default' : 'secondary'}
-                            className={event.status === 'published' ? 'bg-green-100 text-green-800' : ''}
+                            variant={event.status === 'published' ? 'default' : event.status === 'rejected' ? 'destructive' : 'secondary'}
+                            className={event.status === 'published' ? 'bg-green-100 text-green-800' : event.status === 'rejected' ? '' : 'bg-amber-100 text-amber-800'}
                           >
-                            {event.status === 'published' ? 'Publié' : 'Brouillon'}
+                            {event.status === 'published' ? 'Publié' : event.status === 'rejected' ? 'Rejeté' : 'En attente de validation'}
                           </Badge>
                           {isEventPromotionActive(event) && event.promotionType && (
                             <EventPromotionBadge promotionType={event.promotionType as any} size="sm" />
@@ -1267,7 +1308,7 @@ export function OrganizerDashboard({
                           <div className="flex items-center space-x-4">
                             <div className="text-right">
                               <p className="font-bold text-gray-900">
-                                {formatPrice(event.price * event.attendees, event.currency)}
+                                {formatRevenue(event.totalRevenue ?? event.price * event.attendees, event.currency)}
                               </p>
                               <p className="text-sm text-gray-600">Revenus</p>
                             </div>
@@ -1323,13 +1364,33 @@ export function OrganizerDashboard({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Revenus par mois</CardTitle>
+                  <CardTitle>Revenus nets par mois (6 derniers mois)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64 flex items-center justify-center text-gray-500">
-                    <BarChart3 className="w-8 h-8 mr-2" />
-                    Graphique des revenus (simulation)
-                  </div>
+                  {statsLoading ? (
+                    <div className="h-64 flex items-center justify-center text-gray-400">Chargement...</div>
+                  ) : tendances.length === 0 ? (
+                    <div className="h-64 flex items-center justify-center text-gray-400">
+                      <BarChart3 className="w-8 h-8 mr-2" />
+                      Aucune donnée sur la période
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={256}>
+                      <BarChart data={tendances} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                        <YAxis
+                          tickFormatter={(v: number) => `${(v / 100).toLocaleString('fr-FR')}`}
+                          tick={{ fontSize: 10 }}
+                          width={70}
+                        />
+                        <Tooltip
+                          formatter={(val: number) => [`${(val / 100).toLocaleString('fr-FR')} FCFA`, 'Net organisateur']}
+                        />
+                        <Bar dataKey="net" name="Net organisateur" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1338,10 +1399,35 @@ export function OrganizerDashboard({
                   <CardTitle>Participants par événement</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64 flex items-center justify-center text-gray-500">
-                    <Users className="w-8 h-8 mr-2" />
-                    Graphique des participants (simulation)
-                  </div>
+                  {organizerEvents.length === 0 ? (
+                    <div className="h-64 flex items-center justify-center text-gray-400">
+                      <Users className="w-8 h-8 mr-2" />
+                      Aucun événement
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={256}>
+                      <BarChart
+                        data={organizerEvents.slice(0, 8).map(e => ({
+                          name: e.title.length > 15 ? e.title.slice(0, 15) + '…' : e.title,
+                          participants: e.attendees,
+                          capacite: e.maxAttendees,
+                        }))}
+                        margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip
+                          formatter={(val: number, name: string) => [
+                            val,
+                            name === 'participants' ? 'Participants' : 'Capacité max',
+                          ]}
+                        />
+                        <Bar dataKey="participants" name="Participants" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="capacite" name="Capacité max" fill="#d1fae5" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -1350,25 +1436,58 @@ export function OrganizerDashboard({
               <CardHeader>
                 <CardTitle>Performance des événements</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {organizerEvents.slice(0, 5).map((event) => (
-                    <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <h4 className="font-medium text-gray-900">{event.title}</h4>
-                        <p className="text-sm text-gray-600">{event.attendees} participants</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-gray-900">
-                          {formatPrice(event.price * event.attendees, event.currency)}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {Math.round((event.attendees / event.maxAttendees) * 100)}% rempli
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <CardContent className="overflow-x-auto">
+                {organizerEvents.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-8">Aucun événement</p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                        <th className="py-2 pr-4 text-left font-medium">Événement</th>
+                        <th className="py-2 px-3 text-right font-medium">Billets vendus</th>
+                        <th className="py-2 px-3 text-right font-medium">TTC encaissé</th>
+                        <th className="py-2 px-3 text-right font-medium">Net organisateur</th>
+                        <th className="py-2 pl-3 text-left font-medium w-36">Remplissage</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {organizerEvents.map((event) => {
+                        const stats = revenusParEvent.find(r => r.eventId === event.id);
+                        const fillPct = event.maxAttendees > 0
+                          ? Math.min(100, Math.round((event.attendees / event.maxAttendees) * 100))
+                          : 0;
+                        return (
+                          <tr key={event.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="py-3 pr-4">
+                              <p className="font-medium text-gray-900 truncate max-w-[180px]">{event.title}</p>
+                              <p className="text-xs text-gray-400">{formatDate(event.date)}</p>
+                            </td>
+                            <td className="py-3 px-3 text-right text-gray-700">
+                              {stats ? stats.billets : event.attendees}
+                            </td>
+                            <td className="py-3 px-3 text-right font-medium text-gray-900">
+                              {stats ? stats.formatted.ttc : formatRevenue(event.price * event.attendees, event.currency)}
+                            </td>
+                            <td className="py-3 px-3 text-right font-semibold text-indigo-700">
+                              {stats ? stats.formatted.net : '—'}
+                            </td>
+                            <td className="py-3 pl-3">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-gray-100 rounded-full h-2">
+                                  <div
+                                    className="h-2 rounded-full bg-indigo-500"
+                                    style={{ width: `${fillPct}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-gray-500 w-9 text-right">{fillPct}%</span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1450,8 +1569,11 @@ export function OrganizerDashboard({
               )}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-bold text-xl text-gray-900">{viewOrgEvent.title}</span>
-                <Badge variant={viewOrgEvent.status === 'published' ? 'default' : 'secondary'}>
-                  {viewOrgEvent.status === 'published' ? 'Publié' : viewOrgEvent.status === 'draft' ? 'Brouillon / En attente' : viewOrgEvent.status}
+                <Badge
+                  variant={viewOrgEvent.status === 'published' ? 'default' : viewOrgEvent.status === 'rejected' ? 'destructive' : 'secondary'}
+                  className={viewOrgEvent.status === 'draft' ? 'bg-amber-100 text-amber-800' : ''}
+                >
+                  {viewOrgEvent.status === 'published' ? 'Publié' : viewOrgEvent.status === 'rejected' ? 'Rejeté' : 'En attente de validation'}
                 </Badge>
                 {viewOrgEvent.isLive && <Badge className="bg-red-500 text-white">LIVE</Badge>}
               </div>

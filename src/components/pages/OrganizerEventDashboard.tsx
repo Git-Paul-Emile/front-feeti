@@ -31,6 +31,10 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  Pencil,
+  Info,
+  Mail,
+  Phone,
 } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -99,6 +103,15 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
   const [ctrlShowPwd, setCtrlShowPwd] = useState(false);
   const [ctrlSaving, setCtrlSaving] = useState(false);
   const [ctrlDeleting, setCtrlDeleting] = useState<string | null>(null);
+  // Détails / Modifier / Supprimer
+  const [ctrlDetails, setCtrlDetails] = useState<EventControllerAssignment | null>(null);
+  const [ctrlEdit, setCtrlEdit] = useState<EventControllerAssignment | null>(null);
+  const [ctrlEditName, setCtrlEditName] = useState('');
+  const [ctrlEditPhone, setCtrlEditPhone] = useState('');
+  const [ctrlEditPassword, setCtrlEditPassword] = useState('');
+  const [ctrlEditShowPwd, setCtrlEditShowPwd] = useState(false);
+  const [ctrlEditSaving, setCtrlEditSaving] = useState(false);
+  const [ctrlConfirmDelete, setCtrlConfirmDelete] = useState<EventControllerAssignment | null>(null);
 
   const computeStats = useCallback((ticketList: BackendTicket[]): EventStats => {
     const sold = ticketList.length;
@@ -186,10 +199,11 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
     }
   }, [event.id, ctrlName, ctrlEmail, ctrlPassword, ctrlPhone, loadControllers]);
 
-  const handleRemoveController = useCallback(async (assignmentId: string) => {
-    setCtrlDeleting(assignmentId);
+  const handleRemoveController = useCallback(async (assignment: EventControllerAssignment) => {
+    setCtrlDeleting(assignment.id);
+    setCtrlConfirmDelete(null);
     try {
-      await ControllerAPI.remove(event.id, assignmentId);
+      await ControllerAPI.remove(event.id, assignment.id);
       toast.success('Contrôleur retiré');
       await loadControllers();
     } catch (err: unknown) {
@@ -199,6 +213,34 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
       setCtrlDeleting(null);
     }
   }, [event.id, loadControllers]);
+
+  const openEditController = useCallback((c: EventControllerAssignment) => {
+    setCtrlEdit(c);
+    setCtrlEditName(c.controller.name);
+    setCtrlEditPhone(c.controller.phone ?? '');
+    setCtrlEditPassword('');
+    setCtrlEditShowPwd(false);
+  }, []);
+
+  const handleEditController = useCallback(async () => {
+    if (!ctrlEdit) return;
+    if (!ctrlEditName.trim()) { toast.error('Le nom est requis'); return; }
+    setCtrlEditSaving(true);
+    try {
+      await ControllerAPI.update(event.id, ctrlEdit.controllerId, {
+        name: ctrlEditName.trim(),
+        phone: ctrlEditPhone.trim() || undefined,
+        ...(ctrlEditPassword ? { password: ctrlEditPassword } : {}),
+      });
+      toast.success('Contrôleur mis à jour');
+      setCtrlEdit(null);
+      await loadControllers();
+    } catch (err: unknown) {
+      toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la modification'));
+    } finally {
+      setCtrlEditSaving(false);
+    }
+  }, [event.id, ctrlEdit, ctrlEditName, ctrlEditPhone, ctrlEditPassword, loadControllers]);
 
   const handleQRScan = useCallback(async (qrData: string) => {
     try {
@@ -615,23 +657,23 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
                             <p className="font-medium text-gray-900">{c.controller.name}</p>
                             <p className="text-sm text-gray-500">{c.controller.email}</p>
                             {c.controller.phone && <p className="text-xs text-gray-400">{c.controller.phone}</p>}
+                            <p className="text-xs text-gray-400">Depuis le {new Date(c.assignedAt).toLocaleDateString('fr-FR')}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400 hidden sm:block">
-                            Depuis le {new Date(c.assignedAt).toLocaleDateString('fr-FR')}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            disabled={ctrlDeleting === c.id}
-                            onClick={() => handleRemoveController(c.id)}
-                          >
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" className="text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
+                            onClick={() => setCtrlDetails(c)} title="Voir les détails">
+                            <Info className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-gray-500 hover:text-amber-600 hover:bg-amber-50"
+                            onClick={() => openEditController(c)} title="Modifier">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            disabled={ctrlDeleting === c.id} onClick={() => setCtrlConfirmDelete(c)} title="Retirer">
                             {ctrlDeleting === c.id
                               ? <div className="w-4 h-4 animate-spin rounded-full border-2 border-red-300 border-t-red-600" />
-                              : <Trash2 className="w-4 h-4" />
-                            }
+                              : <Trash2 className="w-4 h-4" />}
                           </Button>
                         </div>
                       </div>
@@ -641,6 +683,138 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* ── Dialog Détails contrôleur ─────────────────────────────── */}
+          <Dialog open={!!ctrlDetails} onOpenChange={open => { if (!open) setCtrlDetails(null); }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <UserCheck className="w-5 h-5 text-indigo-600" />
+                  Détails du contrôleur
+                </DialogTitle>
+              </DialogHeader>
+              {ctrlDetails && (
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
+                      <UserCheck className="w-7 h-7 text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">{ctrlDetails.controller.name}</p>
+                      <p className="text-sm text-gray-500">Contrôleur de billets</p>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg divide-y divide-gray-100">
+                    <div className="flex items-center gap-3 p-3">
+                      <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                      <div>
+                        <p className="text-xs text-gray-400">Email</p>
+                        <p className="text-sm font-medium text-gray-800">{ctrlDetails.controller.email}</p>
+                      </div>
+                    </div>
+                    {ctrlDetails.controller.phone && (
+                      <div className="flex items-center gap-3 p-3">
+                        <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                        <div>
+                          <p className="text-xs text-gray-400">Téléphone</p>
+                          <p className="text-sm font-medium text-gray-800">{ctrlDetails.controller.phone}</p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 p-3">
+                      <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+                      <div>
+                        <p className="text-xs text-gray-400">Affecté le</p>
+                        <p className="text-sm font-medium text-gray-800">
+                          {new Date(ctrlDetails.assignedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="outline" className="w-full" onClick={() => setCtrlDetails(null)}>Fermer</Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* ── Dialog Modifier contrôleur ───────────────────────────── */}
+          <Dialog open={!!ctrlEdit} onOpenChange={open => { if (!open) setCtrlEdit(null); }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Pencil className="w-5 h-5 text-amber-600" />
+                  Modifier le contrôleur
+                </DialogTitle>
+              </DialogHeader>
+              {ctrlEdit && (
+                <div className="space-y-4 pt-2">
+                  <p className="text-sm text-gray-500">
+                    Modification de <strong>{ctrlEdit.controller.email}</strong>
+                  </p>
+                  <div className="space-y-1">
+                    <Label>Nom complet *</Label>
+                    <Input value={ctrlEditName} onChange={e => setCtrlEditName(e.target.value)} placeholder="Nom du contrôleur" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Téléphone</Label>
+                    <Input value={ctrlEditPhone} onChange={e => setCtrlEditPhone(e.target.value)} placeholder="+242 ..." />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Nouveau mot de passe <span className="text-gray-400 font-normal">(laisser vide pour ne pas changer)</span></Label>
+                    <div className="relative">
+                      <Input
+                        type={ctrlEditShowPwd ? 'text' : 'password'}
+                        value={ctrlEditPassword}
+                        onChange={e => setCtrlEditPassword(e.target.value)}
+                        placeholder="Nouveau mot de passe"
+                        className="pr-10"
+                      />
+                      <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        onClick={() => setCtrlEditShowPwd(v => !v)}>
+                        {ctrlEditShowPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setCtrlEdit(null)}>Annuler</Button>
+                    <Button className="flex-1 bg-amber-600 hover:bg-amber-700" onClick={handleEditController} disabled={ctrlEditSaving}>
+                      {ctrlEditSaving ? 'Enregistrement...' : 'Enregistrer'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* ── Dialog Confirmer suppression ─────────────────────────── */}
+          <Dialog open={!!ctrlConfirmDelete} onOpenChange={open => { if (!open) setCtrlConfirmDelete(null); }}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-red-600">
+                  <Trash2 className="w-5 h-5" />
+                  Retirer le contrôleur
+                </DialogTitle>
+              </DialogHeader>
+              {ctrlConfirmDelete && (
+                <div className="space-y-4 pt-2">
+                  <p className="text-sm text-gray-600">
+                    Voulez-vous retirer <strong>{ctrlConfirmDelete.controller.name}</strong> ({ctrlConfirmDelete.controller.email}) de cet événement ?
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Son compte reste intact. Il ne pourra simplement plus scanner les billets de cet événement.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setCtrlConfirmDelete(null)}>Annuler</Button>
+                    <Button className="flex-1 bg-red-600 hover:bg-red-700"
+                      disabled={ctrlDeleting === ctrlConfirmDelete.id}
+                      onClick={() => handleRemoveController(ctrlConfirmDelete)}>
+                      {ctrlDeleting === ctrlConfirmDelete.id ? 'Suppression...' : 'Retirer'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* Scanner Tab */}
           <TabsContent value="scanner" className="space-y-6">

@@ -829,7 +829,7 @@ function OrganizerRoute() {
         isLive: eventData.isLive,
         status: 'draft',
       });
-      toast.success('Événement créé avec succès !');
+      toast.success('Événement soumis ! Il sera visible après validation par un administrateur.');
       refreshEvents();
     } catch {
       toast.error('Erreur lors de la création de l\'événement');

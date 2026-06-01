@@ -151,7 +151,7 @@ export async function buildTicketCanvas(ticket: Ticket): Promise<HTMLCanvasEleme
   const qrSize = 337 - 65;                                        // 272
   const qrX = 1220 + Math.round((340 - qrSize) / 2);             // 1230+170 = 1400
   const qrY = 185  + Math.round((384 - qrSize) / 2);             // 185+192 = 377
-  const qrDataUrl = generateQRDataUrl(ticket.qrCode, qrSize);
+  const qrDataUrl = await generateQRDataUrl(ticket.qrCode, qrSize);
   const qrImg = await loadImage(qrDataUrl);
   ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 

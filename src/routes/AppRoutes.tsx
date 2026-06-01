@@ -386,6 +386,11 @@ function PaymentRoute() {
   if (loading) return <PageLoader />;
   if (!event || !currentUser) return <Navigate to="/events" replace />;
 
+  // Un événement purement live ne peut pas être acheté comme billet physique
+  if (event.eventType === 'STREAMING_LIVE' || (!event.eventType && event.isLive)) {
+    return <Navigate to={`/streaming/${id}`} replace />;
+  }
+
   const handleComplete = (tickets: Ticket[]) => {
     addTickets(tickets);
     navigate('/dashboard');
@@ -403,15 +408,35 @@ function PaymentRoute() {
 
 function StreamingRoute() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!id) return;
-    // Le streaming se passe sur FeetiPlay — redirection immédiate
-    const eventId = isFeetiPlayRouteId(id) ? fromFeetiPlayRouteId(id) : id;
-    if (FEETIPLAY_URL) {
-      window.location.href = `${FEETIPLAY_URL}/event/${eventId}`;
+
+    // Pour un ID FeetiPlay natif, redirection directe sans vérification
+    if (isFeetiPlayRouteId(id)) {
+      const eventId = fromFeetiPlayRouteId(id);
+      if (FEETIPLAY_URL) window.location.href = `${FEETIPLAY_URL}/event/${eventId}`;
+      return;
     }
-  }, [id]);
+
+    // Pour un ID local, charger l'événement pour vérifier son type
+    EventsBackendAPI.getEventById(id)
+      .then(data => {
+        const eventType = data.eventType;
+        const isLive = data.isLive;
+
+        if (eventType === 'PRESENTIEL' || (!isLive && eventType !== 'MIXTE')) {
+          // L'événement est devenu physique — rediriger vers sa page normale
+          navigate(`/events/${id}`, { replace: true });
+          return;
+        }
+
+        // STREAMING_LIVE ou MIXTE → redirection FeetiPlay
+        if (FEETIPLAY_URL) window.location.href = `${FEETIPLAY_URL}/event/${id}`;
+      })
+      .catch(() => navigate('/events', { replace: true }));
+  }, [id, navigate]);
 
   return <PageLoader />;
 }
@@ -846,7 +871,7 @@ function OrganizerRoute() {
     }
   }, []);
 
-  const handleEventEdit = useCallback(async (eventId: string, eventData: { title?: string; description?: string; date?: string; time?: string; location?: string; imageFile?: File; price?: number; ticketTypes?: { type: string; price?: number }[]; category?: string; maxAttendees?: number; duration?: string; isLive?: boolean }) => {
+  const handleEventEdit = useCallback(async (eventId: string, eventData: { title?: string; description?: string; date?: string; time?: string; location?: string; imageFile?: File; price?: number; ticketTypes?: { type: string; price?: number }[]; category?: string; maxAttendees?: number; duration?: string; isLive?: boolean; eventType?: string }) => {
     try {
       let imageUrl: string | undefined;
       if (eventData.imageFile instanceof File) {
@@ -867,7 +892,12 @@ function OrganizerRoute() {
         maxAttendees: eventData.maxAttendees ?? 100,
         duration: eventData.duration,
         isLive: eventData.isLive,
+        eventType: eventData.eventType,
       });
+      // Mise à jour immédiate du state local avec la réponse du backend
+      if (updated) {
+        setOrganizerEvents(prev => prev.map(e => e.id === eventId ? { ...e, ...updated } : e));
+      }
       toast.success('Événement modifié avec succès !');
       refreshEvents();
     } catch {

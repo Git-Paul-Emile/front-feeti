@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { ArrowLeft, Ticket, Calendar, MapPin, Clock, Download, QrCode, RefreshCw, RotateCcw, X } from 'lucide-react';
-import { QRCodeGenerator, generateQRDataUrl } from '../QRCodeGenerator';
+import { QRCodeGenerator } from '../QRCodeGenerator';
 import { buildTicketCanvas } from '../TicketPDFGenerator';
 import jsPDF from 'jspdf';
 import TicketAPI, { type BackendTicket } from '../../services/api/TicketAPI';
@@ -79,7 +79,6 @@ export function MyTicketsPage({ onBack }: MyTicketsPageProps) {
 
   const handleDownloadPDF = async (ticket: BackendTicket) => {
     const ev = ticket.event;
-    const qrCode = generateQRDataUrl(ticket.qrData, 300);
     try {
       const mapped = {
         id: ticket.id,
@@ -95,7 +94,7 @@ export function MyTicketsPage({ onBack }: MyTicketsPageProps) {
         currency: ticket.currency,
         holderName: ticket.holderName,
         holderEmail: ticket.holderEmail,
-        qrCode,
+        qrCode: ticket.qrData,
         status: ticket.status as 'valid' | 'used' | 'expired',
         purchaseDate: ticket.createdAt ?? new Date().toISOString(),
         timestamp: Date.now(),

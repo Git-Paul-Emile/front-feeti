@@ -104,6 +104,7 @@ export interface CreateBackendEventInput {
   maxAttendees: number;
   duration?: string;
   isLive?: boolean;
+  eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE';
   streamUrl?: string;
   videoUrl?: string;
   status?: string;

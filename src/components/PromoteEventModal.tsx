@@ -10,7 +10,7 @@ import { PaymentSelector, type PaymentMethod } from './payment/PaymentSelector';
 import { toast } from 'sonner';
 
 // Récupération de l'email utilisateur via contexte auth
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 
 interface PromoteEventModalProps {
   open: boolean;
@@ -76,6 +76,7 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
       });
       setConfirmed({ ...result, paymentMode: 'immediate' });
       setStep('confirmed');
+      toast.success('Votre événement est maintenant mis en avant sur Feeti !');
       onSuccess?.();
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Erreur lors de l'activation");
@@ -94,6 +95,7 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
       });
       setConfirmed({ ...result, paymentMode: 'on_sales' });
       setStep('confirmed');
+      toast.success('Pack activé ! Le coût sera déduit de vos ventes de billets.');
       onSuccess?.();
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Erreur lors de l'activation");

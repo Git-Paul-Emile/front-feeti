@@ -123,6 +123,34 @@ export interface SuspectReport {
   badge?: { holderName: string; holderEmail: string; category?: { name: string } | null };
 }
 
+// ─── Badge order ──────────────────────────────────────────────────────────────
+
+export interface BadgePricing {
+  id: string;
+  unitCost: number;
+  currency: string;
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export interface BadgeOrder {
+  id: string;
+  eventId: string;
+  organizerId: string;
+  quantity: number;
+  unitCost: number;
+  totalAmount: number;
+  currency: string;
+  status: 'pending' | 'paid' | 'cancelled';
+  paymentMethod: string | null;
+  paymentRef: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  event?: { id: string; title: string; date: string; location: string } | null;
+  organizer?: { id: string; name: string; email: string } | null;
+}
+
 // ─── API ──────────────────────────────────────────────────────────────────────
 
 const AccessAPI = {
@@ -343,6 +371,30 @@ const AccessAPI = {
 
   async sendStandaloneBadge(badgeId: string): Promise<AccessBadge> {
     const res = await api.post<{ data: AccessBadge }>(`/api/access/badges/standalone/${badgeId}/send`);
+    return res.data.data;
+  },
+
+  // ── Tarification badges ──────────────────────────────────────────────
+
+  async getBadgePricing(): Promise<BadgePricing> {
+    const res = await api.get<{ data: BadgePricing }>('/api/access/badge-pricing');
+    return res.data.data;
+  },
+
+  // ── Commandes de badges ──────────────────────────────────────────────
+
+  async createBadgeOrder(eventId: string, quantity: number): Promise<BadgeOrder> {
+    const res = await api.post<{ data: BadgeOrder }>('/api/access/badge-orders', { eventId, quantity });
+    return res.data.data;
+  },
+
+  async payBadgeOrder(orderId: string): Promise<BadgeOrder> {
+    const res = await api.post<{ data: BadgeOrder }>(`/api/access/badge-orders/${orderId}/pay`);
+    return res.data.data;
+  },
+
+  async getMyBadgeOrders(): Promise<BadgeOrder[]> {
+    const res = await api.get<{ data: BadgeOrder[] }>('/api/access/badge-orders');
     return res.data.data;
   },
 };

@@ -1887,6 +1887,40 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   const [editingCity, setEditingCity] = useState<DeliveryCity | null>(null);
   const [deliveryTab, setDeliveryTab] = useState<'zones' | 'cities'>('zones');
 
+  // ── Tarification badges Feeti Access ────────────────────────────────────────
+  const [badgePricingUnitCost, setBadgePricingUnitCost] = useState(500);
+  const [badgePricingSaving, setBadgePricingSaving] = useState(false);
+  const [badgePricingLoaded, setBadgePricingLoaded] = useState(false);
+  const [adminBadgeOrders, setAdminBadgeOrders] = useState<any[]>([]);
+  const [badgeOrdersLoading, setBadgeOrdersLoading] = useState(false);
+
+  const loadBadgePricing = async () => {
+    try {
+      const res = await axiosInstance.get('/api/access/badge-pricing');
+      setBadgePricingUnitCost(res.data.data?.unitCost ?? 500);
+      setBadgePricingLoaded(true);
+    } catch { /* silently use defaults */ }
+  };
+
+  const handleSaveBadgePricing = async () => {
+    setBadgePricingSaving(true);
+    try {
+      await axiosInstance.put('/api/admin/badge-pricing', { unitCost: badgePricingUnitCost });
+      toast.success('Tarification badges mise à jour');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Erreur lors de la sauvegarde');
+    } finally { setBadgePricingSaving(false); }
+  };
+
+  const loadAdminBadgeOrders = async () => {
+    setBadgeOrdersLoading(true);
+    try {
+      const res = await axiosInstance.get('/api/admin/badge-orders');
+      setAdminBadgeOrders(res.data.data ?? []);
+    } catch { /* silently fail */ }
+    finally { setBadgeOrdersLoading(false); }
+  };
+
   // ── Tarification établissements ──────────────────────────────────────────────
   const [estPricing, setEstPricing] = useState<EstablishmentPricing>({ establishmentAnnualFee: 50000, bonplanCreationFee: 5000, subscriptionDurationDays: 365, currency: 'FCFA' });
   const [estPricingSaving, setEstPricingSaving] = useState(false);
@@ -2299,6 +2333,10 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
 
               <TabsTrigger value="establishment-pricing" onClick={() => { if (!estPricingLoaded) loadEstPricing(); }} className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
                 <DollarSign className="w-4 h-4" /><span>Tarification</span>
+              </TabsTrigger>
+
+              <TabsTrigger value="badge-pricing" onClick={() => { if (!badgePricingLoaded) loadBadgePricing(); loadAdminBadgeOrders(); }} className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
+                <Shield className="w-4 h-4" /><span>Badges Access</span>
               </TabsTrigger>
 
               <TabsTrigger value="users" className="flex items-center space-x-2 whitespace-nowrap shrink-0 w-auto data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-700 data-[state=active]:bg-indigo-50 rounded-none">
@@ -5304,6 +5342,92 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                           </TableCell>
                           <TableCell className="text-sm text-gray-500">{new Date(dp.createdAt).toLocaleDateString('fr-FR')}</TableCell>
                           <TableCell className="text-xs font-mono text-gray-400">{dp.paymentRef?.slice(0, 12) ?? '—'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Badges Feeti Access — tarification & commandes ────────── */}
+          <TabsContent value="badge-pricing" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Config tarification */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Shield className="w-5 h-5 text-emerald-600"/>Tarification des badges</CardTitle>
+                  <CardDescription>Coût unitaire par badge (en simulation)</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Coût par badge (FCFA)</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        type="number" min={0}
+                        value={badgePricingUnitCost}
+                        onChange={e => setBadgePricingUnitCost(parseInt(e.target.value) || 0)}
+                        className="max-w-[180px]"
+                      />
+                      <span className="text-sm text-gray-500">FCFA / badge</span>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-md text-xs text-gray-600">
+                    Exemple : {badgePricingUnitCost} FCFA × 100 badges = <strong>{(badgePricingUnitCost * 100).toLocaleString('fr-FR')} FCFA</strong>
+                  </div>
+                  <Button onClick={handleSaveBadgePricing} disabled={badgePricingSaving} className="bg-emerald-600 hover:bg-emerald-700">
+                    {badgePricingSaving && <Loader2 className="w-4 h-4 animate-spin mr-2"/>}
+                    Enregistrer
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Commandes de badges */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Commandes de badges</h2>
+                <p className="text-sm text-gray-500">{adminBadgeOrders.length} commande{adminBadgeOrders.length !== 1 ? 's' : ''}</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={loadAdminBadgeOrders} disabled={badgeOrdersLoading}>
+                <RefreshCw className={`w-4 h-4 ${badgeOrdersLoading ? 'animate-spin' : ''}`}/>
+              </Button>
+            </div>
+            <Card>
+              <CardContent className="p-0">
+                {badgeOrdersLoading ? (
+                  <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-emerald-600"/></div>
+                ) : adminBadgeOrders.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Shield className="w-12 h-12 mx-auto mb-3 text-gray-300"/>
+                    <p className="font-medium">Aucune commande</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Organisateur</TableHead>
+                        <TableHead>Événement</TableHead>
+                        <TableHead>Badges</TableHead>
+                        <TableHead>Montant</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {adminBadgeOrders.map((order: any) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="text-sm">{order.organizer?.name ?? '—'}<br/><span className="text-xs text-gray-400">{order.organizer?.email}</span></TableCell>
+                          <TableCell className="text-sm">{order.event?.title ?? '—'}</TableCell>
+                          <TableCell className="font-semibold">{order.quantity}</TableCell>
+                          <TableCell className="font-semibold text-emerald-700">{order.totalAmount?.toLocaleString('fr-FR')} {order.currency}</TableCell>
+                          <TableCell>
+                            <Badge className={order.status === 'paid' ? 'bg-green-100 text-green-800 border-0' : order.status === 'cancelled' ? 'bg-red-100 text-red-800 border-0' : 'bg-yellow-100 text-yellow-800 border-0'}>
+                              {order.status === 'paid' ? 'Payé' : order.status === 'cancelled' ? 'Annulé' : 'En attente'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString('fr-FR')}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

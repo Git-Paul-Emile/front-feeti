@@ -109,6 +109,8 @@ export interface CreateBackendEventInput {
   videoUrl?: string;
   status?: string;
   countryCode?: string;
+  isPrivateForBadges?: boolean;
+  salesBlocked?: boolean;
 }
 
 export interface PromotionSlots {

@@ -4,6 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import EventsBackendAPI from '../../services/api/EventsBackendAPI';
+import AccessAPI, { type BadgePricing, type BadgeOrder } from '../../services/api/AccessAPI';
 import { EventPromotionBadge, isEventPromotionActive } from '../PromotionBadge';
 import { PromoteEventModal } from '../PromoteEventModal';
 import CategoriesAPI from '../../services/api/CategoriesAPI';
@@ -37,6 +38,9 @@ import {
   XCircle,
   X,
   UserCheck,
+  Shield,
+  Globe,
+  CreditCard,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
@@ -66,6 +70,7 @@ interface Event {
   promotionStartDate?: string | null;
   promotionEndDate?: string | null;
   totalRevenue?: number;
+  isPrivateForBadges?: boolean;
 }
 
 interface OrganizerDashboardProps {
@@ -78,6 +83,7 @@ interface OrganizerDashboardProps {
   onManageControllers?: (eventId: string) => void;
   onEventToggleSales?: (eventId: string, salesBlocked: boolean) => void;
   onNavigate?: (page: string) => void;
+  onFeetiAccess?: (eventId: string) => void;
 }
 
 export function OrganizerDashboard({
@@ -89,12 +95,26 @@ export function OrganizerDashboard({
   onEventSelect,
   onManageControllers,
   onEventToggleSales,
-  onNavigate
+  onNavigate,
+  onFeetiAccess
 }: OrganizerDashboardProps) {
   type TicketTypeEntry = { type: string; price: number };
   const DEFAULT_TICKET_TYPES: TicketTypeEntry[] = [{ type: 'Standard', price: 0 }];
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  // Wizard : 'wizard' = choix du type, 'public' = form public, 'badges' = form privé badges
+  const [createMode, setCreateMode] = useState<'wizard' | 'public' | 'badges'>('wizard');
+  // Étapes du tunnel badges : 0=form, 1=tarification, 2=confirmation paiement, 3=succès
+  const [badgeStep, setBadgeStep] = useState<0 | 1 | 2 | 3>(0);
+  // Événement privé pour badges — form simplifié
+  const [privateEvent, setPrivateEvent] = useState({ title: '', location: '', date: '', time: '', description: '' });
+  const [privateCreating, setPrivateCreating] = useState(false);
+  // Badge order tunnel
+  const [badgeOrderEventId, setBadgeOrderEventId] = useState<string | null>(null);
+  const [badgePricing, setBadgePricing] = useState<BadgePricing | null>(null);
+  const [badgeQty, setBadgeQty] = useState(0);
+  const [paidOrder, setPaidOrder] = useState<BadgeOrder | null>(null);
+  const [orderPaying, setOrderPaying] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [newEvent, setNewEvent] = useState({
     title: '',
@@ -164,6 +184,15 @@ export function OrganizerDashboard({
       .then(cats => setCategories(cats.map(c => c.name)))
       .catch(() => setCategories([]));
   }, []);
+
+  // Charger le pricing badges quand l'étape 1 s'affiche
+  useEffect(() => {
+    if (createMode === 'badges' && badgeStep === 1 && !badgePricing) {
+      AccessAPI.getBadgePricing()
+        .then(setBadgePricing)
+        .catch(() => toast.error('Erreur chargement tarification'));
+    }
+  }, [createMode, badgeStep, badgePricing]);
 
   useEffect(() => {
     setStatsLoading(true);
@@ -311,12 +340,80 @@ export function OrganizerDashboard({
     setEditImagePreview('');
   };
 
+  const resetCreateModal = () => {
+    setCreateMode('wizard');
+    setBadgeStep(0);
+    setPrivateEvent({ title: '', location: '', date: '', time: '', description: '' });
+    setBadgeOrderEventId(null);
+    setBadgePricing(null);
+    setBadgeQty(0);
+    setPaidOrder(null);
+    setOrderPaying(false);
+  };
+
+  const handleOpenCreate = async () => {
+    resetCreateModal();
+    setIsCreateModalOpen(true);
+  };
+
+  // Étape 0 → 1 : valider uniquement, pas d'appel API
+  const handleValidatePrivateForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!privateEvent.title.trim()) { toast.error('Le nom est obligatoire'); return; }
+    if (!privateEvent.location.trim()) { toast.error("L'adresse est obligatoire"); return; }
+    if (!privateEvent.date) { toast.error('La date est obligatoire'); return; }
+    const duplicate = organizerEvents.some(
+      ev => ev.title.trim().toLowerCase() === privateEvent.title.trim().toLowerCase()
+    );
+    if (duplicate) { toast.error('Un événement avec ce nom existe déjà'); return; }
+    setBadgeStep(1);
+  };
+
+  // Étape 1 → 2 : passer à la confirmation
+  const handleGoToPaymentConfirm = () => {
+    if (!badgeQty || badgeQty < 1) { toast.error('La quantité doit être ≥ 1'); return; }
+    setBadgeStep(2);
+  };
+
+  // Étape 2 → 3 : créer l'événement + commande + paiement simulé en une seule action
+  const handlePayAndCreate = async () => {
+    if (!badgePricing) return;
+    setOrderPaying(true);
+    try {
+      const created = await EventsBackendAPI.createEvent({
+        title: privateEvent.title.trim(),
+        description: privateEvent.description?.trim() || `Événement privé pour badges — ${privateEvent.title.trim()}`,
+        date: privateEvent.date,
+        time: privateEvent.time || '00:00',
+        location: privateEvent.location.trim(),
+        category: 'Autre',
+        maxAttendees: 9999,
+        duration: '0',
+        eventType: 'PRESENTIEL',
+        isPrivateForBadges: true,
+        salesBlocked: true,
+      });
+      const order = await AccessAPI.createBadgeOrder(created.id, badgeQty);
+      const paid  = await AccessAPI.payBadgeOrder(order.id);
+      setBadgeOrderEventId(created.id);
+      setPaidOrder(paid);
+      setBadgeStep(3);
+      toast.success('Paiement confirmé !');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Erreur lors du paiement');
+    } finally {
+      setOrderPaying(false);
+    }
+  };
+
   const totalRevenue = organizerEvents.reduce((sum, event) =>
     sum + (event.totalRevenue ?? event.price * event.attendees), 0
   );
   const totalAttendees = organizerEvents.reduce((sum, event) => sum + event.attendees, 0);
-  const upcomingEvents = organizerEvents.filter(event => new Date(event.date) > new Date());
-  const pastEvents = organizerEvents.filter(event => new Date(event.date) <= new Date());
+  const publicEvents  = organizerEvents.filter(e => !e.isPrivateForBadges);
+  const privateEvents = organizerEvents.filter(e => e.isPrivateForBadges);
+  const upcomingEvents = publicEvents.filter(event => new Date(event.date) > new Date());
+  const pastEvents     = publicEvents.filter(event => new Date(event.date) <= new Date());
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -346,17 +443,223 @@ export function OrganizerDashboard({
               <span>Badges indépendants</span>
             </Button>
             
-            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+            <Dialog open={isCreateModalOpen} onOpenChange={(open) => { if (!open) resetCreateModal(); setIsCreateModalOpen(open); }}>
               <DialogTrigger asChild>
-                <Button className="bg-indigo-600 hover:bg-indigo-700">
+                <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={resetCreateModal}>
                   <Plus className="w-4 h-4 mr-2" />
-                Créer un événement
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Créer un nouvel événement</DialogTitle>
-              </DialogHeader>
+                  Créer un événement
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+                <DialogHeader>
+                  <DialogTitle>
+                    {createMode === 'wizard' && 'Que souhaitez-vous faire ?'}
+                    {createMode === 'public' && 'Créer un événement public'}
+                    {createMode === 'badges' && badgeStep === 0 && 'Créer un événement privé pour badges'}
+                    {createMode === 'badges' && badgeStep === 1 && 'Choisir le nombre de badges'}
+                    {createMode === 'badges' && badgeStep === 2 && 'Confirmer le paiement'}
+                    {createMode === 'badges' && badgeStep === 3 && 'Commande confirmée'}
+                  </DialogTitle>
+                </DialogHeader>
+                <div>
+
+              {/* ── Étape 0 : wizard choix du type ── */}
+              {createMode === 'wizard' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setCreateMode('public')}
+                    className="group relative p-6 rounded-xl border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-indigo-100 group-hover:bg-indigo-200 flex items-center justify-center mb-3">
+                      <Globe className="w-6 h-6 text-indigo-600" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 mb-1">Publier un événement</h3>
+                    <p className="text-sm text-gray-500">L'événement sera visible publiquement sur Fééti. Les visiteurs pourront le consulter et acheter des billets.</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreateMode('badges')}
+                    className="group relative p-6 rounded-xl border-2 border-gray-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-emerald-100 group-hover:bg-emerald-200 flex items-center justify-center mb-3">
+                      <Shield className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 mb-1">Générer des badges uniquement</h3>
+                    <p className="text-sm text-gray-500">L'événement ne sera pas public. Il sert uniquement à créer des badges d'accès pour vos participants.</p>
+                  </button>
+                </div>
+              )}
+
+              {/* ── Étape 0 : formulaire événement privé pour badges ── */}
+              {createMode === 'badges' && badgeStep === 0 && (
+                <form onSubmit={handleValidatePrivateForm} className="space-y-4 mt-2">
+                  <div className="space-y-1">
+                    <Label>Nom de l'événement <span className="text-red-500">*</span></Label>
+                    <Input
+                      value={privateEvent.title}
+                      onChange={e => setPrivateEvent(p => ({ ...p, title: e.target.value }))}
+                      placeholder="Gala de fin d'année, Conférence XYZ…"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Adresse / lieu <span className="text-red-500">*</span></Label>
+                    <Input
+                      value={privateEvent.location}
+                      onChange={e => setPrivateEvent(p => ({ ...p, location: e.target.value }))}
+                      placeholder="Salle des fêtes, Hôtel Radisson…"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>Date <span className="text-red-500">*</span></Label>
+                      <Input
+                        type="date"
+                        value={privateEvent.date}
+                        onChange={e => setPrivateEvent(p => ({ ...p, date: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Heure</Label>
+                      <Input
+                        type="time"
+                        value={privateEvent.time}
+                        onChange={e => setPrivateEvent(p => ({ ...p, time: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Description <span className="text-gray-400 text-xs font-normal">(facultatif)</span></Label>
+                    <Textarea
+                      rows={2}
+                      value={privateEvent.description}
+                      onChange={e => setPrivateEvent(p => ({ ...p, description: e.target.value }))}
+                      placeholder="Informations complémentaires…"
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', paddingTop: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCreateMode('wizard')}
+                      style={{ flex: 1, height: '36px', padding: '0 16px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+                    >
+                      Retour
+                    </button>
+                    <button
+                      type="submit"
+                      style={{ flex: 1, height: '36px', padding: '0 16px', borderRadius: '6px', border: 'none', background: '#059669', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+                    >
+                      Suivant
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* ── Étape 1 : choix du nombre de badges + tarification ── */}
+              {createMode === 'badges' && badgeStep === 1 && badgePricing && (
+                <div className="space-y-5 mt-2">
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm text-blue-800">
+                    <strong>{privateEvent.title}</strong> — {privateEvent.location} — {privateEvent.date}
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Nombre de badges souhaité</Label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10000}
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={badgeQty || ''}
+                      onChange={e => {
+                        const v = parseInt(e.target.value);
+                        if (!isNaN(v) && v >= 1) setBadgeQty(v);
+                        else if (e.target.value === '') setBadgeQty(0);
+                      }}
+                      onBlur={() => { if (!badgeQty || badgeQty < 1) setBadgeQty(1); }}
+                      placeholder="Ex : 50"
+                    />
+                  </div>
+                  <div className="rounded-lg border bg-gray-50 p-4 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Coût unitaire</span>
+                      <span className="font-medium">{badgePricing.unitCost.toLocaleString('fr-FR')} {badgePricing.currency}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Quantité</span>
+                      <span className="font-medium">{badgeQty || '—'}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2 text-base font-bold">
+                      <span>Total à payer</span>
+                      <span className="text-emerald-700">
+                        {badgeQty > 0 ? (badgeQty * badgePricing.unitCost).toLocaleString('fr-FR') : '—'} {badgePricing.currency}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" onClick={() => setBadgeStep(0)}
+                      style={{ flex: 1, height: '40px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                      Retour
+                    </button>
+                    <button type="button" onClick={handleGoToPaymentConfirm}
+                      disabled={!badgeQty || badgeQty < 1}
+                      style={{ flex: 1, height: '40px', borderRadius: '6px', border: 'none', background: badgeQty >= 1 ? '#059669' : '#d1d5db', color: 'white', cursor: badgeQty >= 1 ? 'pointer' : 'not-allowed', fontSize: '14px', fontWeight: '500' }}>
+                      Procéder au paiement
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Étape 2 : confirmation paiement ── */}
+              {createMode === 'badges' && badgeStep === 2 && badgePricing && (
+                <div className="space-y-5 mt-2">
+                  <div className="rounded-lg border bg-gray-50 p-4 space-y-2 text-sm">
+                    <p className="font-semibold text-gray-800">Récapitulatif</p>
+                    <div className="flex justify-between"><span className="text-gray-600">Événement</span><span className="font-medium">{privateEvent.title}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">Lieu</span><span>{privateEvent.location}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">Date</span><span>{privateEvent.date}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">Badges</span><span className="font-medium">{badgeQty}</span></div>
+                    <div className="flex justify-between border-t pt-2 font-bold text-base">
+                      <span>Total</span>
+                      <span className="text-emerald-700">{(badgeQty * badgePricing.unitCost).toLocaleString('fr-FR')} {badgePricing.currency}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" onClick={() => setBadgeStep(1)} disabled={orderPaying}
+                      style={{ flex: 1, height: '40px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                      Retour
+                    </button>
+                    <button type="button" onClick={handlePayAndCreate} disabled={orderPaying}
+                      style={{ flex: 2, height: '40px', borderRadius: '6px', border: 'none', background: orderPaying ? '#6ee7b7' : '#059669', color: 'white', cursor: orderPaying ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                      {orderPaying ? 'Création en cours…' : 'Confirmer et payer (simulation)'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Étape 3 : succès ── */}
+              {createMode === 'badges' && badgeStep === 3 && paidOrder && (
+                <div className="space-y-4 mt-2 text-center">
+                  <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                  </div>
+                  <p className="font-semibold text-gray-900">Paiement confirmé !</p>
+                  <p className="text-sm text-gray-600">
+                    <strong>{paidOrder.quantity} badges</strong> pour <strong>{privateEvent.title}</strong> sont prêts à être configurés.
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" onClick={() => { resetCreateModal(); setIsCreateModalOpen(false); }}
+                      style={{ flex: 1, height: '40px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                      Fermer
+                    </button>
+                    <button type="button" onClick={() => { const id = badgeOrderEventId; resetCreateModal(); setIsCreateModalOpen(false); if (id) onFeetiAccess?.(id); }}
+                      style={{ flex: 1, height: '40px', borderRadius: '6px', border: 'none', background: '#059669', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                      Zones &amp; Badges
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Formulaire événement public (form existant) ── */}
+              {createMode === 'public' && (
               <form onSubmit={handleCreateEvent} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2 space-y-2">
@@ -733,18 +1036,16 @@ export function OrganizerDashboard({
                 </div>
 
                 <div className="flex justify-end space-x-3 pt-4">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsCreateModalOpen(false)}
-                  >
-                    Annuler
+                  <Button type="button" variant="outline" onClick={() => setCreateMode('wizard')}>
+                    Retour
                   </Button>
                   <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
                     Créer l'événement
                   </Button>
                 </div>
               </form>
+              )} {/* fin createMode === 'public' */}
+                </div>
             </DialogContent>
           </Dialog>
           </div>
@@ -752,10 +1053,50 @@ export function OrganizerDashboard({
 
         {/* Edit Event Dialog */}
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
             <DialogHeader>
-              <DialogTitle>Modifier l'événement</DialogTitle>
+              <DialogTitle>
+                {editingEvent?.isPrivateForBadges ? 'Modifier l\'événement privé' : 'Modifier l\'événement'}
+              </DialogTitle>
             </DialogHeader>
+
+            {/* ── Formulaire simplifié pour événements privés ── */}
+            {editingEvent?.isPrivateForBadges ? (
+              <form onSubmit={handleEditSubmit} className="space-y-4 mt-2">
+                <div className="space-y-1">
+                  <Label>Nom de l'événement <span className="text-red-500">*</span></Label>
+                  <Input value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} placeholder="Nom de l'événement" />
+                </div>
+                <div className="space-y-1">
+                  <Label>Adresse / lieu <span className="text-red-500">*</span></Label>
+                  <Input value={editForm.location} onChange={e => setEditForm({...editForm, location: e.target.value})} placeholder="Lieu" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label>Date <span className="text-red-500">*</span></Label>
+                    <Input type="date" value={editForm.date} onChange={e => setEditForm({...editForm, date: e.target.value})} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Heure</Label>
+                    <Input type="time" value={editForm.time} onChange={e => setEditForm({...editForm, time: e.target.value})} />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label>Description <span className="text-gray-400 text-xs font-normal">(facultatif)</span></Label>
+                  <Textarea rows={2} value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} placeholder="Informations complémentaires…" />
+                </div>
+                <div style={{ display: 'flex', gap: '8px', paddingTop: '8px' }}>
+                  <button type="button" onClick={() => setIsEditModalOpen(false)}
+                    style={{ flex: 1, height: '36px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                    Annuler
+                  </button>
+                  <button type="submit"
+                    style={{ flex: 1, height: '36px', borderRadius: '6px', border: 'none', background: '#059669', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                    Enregistrer
+                  </button>
+                </div>
+              </form>
+            ) : (
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2 space-y-2">
@@ -1027,6 +1368,7 @@ export function OrganizerDashboard({
                 </Button>
               </div>
             </form>
+            )} {/* fin formulaire public */}
           </DialogContent>
         </Dialog>
 
@@ -1133,8 +1475,15 @@ export function OrganizerDashboard({
         </div>
 
         <Tabs defaultValue="events" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="events">Mes événements</TabsTrigger>
+          <TabsList className="grid w-full max-w-lg grid-cols-4">
+            <TabsTrigger value="events">
+              Événements publics
+              {publicEvents.length > 0 && <span className="ml-1 text-xs opacity-70">({publicEvents.length})</span>}
+            </TabsTrigger>
+            <TabsTrigger value="private-events">
+              Événements privés
+              {privateEvents.length > 0 && <span className="ml-1 text-xs opacity-70">({privateEvents.length})</span>}
+            </TabsTrigger>
             <TabsTrigger value="analytics">Statistiques</TabsTrigger>
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
           </TabsList>
@@ -1323,6 +1672,17 @@ export function OrganizerDashboard({
                                 Contrôleurs
                               </Button>
                             )}
+                            {event.eventType !== 'STREAMING_LIVE' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onFeetiAccess?.(event.id)}
+                                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                              >
+                                <Shield className="w-4 h-4 mr-1" />
+                                Fééti Access
+                              </Button>
+                            )}
                             <Button
                               variant="outline"
                               size="sm"
@@ -1356,6 +1716,71 @@ export function OrganizerDashboard({
                   <Plus className="w-4 h-4 mr-2" />
                   Créer un événement
                 </Button>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ── Onglet événements privés (badges uniquement) ── */}
+          <TabsContent value="private-events" className="space-y-6">
+            {privateEvents.length === 0 ? (
+              <div className="text-center py-12">
+                <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun événement privé</h3>
+                <p className="text-gray-500 mb-6 text-sm">Les événements créés pour la gestion de badges apparaissent ici.</p>
+                <button
+                  type="button"
+                  onClick={() => { resetCreateModal(); setCreateMode('badges'); setIsCreateModalOpen(true); }}
+                  style={{ padding: '8px 20px', borderRadius: '6px', border: 'none', background: '#059669', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+                >
+                  Créer un événement privé
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Événements privés — Badges ({privateEvents.length})
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {privateEvents.map(event => (
+                    <Card key={event.id} className="hover:shadow-lg transition-shadow border-emerald-100">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 truncate">{event.title}</h3>
+                            <p className="text-xs text-gray-500 mt-0.5">{event.location}</p>
+                          </div>
+                          <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium shrink-0">
+                            Privé
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-4">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {event.date}
+                          {event.time && <span>à {event.time}</span>}
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap">
+                          <Button size="sm" variant="outline" className="flex-1" onClick={() => setViewOrgEvent(event)}>
+                            <Eye className="w-3.5 h-3.5 mr-1" />
+                            Détails
+                          </Button>
+                          <Button size="sm" variant="outline" className="flex-1" onClick={() => handleEditClick(event)}>
+                            <Edit className="w-3.5 h-3.5 mr-1" />
+                            Modifier
+                          </Button>
+                          <Button size="sm" variant="outline" className="flex-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => onFeetiAccess?.(event.id)}>
+                            <Shield className="w-3.5 h-3.5 mr-1" />
+                            Badges
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => setDeleteConfirmEvent(event)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             )}
           </TabsContent>

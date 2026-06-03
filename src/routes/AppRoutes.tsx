@@ -208,7 +208,7 @@ const PAGE_ROUTES: Record<string, string> = {
   'feeti-na-feeti': '/feeti-na-feeti',
   'user-profile': '/profile',
   'standalone-badges': '/organizer/badges-standalone',
-  'feeti-access': '/organizer/badges-standalone',
+  'feeti-access': '/organizer',
 };
 
 // ── Loader ────────────────────────────────────────────────────────────────────
@@ -917,6 +917,7 @@ function OrganizerRoute() {
       }
       onEventSelect={(id: string) => navigate(`/organizer/event/${id}`)}
       onManageControllers={(id: string) => navigate(`/organizer/event/${id}`, { state: { initialTab: 'controllers' } })}
+      onFeetiAccess={(id: string) => navigate(`/organizer/event/${id}/access`)}
       onNavigate={(page: string, params?: any) => navigate(PAGE_ROUTES[page] ?? '/', { state: params })}
     />
   );

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import jsPDF from 'jspdf';
+import QRCode from 'qrcode';
 import {
   ArrowLeft, Plus, RefreshCw, Download, Shield, Users, Map,
   TicketCheck, CheckCircle2, XCircle, AlertTriangle, Mail,
@@ -21,7 +22,7 @@ import { Progress } from '../ui/progress';
 import AccessAPI from '../../services/api/AccessAPI';
 import type {
   EventZone, ParticipantCategory, ZoneAccessLevel,
-  AccessBadge, AccessLog, ZoneTracking,
+  AccessBadge, AccessLog, ZoneTracking, SuspectReport,
 } from '../../services/api/AccessAPI';
 import { useAccessSocket } from '../../hooks/useAccessSocket';
 
@@ -95,6 +96,14 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
   const [logsFilter, setLogsFilter] = useState<{ zoneId: string; result: string }>({ zoneId: '', result: '' });
   const [trackingLoading, setTrackingLoading] = useState(false);
 
+  // ── Refus & signalements (FA-034 / FA-027) ───────────────────────────────────
+  const [refusedLogs, setRefusedLogs] = useState<AccessLog[]>([]);
+  const [refusedLoading, setRefusedLoading] = useState(false);
+  const [suspectReports, setSuspectReports] = useState<SuspectReport[]>([]);
+  const [suspectLoading, setSuspectLoading] = useState(false);
+  const [reportDialog, setReportDialog] = useState<{ open: boolean; badge?: AccessBadge }>({ open: false });
+  const [reportReason, setReportReason] = useState('');
+
   // ── QR rotatif state ────────────────────────────────────────────────────────
   const [rotatingMode, setRotatingMode] = useState(false);
   const [rotatingQrData, setRotatingQrData] = useState<{ qr: string; expiresAt: number } | null>(null);
@@ -161,12 +170,40 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
     finally { setTrackingLoading(false); }
   }, [eventId, logsFilter]);
 
+  const loadRefused = useCallback(async () => {
+    setRefusedLoading(true);
+    try { setRefusedLogs(await AccessAPI.getRefusedAttempts(eventId)); }
+    catch { toast.error('Erreur chargement refus'); }
+    finally { setRefusedLoading(false); }
+  }, [eventId]);
+
+  const loadSuspectReports = useCallback(async () => {
+    setSuspectLoading(true);
+    try { setSuspectReports(await AccessAPI.getSuspectReports(eventId)); }
+    catch { toast.error('Erreur chargement signalements'); }
+    finally { setSuspectLoading(false); }
+  }, [eventId]);
+
+  const handleReportSuspect = async () => {
+    if (!reportDialog.badge || !reportReason.trim()) return;
+    try {
+      await AccessAPI.reportSuspectBadge(reportDialog.badge.id, reportReason.trim());
+      toast.success('Badge signalé');
+      setReportDialog({ open: false });
+      setReportReason('');
+      loadSuspectReports();
+    } catch { toast.error('Erreur lors du signalement'); }
+  };
+
   useEffect(() => { loadZones(); }, [loadZones]);
   useEffect(() => { if (activeTab === 'categories') loadCategories(); }, [activeTab, loadCategories]);
   useEffect(() => { if (activeTab === 'badges') loadBadges(); }, [activeTab, loadBadges]);
   useEffect(() => {
     if (activeTab === 'tracking') loadTracking();
   }, [activeTab, loadTracking]);
+  useEffect(() => {
+    if (activeTab === 'alertes') { loadRefused(); loadSuspectReports(); }
+  }, [activeTab, loadRefused, loadSuspectReports]);
 
   // WebSocket temps réel — met à jour une zone à chaque scan accordé
   useAccessSocket(eventId, (updatedZone) => {
@@ -429,24 +466,55 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
     } catch { toast.error('Erreur lors de l\'export badges'); }
   };
 
-  const handleExportBadgesPdf = () => {
+  const handleExportBadgesPdf = async () => {
+    if (badges.length === 0) return;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    badges.forEach((badge, index) => {
-      if (index > 0) doc.addPage();
-      doc.setFontSize(18);
-      doc.text('Feeti Access', 20, 24);
-      doc.setFontSize(12);
-      doc.text(`Evenement: ${eventTitle}`, 20, 34);
-      doc.text(`Titulaire: ${badge.holderName}`, 20, 46);
-      doc.text(`Email: ${badge.holderEmail}`, 20, 54);
-      if (badge.holderPhone) doc.text(`Telephone: ${badge.holderPhone}`, 20, 62);
-      doc.text(`Categorie: ${badge.category?.name ?? ''}`, 20, badge.holderPhone ? 70 : 62);
-      doc.text(`Statut: ${badge.status}`, 20, badge.holderPhone ? 78 : 70);
-      doc.setFontSize(8);
-      const qrText = doc.splitTextToSize(badge.qrCode, 170);
-      doc.text(qrText, 20, badge.holderPhone ? 92 : 84);
-    });
+    for (let i = 0; i < badges.length; i++) {
+      const badge = badges[i];
+      if (i > 0) doc.addPage();
+
+      // En-tête
+      doc.setFillColor(79, 70, 229); // indigo-600
+      doc.rect(0, 0, 210, 28, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Fééti Access', 14, 12);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(eventTitle, 14, 20);
+
+      // Infos porteur
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(badge.holderName, 14, 40);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80, 80, 80);
+      doc.text(badge.holderEmail, 14, 48);
+      if (badge.holderPhone) doc.text(badge.holderPhone, 14, 55);
+      const categoryY = badge.holderPhone ? 63 : 56;
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Catégorie : ${badge.category?.name ?? badge.categoryLabel ?? '—'}`, 14, categoryY);
+      doc.text(`Statut : ${badge.status === 'active' ? 'Actif' : badge.status === 'revoked' ? 'Révoqué' : 'Expiré'}`, 14, categoryY + 7);
+
+      // QR code visuel (centré, 80×80 mm)
+      try {
+        const dataUrl = await QRCode.toDataURL(badge.qrCode, { width: 300, margin: 1, errorCorrectionLevel: 'M' });
+        const qrX = (210 - 80) / 2;
+        doc.addImage(dataUrl, 'PNG', qrX, 85, 80, 80);
+      } catch { /* fallback texte si échec */ }
+
+      // Pied de page
+      doc.setFontSize(7);
+      doc.setTextColor(160, 160, 160);
+      doc.text(`Badge ID: ${badge.id}`, 14, 280);
+      doc.text('Fééti Access — Contrôle d\'accès sécurisé', 105, 280, { align: 'center' });
+    }
     doc.save(`badges-feeti-access-${eventId}.pdf`);
+    toast.success(`${badges.length} badge${badges.length > 1 ? 's' : ''} exporté${badges.length > 1 ? 's' : ''} en PDF`);
   };
 
   const handleDuplicateConfig = async () => {
@@ -501,6 +569,10 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
             <TabsTrigger value="tracking">
               <Zap className="w-4 h-4 mr-1 hidden sm:block" />
               Tracking
+            </TabsTrigger>
+            <TabsTrigger value="alertes">
+              <AlertTriangle className="w-4 h-4 mr-1 hidden sm:block" />
+              Alertes
             </TabsTrigger>
           </TabsList>
 
@@ -837,6 +909,10 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
                                 </Button>
                               </>
                             )}
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-amber-500 hover:text-amber-600" title="Signaler badge suspect"
+                              onClick={() => { setReportDialog({ open: true, badge }); setReportReason(''); }}>
+                              <AlertTriangle className="w-3.5 h-3.5" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -983,6 +1059,105 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
                 </Table>
               </div>
             </div>
+          </TabsContent>
+
+          {/* ── TAB ALERTES : refus + signalements suspects (FA-034 / FA-027) ── */}
+          <TabsContent value="alertes" className="space-y-8">
+
+            {/* Tentatives refusées */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Tentatives refusées</h2>
+                  <p className="text-sm text-gray-500">{refusedLogs.length} refus enregistrés</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={loadRefused} disabled={refusedLoading}>
+                  <RefreshCw className={`w-4 h-4 ${refusedLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+              <div className="bg-white rounded-xl border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Titulaire</TableHead>
+                      <TableHead>Zone</TableHead>
+                      <TableHead>Motif</TableHead>
+                      <TableHead>Date & Heure</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {refusedLoading ? (
+                      <TableRow><TableCell colSpan={4} className="text-center py-8 text-gray-400">Chargement…</TableCell></TableRow>
+                    ) : refusedLogs.length === 0 ? (
+                      <TableRow><TableCell colSpan={4} className="text-center py-8 text-gray-400">Aucun refus enregistré</TableCell></TableRow>
+                    ) : refusedLogs.map(log => (
+                      <TableRow key={log.id} className="bg-red-50/40">
+                        <TableCell>
+                          <p className="font-medium text-sm">{log.badge?.holderName ?? '—'}</p>
+                          <p className="text-xs text-gray-500">{log.badge?.category?.name ?? ''}</p>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {log.zone ? `${log.zone.code} — ${log.zone.name}` : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-red-600 font-medium">{log.refusalReason ?? 'Accès non autorisé'}</span>
+                        </TableCell>
+                        <TableCell className="text-xs text-gray-500">{fmt(log.scannedAt)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Badges signalés suspects */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Badges signalés suspects</h2>
+                  <p className="text-sm text-gray-500">{suspectReports.length} signalement{suspectReports.length !== 1 ? 's' : ''}</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={loadSuspectReports} disabled={suspectLoading}>
+                  <RefreshCw className={`w-4 h-4 ${suspectLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+              <div className="bg-white rounded-xl border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Titulaire du badge</TableHead>
+                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Motif du signalement</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {suspectLoading ? (
+                      <TableRow><TableCell colSpan={5} className="text-center py-8 text-gray-400">Chargement…</TableCell></TableRow>
+                    ) : suspectReports.length === 0 ? (
+                      <TableRow><TableCell colSpan={5} className="text-center py-8 text-gray-400">Aucun signalement</TableCell></TableRow>
+                    ) : suspectReports.map(r => (
+                      <TableRow key={r.id} className="bg-amber-50/40">
+                        <TableCell>
+                          <p className="font-medium text-sm">{r.badge?.holderName ?? '—'}</p>
+                          <p className="text-xs text-gray-500">{r.badge?.holderEmail ?? ''}</p>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">{r.badge?.category?.name ?? '—'}</TableCell>
+                        <TableCell className="text-sm text-amber-700 font-medium">{r.reason}</TableCell>
+                        <TableCell>
+                          {r.resolved
+                            ? <Badge variant="default" className="bg-green-100 text-green-700 border-0 text-xs">Résolu</Badge>
+                            : <Badge variant="outline" className="text-amber-600 border-amber-300 text-xs">En cours</Badge>}
+                        </TableCell>
+                        <TableCell className="text-xs text-gray-500">{fmt(r.createdAt)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
           </TabsContent>
         </Tabs>
       </div>
@@ -1205,6 +1380,48 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog signalement badge suspect (FA-027) ─────────────────────────── */}
+      <Dialog open={reportDialog.open} onOpenChange={(o) => setReportDialog(p => ({ ...p, open: o }))}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Signaler un badge suspect
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            {reportDialog.badge && (
+              <div className="p-3 bg-gray-50 rounded-md text-sm text-gray-700">
+                <p className="font-medium">{reportDialog.badge.holderName}</p>
+                <p className="text-xs text-gray-500">{reportDialog.badge.holderEmail}</p>
+              </div>
+            )}
+            <div className="space-y-1">
+              <Label>Motif du signalement <span className="text-red-500">*</span></Label>
+              <textarea
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
+                rows={3}
+                value={reportReason}
+                onChange={e => setReportReason(e.target.value)}
+                placeholder="Ex : badge falsifié, photo non conforme, comportement suspect…"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setReportDialog({ open: false })}>
+                Annuler
+              </Button>
+              <Button
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
+                onClick={handleReportSuspect}
+                disabled={!reportReason.trim()}
+              >
+                <AlertTriangle className="w-4 h-4 mr-1" /> Signaler
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

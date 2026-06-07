@@ -4,7 +4,7 @@ import { BrowserQRCodeReader } from '@zxing/browser';
 import type { IScannerControls } from '@zxing/browser';
 import {
   ArrowLeft, Wifi, WifiOff, Camera, CameraOff,
-  CheckCircle, XCircle, AlertCircle, RefreshCw, Upload,
+  CheckCircle, XCircle, AlertCircle, RefreshCw, Upload, Keyboard,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -64,6 +64,8 @@ export function WebScannerPage() {
   const [agentChecking, setAgentChecking] = useState(false);
   const [suspectDialog, setSuspectDialog] = useState(false);
   const [suspectReason, setSuspectReason] = useState('');
+  const [mode, setMode] = useState<'camera' | 'manual'>('camera');
+  const [manualInput, setManualInput] = useState('');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
@@ -194,6 +196,21 @@ export function WebScannerPage() {
     setScanning(false);
   };
 
+  // ── Saisie manuelle ────────────────────────────────────────────────────
+  const handleManualSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualInput.trim() || !selectedZoneId || !agentUnlocked) return;
+    await handleScan(manualInput.trim());
+    setManualInput('');
+  };
+
+  const switchMode = (next: 'camera' | 'manual') => {
+    stopScanner();
+    setLastResult(null);
+    setManualInput('');
+    setMode(next);
+  };
+
   // ── Sync offline queue ─────────────────────────────────────────────────
   const syncQueue = async () => {
     if (!eventId || offlineQueue.length === 0) return;
@@ -255,6 +272,20 @@ export function WebScannerPage() {
             ? <Wifi className="w-4 h-4 text-emerald-400" />
             : <WifiOff className="w-4 h-4 text-red-400" />
           }
+          <button
+            onClick={() => switchMode('camera')}
+            className={`p-1.5 rounded-lg transition ${mode === 'camera' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}
+            title="Mode caméra"
+          >
+            <Camera className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => switchMode('manual')}
+            className={`p-1.5 rounded-lg transition ${mode === 'manual' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}
+            title="Saisie manuelle"
+          >
+            <Keyboard className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -306,48 +337,80 @@ export function WebScannerPage() {
           </div>
         )}
 
-        {/* ── Viewfinder ────────────────────────────────────────────────── */}
-        <div className="relative bg-black rounded-2xl overflow-hidden aspect-square flex items-center justify-center">
-          <video
-            ref={videoRef}
-            className={`w-full h-full object-cover ${scanning ? 'block' : 'hidden'}`}
-            muted
-            playsInline
-          />
-
-          {/* Overlay viseur */}
-          {scanning && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-56 h-56 border-2 border-white/60 rounded-xl relative">
-                <span className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-indigo-400 rounded-tl-lg" />
-                <span className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-indigo-400 rounded-tr-lg" />
-                <span className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-indigo-400 rounded-bl-lg" />
-                <span className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-indigo-400 rounded-br-lg" />
-              </div>
+        {/* ── Mode caméra ───────────────────────────────────────────────── */}
+        {mode === 'camera' && (
+          <>
+            <div className="relative bg-black rounded-2xl overflow-hidden aspect-square flex items-center justify-center">
+              <video
+                ref={videoRef}
+                className={`w-full h-full object-cover ${scanning ? 'block' : 'hidden'}`}
+                muted
+                playsInline
+              />
+              {scanning && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-56 h-56 border-2 border-white/60 rounded-xl relative">
+                    <span className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-indigo-400 rounded-tl-lg" />
+                    <span className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-indigo-400 rounded-tr-lg" />
+                    <span className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-indigo-400 rounded-bl-lg" />
+                    <span className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-indigo-400 rounded-br-lg" />
+                  </div>
+                </div>
+              )}
+              {!scanning && (
+                <div className="flex flex-col items-center gap-3 text-gray-500">
+                  <Camera className="w-14 h-14 opacity-40" />
+                  <p className="text-sm">Caméra inactive</p>
+                </div>
+              )}
             </div>
-          )}
+            <Button
+              onClick={scanning ? stopScanner : startScanner}
+              disabled={!scanning && !selectedZoneId}
+              className={`w-full py-6 text-base font-semibold rounded-xl transition-colors ${
+                scanning ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
+            >
+              {scanning
+                ? <><CameraOff className="w-5 h-5 mr-2" />Arrêter le scan</>
+                : <><Camera className="w-5 h-5 mr-2" />Démarrer le scan</>
+              }
+            </Button>
+          </>
+        )}
 
-          {!scanning && (
-            <div className="flex flex-col items-center gap-3 text-gray-500">
-              <Camera className="w-14 h-14 opacity-40" />
-              <p className="text-sm">Caméra inactive</p>
-            </div>
-          )}
-        </div>
-
-        {/* ── Start / Stop ──────────────────────────────────────────────── */}
-        <Button
-          onClick={scanning ? stopScanner : startScanner}
-          disabled={!scanning && !selectedZoneId}
-          className={`w-full py-6 text-base font-semibold rounded-xl transition-colors ${
-            scanning ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'
-          }`}
-        >
-          {scanning
-            ? <><CameraOff className="w-5 h-5 mr-2" />Arrêter le scan</>
-            : <><Camera className="w-5 h-5 mr-2" />Démarrer le scan</>
-          }
-        </Button>
+        {/* ── Mode saisie manuelle ───────────────────────────────────────── */}
+        {mode === 'manual' && (
+          <Card className="bg-gray-800 border-gray-700">
+            <CardContent className="p-4">
+              <form onSubmit={handleManualSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-gray-300 flex items-center gap-2">
+                    <Keyboard className="w-4 h-4 text-indigo-400" />
+                    Données du QR code
+                  </Label>
+                  <Input
+                    value={manualInput}
+                    onChange={e => setManualInput(e.target.value)}
+                    placeholder="Collez les données du QR code ici…"
+                    className="bg-gray-900 border-gray-600 text-white placeholder-gray-500"
+                    autoFocus
+                  />
+                  <p className="text-xs text-gray-500">
+                    Copiez la valeur du QR code depuis le badge du participant
+                  </p>
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full py-6 text-base font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700"
+                  disabled={!manualInput.trim() || !selectedZoneId || !agentUnlocked}
+                >
+                  <CheckCircle className="w-5 h-5 mr-2" />Valider le badge
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         {/* ── Last result ───────────────────────────────────────────────── */}
         {lastResult && cfg && (

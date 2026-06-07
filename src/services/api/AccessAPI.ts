@@ -336,15 +336,6 @@ const AccessAPI = {
     return res.data.data;
   },
 
-  // ── QR rotatif ────────────────────────────────────────────────────────────
-
-  async getCurrentQr(eventId: string, badgeId: string): Promise<{ qr: string; windowSeconds: number; nextRefreshAt: number }> {
-    const res = await api.get<{ data: { qr: string; windowSeconds: number; nextRefreshAt: number } }>(
-      `/api/access/events/${eventId}/badges/${badgeId}/qr`
-    );
-    return res.data.data;
-  },
-
   // ── Badges indépendants (standalone) ──────────────────────────────────────
 
   async generateStandaloneBadge(data: {

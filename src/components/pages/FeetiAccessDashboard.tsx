@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import {
   ArrowLeft, Plus, RefreshCw, Download, Shield, Users, Map,
   TicketCheck, CheckCircle2, XCircle, AlertTriangle, Mail,
-  RotateCcw, Trash2, Eye, ChevronRight, Layers, Zap, Copy, QrCode, Upload,
+  RotateCcw, Trash2, Eye, ChevronRight, Layers, Zap, Copy, QrCode, Upload, UserCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -20,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Progress } from '../ui/progress';
 import AccessAPI from '../../services/api/AccessAPI';
+import ControllerAPI, { type EventControllerAssignment, type ControllerUser } from '../../services/api/ControllerAPI';
 import type {
   EventZone, ParticipantCategory, ZoneAccessLevel,
   AccessBadge, AccessLog, ZoneTracking, SuspectReport,
@@ -28,12 +29,10 @@ import { useAccessSocket } from '../../hooks/useAccessSocket';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
-const ZONE_CODES = ['Z1','Z2','Z3','Z4','Z5','Z6','Z7','Z8','Z9','Z10'] as const;
-
-const LEVEL_STYLES: Record<ZoneAccessLevel, string> = {
-  OUI:  'bg-emerald-500 text-white hover:bg-emerald-600',
-  COND: 'bg-amber-400 text-white hover:bg-amber-500',
-  NON:  'bg-red-400 text-white hover:bg-red-500',
+const LEVEL_COLORS: Record<ZoneAccessLevel, string> = {
+  OUI:  '#22C55E',
+  COND: '#F59E0B',
+  NON:  '#F87171',
 };
 
 const LEVEL_NEXT: Record<ZoneAccessLevel, ZoneAccessLevel> = {
@@ -62,7 +61,8 @@ interface FeetiAccessDashboardProps {
 
 export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAccessDashboardProps) {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('zones');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState((location.state as any)?.initialTab ?? 'zones');
 
   // ── Zones state ─────────────────────────────────────────────────────────────
   const [zones, setZones] = useState<EventZone[]>([]);
@@ -104,33 +104,51 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
   const [reportDialog, setReportDialog] = useState<{ open: boolean; badge?: AccessBadge }>({ open: false });
   const [reportReason, setReportReason] = useState('');
 
-  // ── QR rotatif state ────────────────────────────────────────────────────────
-  const [rotatingMode, setRotatingMode] = useState(false);
-  const [rotatingQrData, setRotatingQrData] = useState<{ qr: string; expiresAt: number } | null>(null);
-  const [rotatingCountdown, setRotatingCountdown] = useState(0);
-  const rotatingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // ── Contrôleurs ─────────────────────────────────────────────────────────────
+  const [controllers, setControllers] = useState<EventControllerAssignment[]>([]);
+  const [ctrlLoading, setCtrlLoading] = useState(false);
+  const [ctrlForm, setCtrlForm] = useState({ name: '', email: '', password: '', phone: '' });
+  const [ctrlDialog, setCtrlDialog] = useState(false);
+  const [assignDialog, setAssignDialog] = useState(false);
+  const [allControllers, setAllControllers] = useState<ControllerUser[]>([]);
+  const [selectedCtrlId, setSelectedCtrlId] = useState('');
 
-  // ── Load zones ─────────────────────────────────────────────────────────────
+
+  // ── Load zones (auto-init les 10 zones par défaut si l'événement n'en a pas) ─
   const loadZones = useCallback(async () => {
     try {
       setZonesLoading(true);
-      const data = await AccessAPI.getZones(eventId);
-      setZones(data);
+      let data = await AccessAPI.getZones(eventId);
+      if (data.length === 0) {
+        data = await AccessAPI.applyDefaultZones(eventId);
+      }
+      setZones(Array.isArray(data) ? data : []);
     } catch { toast.error('Erreur lors du chargement des zones'); }
     finally { setZonesLoading(false); }
   }, [eventId]);
 
-  // ── Load categories + matrix ─────────────────────────────────────────────
+  // ── Prochain code zone disponible ──────────────────────────────────────────
+  const nextZoneCode = useMemo(() => {
+    if (zones.length === 0) return 'Z11';
+    const nums = zones
+      .map(z => parseInt(z.code.replace(/^Z/, ''), 10))
+      .filter(n => !isNaN(n));
+    return `Z${Math.max(...nums) + 1}`;
+  }, [zones]);
+
+  // ── Load categories + matrix (auto-init les catégories par défaut si vides) ─
   const loadCategories = useCallback(async () => {
     try {
       setCatsLoading(true);
+      let cats = await AccessAPI.getCategories(eventId);
+      if (cats.length === 0) {
+        cats = await AccessAPI.applyDefaultCategories(eventId);
+      }
       const [data, matrixData] = await Promise.all([
-        AccessAPI.getCategories(eventId),
+        Promise.resolve(cats),
         AccessAPI.getAccessMatrix(eventId),
       ]);
-      setCategories(data);
-      // Build matrix map: categoryId → zoneId → level
+      setCategories(Array.isArray(data) ? data : []);
       const map: Record<string, Record<string, ZoneAccessLevel>> = {};
       matrixData.categories.forEach((cat) => {
         map[cat.id] = {};
@@ -196,6 +214,7 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
   };
 
   useEffect(() => { loadZones(); }, [loadZones]);
+  useEffect(() => { loadCategories(); }, [loadCategories]);
   useEffect(() => { if (activeTab === 'categories') loadCategories(); }, [activeTab, loadCategories]);
   useEffect(() => { if (activeTab === 'badges') loadBadges(); }, [activeTab, loadBadges]);
   useEffect(() => {
@@ -218,39 +237,6 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
     });
   });
 
-  // QR rotatif — refresh auto avant expiration de la fenêtre
-  const fetchRotatingQr = useCallback(async (badge: AccessBadge) => {
-    try {
-      const data = await AccessAPI.getCurrentQr(eventId, badge.id);
-      setRotatingQrData({ qr: data.qr, expiresAt: data.nextRefreshAt });
-      const delay = Math.max(1000, data.nextRefreshAt - Date.now() - 2000);
-      rotatingTimerRef.current = setTimeout(() => fetchRotatingQr(badge), delay);
-    } catch {}
-  }, [eventId]);
-
-  useEffect(() => {
-    if (!rotatingMode || !qrDialog.badge) {
-      if (rotatingTimerRef.current) clearTimeout(rotatingTimerRef.current);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-      setRotatingQrData(null);
-      setRotatingCountdown(0);
-      return;
-    }
-    fetchRotatingQr(qrDialog.badge);
-    return () => {
-      if (rotatingTimerRef.current) clearTimeout(rotatingTimerRef.current);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    };
-  }, [rotatingMode, qrDialog.badge, fetchRotatingQr]);
-
-  // Compte à rebours visuel
-  useEffect(() => {
-    if (!rotatingQrData) return;
-    const tick = () => setRotatingCountdown(Math.max(0, Math.ceil((rotatingQrData.expiresAt - Date.now()) / 1000)));
-    tick();
-    countdownIntervalRef.current = setInterval(tick, 1000);
-    return () => { if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current); };
-  }, [rotatingQrData]);
 
   // ── Zone actions ────────────────────────────────────────────────────────────
 
@@ -527,6 +513,51 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
     } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Duplication impossible'); }
   };
 
+  // ── Contrôleurs actions ──────────────────────────────────────────────────────
+
+  const loadControllers = useCallback(async () => {
+    try {
+      setCtrlLoading(true);
+      const data = await ControllerAPI.listForEvent(eventId);
+      setControllers(data);
+    } catch { toast.error('Erreur lors du chargement des contrôleurs'); }
+    finally { setCtrlLoading(false); }
+  }, [eventId]);
+
+  useEffect(() => { if (activeTab === 'controleurs') loadControllers(); }, [activeTab, loadControllers]);
+
+  const handleCreateController = async () => {
+    if (!ctrlForm.name.trim() || !ctrlForm.email.trim() || !ctrlForm.password.trim()) return;
+    try {
+      await ControllerAPI.createAndAssign(eventId, ctrlForm);
+      await loadControllers();
+      setCtrlDialog(false);
+      setCtrlForm({ name: '', email: '', password: '', phone: '' });
+      toast.success('Contrôleur créé et assigné');
+    } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Erreur'); }
+  };
+
+  const handleAssignController = async () => {
+    if (!selectedCtrlId) return;
+    const ctrl = allControllers.find(c => c.id === selectedCtrlId);
+    if (!ctrl) return;
+    try {
+      await ControllerAPI.assignExisting(eventId, { email: ctrl.email });
+      await loadControllers();
+      setAssignDialog(false);
+      setSelectedCtrlId('');
+      toast.success('Contrôleur assigné');
+    } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Contrôleur déjà assigné'); }
+  };
+
+  const handleRemoveController = async (controllerId: string) => {
+    try {
+      await ControllerAPI.remove(eventId, controllerId);
+      setControllers(prev => prev.filter(c => c.id !== controllerId));
+      toast.success('Contrôleur retiré');
+    } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Erreur'); }
+  };
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Render
   // ─────────────────────────────────────────────────────────────────────────────
@@ -553,28 +584,25 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="zones">
-              <Map className="w-4 h-4 mr-1 hidden sm:block" />
-              Zones
-            </TabsTrigger>
-            <TabsTrigger value="categories">
-              <Users className="w-4 h-4 mr-1 hidden sm:block" />
-              Catégories & Droits
-            </TabsTrigger>
-            <TabsTrigger value="badges">
-              <TicketCheck className="w-4 h-4 mr-1 hidden sm:block" />
-              Badges QR
-            </TabsTrigger>
-            <TabsTrigger value="tracking">
-              <Zap className="w-4 h-4 mr-1 hidden sm:block" />
-              Tracking
-            </TabsTrigger>
-            <TabsTrigger value="alertes">
-              <AlertTriangle className="w-4 h-4 mr-1 hidden sm:block" />
-              Alertes
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto mb-6">
+            <TabsList className="flex w-max min-w-full h-auto p-1">
+              <TabsTrigger value="zones" className="flex-1 flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+                <Map className="w-4 h-4 shrink-0" />Zones
+              </TabsTrigger>
+              <TabsTrigger value="categories" className="flex-1 flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+                <Users className="w-4 h-4 shrink-0" />Catégories
+              </TabsTrigger>
+              <TabsTrigger value="badges" className="flex-1 flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+                <TicketCheck className="w-4 h-4 shrink-0" />Badges QR
+              </TabsTrigger>
+              <TabsTrigger value="controleurs" className="flex-1 flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+                <UserCheck className="w-4 h-4 shrink-0" />Contrôleurs
+              </TabsTrigger>
+              <TabsTrigger value="tracking" className="flex-1 flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-3 py-2">
+                <Zap className="w-4 h-4 shrink-0" />Tracking
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ── TAB ZONES ──────────────────────────────────────────────────────── */}
           <TabsContent value="zones" className="space-y-4">
@@ -599,7 +627,7 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
                   10 templates
                 </Button>
                 <Button onClick={() => {
-                  setZoneForm({ code: 'Z1', name: '', description: '', color: '#3B82F6', maxCapacity: '' });
+                  setZoneForm({ code: nextZoneCode, name: '', description: '', color: '#3B82F6', maxCapacity: '' });
                   setZoneDialog({ open: true });
                 }}>
                   <Plus className="w-4 h-4 mr-1" />
@@ -753,7 +781,7 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
               {/* Légende */}
               <div className="flex gap-3 mb-3 text-xs">
                 {(['OUI','COND','NON'] as ZoneAccessLevel[]).map(l => (
-                  <span key={l} className={`px-2 py-0.5 rounded font-semibold ${LEVEL_STYLES[l]}`}>{l}</span>
+                  <span key={l} className="px-2 py-0.5 rounded font-semibold text-white" style={{ backgroundColor: LEVEL_COLORS[l] }}>{l}</span>
                 ))}
                 <span className="text-gray-500">— cliquer pour changer</span>
               </div>
@@ -795,7 +823,8 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
                             return (
                               <td key={zone.id} className="px-2 py-1.5 text-center">
                                 <button
-                                  className={`px-2 py-0.5 rounded text-xs font-bold transition-colors ${LEVEL_STYLES[level]}`}
+                                  className="px-2 py-0.5 rounded text-xs font-bold transition-opacity hover:opacity-80 text-white"
+                                  style={{ backgroundColor: LEVEL_COLORS[level] }}
                                   onClick={() => toggleCell(cat.id, zone.id)}
                                 >
                                   {level}
@@ -921,6 +950,135 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
                 </Table>
               </div>
             )}
+          </TabsContent>
+
+          {/* ── TAB CONTRÔLEURS ───────────────────────────────────────────────── */}
+          <TabsContent value="controleurs" className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Contrôleurs</h2>
+                <p className="text-sm text-gray-500">{controllers.length} contrôleur{controllers.length > 1 ? 's' : ''} assigné{controllers.length > 1 ? 's' : ''}</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={async () => {
+                  const list = await ControllerAPI.getAllControllers().catch(() => []);
+                  setAllControllers(list);
+                  setAssignDialog(true);
+                }}>
+                  <UserCheck className="w-4 h-4 mr-1" />Assigner existant
+                </Button>
+                <Button onClick={() => setCtrlDialog(true)}>
+                  <Plus className="w-4 h-4 mr-1" />Nouveau contrôleur
+                </Button>
+              </div>
+            </div>
+
+            {ctrlLoading ? (
+              <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-16 bg-gray-200 rounded-xl animate-pulse" />)}</div>
+            ) : controllers.length === 0 ? (
+              <Card className="py-16 text-center">
+                <CardContent className="flex flex-col items-center gap-3 text-gray-500">
+                  <UserCheck className="w-12 h-12 opacity-30" />
+                  <p className="font-medium">Aucun contrôleur assigné</p>
+                  <p className="text-sm">Créez un compte contrôleur ou assignez un compte existant.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {controllers.map(c => (
+                  <Card key={c.id}>
+                    <CardContent className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                          <UserCheck className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{c.controller.name}</p>
+                          <p className="text-xs text-gray-500">{c.controller.email}</p>
+                          {c.controller.phone && <p className="text-xs text-gray-400">{c.controller.phone}</p>}
+                        </div>
+                      </div>
+                      <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700"
+                        onClick={() => handleRemoveController(c.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Dialog nouveau contrôleur */}
+            <Dialog open={ctrlDialog} onOpenChange={setCtrlDialog}>
+              <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>Nouveau contrôleur</DialogTitle></DialogHeader>
+                <div className="space-y-3 pt-2">
+                  <div><Label>Nom <span className="text-red-500">*</span></Label>
+                    <Input value={ctrlForm.name} onChange={e => setCtrlForm(p => ({ ...p, name: e.target.value }))} placeholder="Nom du contrôleur" />
+                  </div>
+                  <div><Label>Email <span className="text-red-500">*</span></Label>
+                    <Input type="email" value={ctrlForm.email} onChange={e => setCtrlForm(p => ({ ...p, email: e.target.value }))} placeholder="email@exemple.com" />
+                  </div>
+                  <div><Label>Mot de passe <span className="text-red-500">*</span></Label>
+                    <Input type="password" value={ctrlForm.password} onChange={e => setCtrlForm(p => ({ ...p, password: e.target.value }))} placeholder="Mot de passe" />
+                  </div>
+                  <div><Label>Téléphone</Label>
+                    <Input value={ctrlForm.phone} onChange={e => setCtrlForm(p => ({ ...p, phone: e.target.value }))} placeholder="+225 XX XX XX XX XX" />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setCtrlDialog(false)}>Annuler</Button>
+                    <Button className="flex-1" onClick={handleCreateController}
+                      disabled={!ctrlForm.name.trim() || !ctrlForm.email.trim() || !ctrlForm.password.trim()}>
+                      Créer et assigner
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Dialog assigner existant */}
+            <Dialog open={assignDialog} onOpenChange={(o) => { setAssignDialog(o); if (!o) setSelectedCtrlId(''); }}>
+              <DialogContent className="max-w-sm">
+                <DialogHeader><DialogTitle>Assigner un contrôleur existant</DialogTitle></DialogHeader>
+                <div className="space-y-3 pt-2">
+                  {(() => {
+                    const assignedIds = new Set(controllers.map(c => c.controllerId));
+                    const available = allControllers.filter(c => !assignedIds.has(c.id));
+                    return available.length === 0 ? (
+                      <div className="py-6 text-center text-sm text-gray-500">
+                        <UserCheck className="w-10 h-10 mx-auto opacity-20 mb-2" />
+                        Aucun contrôleur disponible à assigner.<br />
+                        Tous vos contrôleurs sont déjà assignés à cet événement,<br />
+                        ou vous n'en avez pas encore créé.
+                      </div>
+                    ) : (
+                      <div>
+                        <Label>Sélectionner un contrôleur</Label>
+                        <Select value={selectedCtrlId} onValueChange={setSelectedCtrlId}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Choisir un contrôleur..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {available.map(c => (
+                              <SelectItem key={c.id} value={c.id}>
+                                <span className="font-medium">{c.name}</span>
+                                <span className="text-gray-400 ml-2 text-xs">{c.email}{c.phone ? ` · ${c.phone}` : ''}</span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })()}
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setAssignDialog(false)}>Annuler</Button>
+                    <Button className="flex-1" onClick={handleAssignController} disabled={!selectedCtrlId}>
+                      Assigner
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* ── TAB TRACKING ──────────────────────────────────────────────────── */}
@@ -1172,23 +1330,12 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
             {!zoneDialog.zone && (
               <div>
                 <Label>Code zone</Label>
-                <Select value={zoneForm.code} onValueChange={v => setZoneForm(p => ({ ...p, code: v }))}>
-                  <SelectTrigger>
-                    <SelectValue>
-                      {zoneForm.code}{zoneForm.name.trim() ? ` (${zoneForm.name.trim()})` : ''}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ZONE_CODES.map(c => {
-                      const existing = zones.find(z => z.code === c);
-                      return (
-                        <SelectItem key={c} value={c}>
-                          {c}{existing ? ` (${existing.name})` : ''}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                <Input
+                  value={zoneForm.code}
+                  onChange={e => setZoneForm(p => ({ ...p, code: e.target.value.toUpperCase() }))}
+                  placeholder={nextZoneCode}
+                />
+                <p className="text-xs text-gray-400 mt-1">Format : Z suivi d'un numéro (ex: {nextZoneCode})</p>
               </div>
             )}
             <div>
@@ -1323,40 +1470,16 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
       </Dialog>
 
       {/* ── Dialog QR Code ──────────────────────────────────────────────────────── */}
-      <Dialog open={qrDialog.open} onOpenChange={(o) => { setQrDialog(p => ({ ...p, open: o })); if (!o) setRotatingMode(false); }}>
+      <Dialog open={qrDialog.open} onOpenChange={(o) => setQrDialog(p => ({ ...p, open: o }))}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Badge QR — {qrDialog.badge?.holderName}</DialogTitle>
           </DialogHeader>
           {qrDialog.badge && (
             <div className="flex flex-col items-center gap-4 pt-2">
-              <div className="relative p-4 bg-white rounded-xl border-2 border-gray-200">
-                <QRCodeSVG
-                  value={rotatingMode && rotatingQrData ? rotatingQrData.qr : qrDialog.badge.qrCode}
-                  size={200} level="M"
-                />
-                {rotatingMode && rotatingCountdown > 0 && (
-                  <div className="absolute bottom-2 right-2 bg-indigo-600 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                    {rotatingCountdown}s
-                  </div>
-                )}
+              <div className="p-4 bg-white rounded-xl border-2 border-gray-200">
+                <QRCodeSVG value={qrDialog.badge.qrCode} size={200} level="M" />
               </div>
-
-              {/* Toggle mode rotatif */}
-              {qrDialog.badge.status === 'active' && (
-                <button
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    rotatingMode
-                      ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                  onClick={() => setRotatingMode(p => !p)}
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  {rotatingMode ? `QR rotatif actif (${rotatingCountdown}s)` : 'Activer QR rotatif anti-fraude'}
-                </button>
-              )}
-
               <div className="text-center text-sm text-gray-600">
                 {qrDialog.badge.holderPhoto && (
                   <img src={qrDialog.badge.holderPhoto} alt="" className="w-16 h-16 rounded-full object-cover mx-auto mb-2 border" />
@@ -1371,13 +1494,11 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
               }>
                 {qrDialog.badge.status === 'active' ? 'Actif' : qrDialog.badge.status === 'revoked' ? 'Révoqué' : 'Expiré'}
               </Badge>
-              {!rotatingMode && (
-                <button
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
-                  onClick={() => { navigator.clipboard.writeText(qrDialog.badge!.qrCode); toast.success('Données copiées'); }}>
-                  <Copy className="w-3 h-3" />Copier les données QR
-                </button>
-              )}
+              <button
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+                onClick={() => { navigator.clipboard.writeText(qrDialog.badge!.qrCode); toast.success('Données copiées'); }}>
+                <Copy className="w-3 h-3" />Copier les données QR
+              </button>
             </div>
           )}
         </DialogContent>

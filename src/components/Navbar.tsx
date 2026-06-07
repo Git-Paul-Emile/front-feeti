@@ -95,6 +95,8 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                     onNavigate('admin-dashboard');
                   } else if (currentUser?.role === 'organizer') {
                     onNavigate('organizer-dashboard');
+                  } else if (currentUser?.role === 'controller') {
+                    onNavigate('controller-dashboard');
                   } else {
                     onNavigate('user-dashboard');
                   }
@@ -137,6 +139,12 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                   <DropdownMenuItem onClick={() => onNavigate('organizer-dashboard')} className="hover:bg-gray-50">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Dashboard organisateur</span>
+                  </DropdownMenuItem>
+                )}
+                {currentUser.role === 'controller' && (
+                  <DropdownMenuItem onClick={() => onNavigate('controller-dashboard')} className="hover:bg-gray-50">
+                    <Shield className="mr-2 h-4 w-4" />
+                    <span>Espace contrôleur</span>
                   </DropdownMenuItem>
                 )}
                 {currentUser.adminRole && ['super_admin', 'admin', 'moderator', 'support'].includes(currentUser.adminRole) && (
@@ -594,6 +602,18 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                         >
                           <Settings className="mr-3 h-4 w-4" />
                           Dashboard organisateur
+                        </button>
+                      )}
+                      {currentUser.role === 'controller' && (
+                        <button
+                          onClick={() => {
+                            onNavigate('controller-dashboard');
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="flex items-center w-full text-left text-gray-600 hover:text-[#16BDA0] transition-colors"
+                        >
+                          <Shield className="mr-3 h-4 w-4" />
+                          Espace contrôleur
                         </button>
                       )}
                       {currentUser.adminRole && ['super_admin', 'admin', 'moderator', 'support'].includes(currentUser.adminRole) && (

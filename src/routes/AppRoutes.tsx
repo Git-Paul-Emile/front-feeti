@@ -178,7 +178,6 @@ const OrganizerFinancialDashboard = lazy(() => import('../components/pages/Organ
 const AdminFinancialDashboard     = lazy(() => import('../components/pages/AdminFinancialDashboard'));
 const FeetiNaFeetiPage            = lazy(() => import('../components/pages/FeetiNaFeetiPage').then(m => ({ default: m.FeetiNaFeetiPage })));
 const FeetiAccessDashboard        = lazy(() => import('../components/pages/FeetiAccessDashboard').then(m => ({ default: m.FeetiAccessDashboard })));
-const StandaloneAccessBadgeManager = lazy(() => import('../components/StandaloneAccessBadgeManager').then(m => ({ default: m.StandaloneAccessBadgeManager })));
 const WebScannerPage              = lazy(() => import('../components/pages/WebScannerPage').then(m => ({ default: m.WebScannerPage })));
 const FeetiNaFeetiAdminPage       = lazy(() => import('../components/pages/FeetiNaFeetiAdminPage').then(m => ({ default: m.FeetiNaFeetiAdminPage })));
 const UserProfilePage             = lazy(() => import('../components/pages/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
@@ -194,7 +193,7 @@ const PAGE_ROUTES: Record<string, string> = {
   envolee: '/leisure/envolee', 'loisirs-specific': '/leisure/loisirs',
   'bar-night': '/leisure/bar-night',
   blog: '/blog', 'blog-admin': '/blog/admin',
-  'user-dashboard': '/dashboard', 'organizer-dashboard': '/organizer',
+  'user-dashboard': '/dashboard', 'organizer-dashboard': '/organizer', 'controller-dashboard': '/controller',
   'admin-dashboard': '/admin', 'back-office': '/back-office',
   login: '/login', replay: '/replay', streaming: '/streaming',
   'ticket-verification': '/verify',
@@ -207,7 +206,6 @@ const PAGE_ROUTES: Record<string, string> = {
   'admin-audit': '/admin/audit',
   'feeti-na-feeti': '/feeti-na-feeti',
   'user-profile': '/profile',
-  'standalone-badges': '/organizer/badges-standalone',
   'feeti-access': '/organizer',
 };
 
@@ -523,11 +521,6 @@ function FeetiAccessRoute() {
       onBack={() => navigate(`/organizer/event/${eventId}`)}
     />
   );
-}
-
-function StandaloneBadgeRoute() {
-  const navigate = useNavigate();
-  return <StandaloneAccessBadgeManager onBack={() => navigate('/organizer')} />;
 }
 
 function DealsListRoute() {
@@ -916,7 +909,7 @@ function OrganizerRoute() {
         setOrganizerEvents(prev => prev.map(e => e.id === id ? { ...e, salesBlocked } : e))
       }
       onEventSelect={(id: string) => navigate(`/organizer/event/${id}`)}
-      onManageControllers={(id: string) => navigate(`/organizer/event/${id}`, { state: { initialTab: 'controllers' } })}
+      onManageControllers={(id: string) => navigate(`/organizer/event/${id}/access`, { state: { initialTab: 'controleurs' } })}
       onFeetiAccess={(id: string) => navigate(`/organizer/event/${id}/access`)}
       onNavigate={(page: string, params?: any) => navigate(PAGE_ROUTES[page] ?? '/', { state: params })}
     />
@@ -1129,7 +1122,6 @@ export function AppRoutes() {
           <Route path="/organizer"        element={<OrganizerRoute />} />
           <Route path="/organizer/event/:eventId" element={<OrganizerEventRoute />} />
           <Route path="/organizer/event/:eventId/access" element={<FeetiAccessRoute />} />
-          <Route path="/organizer/badges-standalone" element={<StandaloneBadgeRoute />} />
           <Route path="/scan/access/:eventId" element={<WebScannerPage />} />
           <Route path="/organizer/finance" element={<OrganizerFinancialDashboard />} />
           <Route path="/verify"           element={<TicketVerificationPage onBack={() => {}} />} />

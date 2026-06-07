@@ -434,14 +434,6 @@ export function OrganizerDashboard({
               <QrCode className="w-4 h-4" />
               <span>Scanner billets</span>
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => onNavigate?.('standalone-badges')}
-              className="flex items-center space-x-2"
-            >
-              <UserCheck className="w-4 h-4" />
-              <span>Badges indépendants</span>
-            </Button>
             
             <Dialog open={isCreateModalOpen} onOpenChange={(open) => { if (!open) resetCreateModal(); setIsCreateModalOpen(open); }}>
               <DialogTrigger asChild>
@@ -1771,7 +1763,7 @@ export function OrganizerDashboard({
                           </Button>
                           <Button size="sm" variant="outline" className="flex-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => onFeetiAccess?.(event.id)}>
                             <Shield className="w-3.5 h-3.5 mr-1" />
-                            Badges
+                            Feeti Access
                           </Button>
                           <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => setDeleteConfirmEvent(event)}>
                             <Trash2 className="w-3.5 h-3.5" />

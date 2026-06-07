@@ -33,7 +33,21 @@ export interface ScanHistoryTicket {
   };
 }
 
+export interface ControllerUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+}
+
 const ControllerAPI = {
+  // ── Liste globale ─────────────────────────────────────────────────────────
+
+  async getAllControllers(): Promise<ControllerUser[]> {
+    const res = await api.get<{ data: ControllerUser[] }>('/api/controller/all');
+    return res.data.data!;
+  },
+
   // ── Organisateur : gérer les contrôleurs d'un événement ──────────────────
 
   /** Créer un nouveau compte contrôleur et l'affecter à l'événement */
@@ -42,9 +56,9 @@ const ControllerAPI = {
     return res.data.data!;
   },
 
-  /** Affecter un contrôleur existant par email */
-  async assignExisting(eventId: string, email: string): Promise<EventControllerAssignment> {
-    const res = await api.post<{ data: EventControllerAssignment }>(`/api/controller/events/${eventId}/controllers/assign`, { email });
+  /** Affecter un contrôleur existant par email ou téléphone */
+  async assignExisting(eventId: string, data: { email?: string; phone?: string }): Promise<EventControllerAssignment> {
+    const res = await api.post<{ data: EventControllerAssignment }>(`/api/controller/events/${eventId}/controllers/assign`, data);
     return res.data.data!;
   },
 

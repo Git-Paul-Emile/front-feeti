@@ -11,6 +11,7 @@ import { useCountry } from '../context/CountryContext';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import EventsBackendAPI from '../services/api/EventsBackendAPI';
 import type { BackendEvent } from '../services/api/EventsBackendAPI';
+import AccessAPI from '../services/api/AccessAPI';
 import FeetiPlayEventsAPI from '../services/api/FeetiPlayEventsAPI';
 import type { FeetiPlayEvent } from '../services/api/FeetiPlayEventsAPI';
 import type { Ticket } from '../context/AppContext';
@@ -523,6 +524,26 @@ function FeetiAccessRoute() {
   );
 }
 
+function AccessScannerRoute() {
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) return <PageLoader />;
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  const isAdminLike = user.adminRole && ['super_admin', 'admin', 'moderator', 'support'].includes(user.adminRole);
+  const isAllowed = user.role === 'organizer' || user.role === 'controller' || isAdminLike;
+
+  if (!isAllowed) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <WebScannerPage />;
+}
+
 function DealsListRoute() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -847,6 +868,15 @@ function OrganizerRoute() {
         isLive: eventData.isLive,
         status: 'draft',
       });
+      try {
+        await Promise.all([
+          AccessAPI.applyDefaultZones(created.id),
+          AccessAPI.applyDefaultCategories(created.id),
+        ]);
+        await AccessAPI.applyDefaultMatrix(created.id);
+      } catch {
+        // Configuration Access à compléter manuellement si nécessaire
+      }
       toast.success('Événement soumis ! Il sera visible après validation par un administrateur.');
       refreshEvents();
     } catch {
@@ -1122,7 +1152,6 @@ export function AppRoutes() {
           <Route path="/organizer"        element={<OrganizerRoute />} />
           <Route path="/organizer/event/:eventId" element={<OrganizerEventRoute />} />
           <Route path="/organizer/event/:eventId/access" element={<FeetiAccessRoute />} />
-          <Route path="/scan/access/:eventId" element={<WebScannerPage />} />
           <Route path="/organizer/finance" element={<OrganizerFinancialDashboard />} />
           <Route path="/verify"           element={<TicketVerificationPage onBack={() => {}} />} />
           <Route path="/scan"             element={<QRScannerRoute />} />
@@ -1132,8 +1161,9 @@ export function AppRoutes() {
         {/* Routes protégées — contrôleur (et au-dessus) */}
         <Route element={<ProtectedRoute requiredRole="controller" />}>
           <Route path="/controller"       element={<ControllerRoute />} />
-          <Route path="/scan/access/:eventId" element={<WebScannerPage />} />
         </Route>
+
+        <Route path="/scan/access/:eventId" element={<AccessScannerRoute />} />
 
         {/* Routes protégées — admin */}
         <Route element={<ProtectedRoute requiredRole="admin" />}>

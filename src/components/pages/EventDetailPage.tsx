@@ -25,6 +25,7 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { toast } from 'sonner';
 import EventsBackendAPI from '../../services/api/EventsBackendAPI';
 import TicketAPI from '../../services/api/TicketAPI';
+import { loyaltyApi } from '../../api/loyalty';
 
 interface Event {
   id: string;
@@ -174,6 +175,8 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
     } else {
       navigator.clipboard.writeText(window.location.href);
     }
+    // Créditer les points de partage Feeti Na Feeti (fire-and-forget)
+    if (currentUser) loyaltyApi.shareEvent(event.id).catch(() => {});
   };
 
   return (

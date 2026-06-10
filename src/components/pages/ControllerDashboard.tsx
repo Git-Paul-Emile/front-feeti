@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -32,6 +33,7 @@ interface ControllerDashboardProps {
 
 export function ControllerDashboard({ onLogout }: ControllerDashboardProps) {
   const { user, updateProfile, changePassword } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('events');
 
   // Événements assignés
@@ -233,15 +235,24 @@ export function ControllerDashboard({ onLogout }: ControllerDashboardProps) {
                       </div>
                       <div className="mt-3 pt-3 border-t flex items-center justify-between text-sm text-gray-500">
                         <span>{event.attendees} / {event.maxAttendees} participants</span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => { setActiveTab('scan'); }}
-                          className="h-7"
-                        >
-                          <QrCode className="w-3 h-3 mr-1" />
-                          Scanner
-                        </Button>
+                        <div className="flex gap-2 flex-wrap justify-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => { setActiveTab('scan'); }}
+                            className="h-7"
+                          >
+                            <QrCode className="w-3 h-3 mr-1" />
+                            Billets
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => navigate(`/scan/access/${event.id}`)}
+                            className="h-7"
+                          >
+                            Scanner accès
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -259,10 +270,29 @@ export function ControllerDashboard({ onLogout }: ControllerDashboardProps) {
                   Scanner de billets
                 </CardTitle>
                 <CardDescription>
-                  Scannez les QR codes des billets pour valider l'entrée
+                  Scannez les QR codes des billets pour valider l'entrée. Pour les badges d'accès, ouvrez le scanner d'accès depuis l'événement assigné.
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {events.length > 0 && (
+                  <div className="mb-4 rounded-lg border bg-gray-50 p-4">
+                    <p className="text-sm font-medium text-gray-900 mb-3">Scanner d'accès par événement</p>
+                    <div className="space-y-2">
+                      {events.map(event => (
+                        <div key={event.id} className="flex items-center justify-between gap-3 rounded-md bg-white border px-3 py-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{event.title}</p>
+                            <p className="text-xs text-gray-500 truncate">{event.date} à {event.time}</p>
+                          </div>
+                          <Button size="sm" variant="outline" onClick={() => navigate(`/scan/access/${event.id}`)}>
+                            Scanner accès
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {showScanner ? (
                   <div className="space-y-4">
                     <QRScanner onScan={handleQRScan} onClose={() => setShowScanner(false)} />
@@ -282,7 +312,7 @@ export function ControllerDashboard({ onLogout }: ControllerDashboardProps) {
                     <Button
                       onClick={() => setShowScanner(true)}
                       size="lg"
-                      className="bg-gradient-to-r from-indigo-600 to-purple-600"
+                      className="bg-linear-to-r from-indigo-600 to-purple-600"
                     >
                       <ScanLine className="w-5 h-5 mr-2" />
                       Activer le scanner

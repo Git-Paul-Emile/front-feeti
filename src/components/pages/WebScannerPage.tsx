@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { BrowserQRCodeReader } from '@zxing/browser';
 import type { IScannerControls } from '@zxing/browser';
 import {
-  ArrowLeft, Wifi, WifiOff, Camera, CameraOff,
+  ArrowLeft, Camera, CameraOff,
   CheckCircle, XCircle, AlertCircle, RefreshCw, Upload, Keyboard,
 } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -17,7 +17,6 @@ import { Textarea } from '../ui/textarea';
 import { toast } from 'sonner';
 import AccessAPI from '../../services/api/AccessAPI';
 import type { EventZone, ScanResult, OfflineScan } from '../../services/api/AccessAPI';
-import { useAuth } from '../../context/AuthContext';
 
 // ─── Offline queue helpers ─────────────────────────────────────────────────
 
@@ -45,11 +44,6 @@ const RESULT_CONFIG = {
 export function WebScannerPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-
-  const isPrivileged = ['organizer', 'admin', 'super_admin', 'moderator'].includes(
-    user?.adminRole ?? user?.role ?? ''
-  );
 
   const [zones, setZones] = useState<EventZone[]>([]);
   const [zonesLoading, setZonesLoading] = useState(true);
@@ -59,9 +53,6 @@ export function WebScannerPage() {
   const [offlineQueue, setOfflineQueue] = useState<OfflineScan[]>([]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncing, setSyncing] = useState(false);
-  const [agentCode, setAgentCode] = useState(sessionStorage.getItem('feeti_access_agent_code') ?? '');
-  const [agentUnlocked, setAgentUnlocked] = useState(isPrivileged);
-  const [agentChecking, setAgentChecking] = useState(false);
   const [suspectDialog, setSuspectDialog] = useState(false);
   const [suspectReason, setSuspectReason] = useState('');
   const [mode, setMode] = useState<'camera' | 'manual'>('camera');
@@ -88,36 +79,30 @@ export function WebScannerPage() {
     } catch {}
   };
 
-  // Auto-unlock pour organisateurs/admins
-  useEffect(() => {
-    if (isPrivileged) setAgentUnlocked(true);
-  }, [isPrivileged]);
-
   // ── Load zones ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!eventId) return;
     setOfflineQueue(loadQueue(eventId));
     AccessAPI.getZones(eventId)
-      .then(data => setZones(data.filter(z => z.isActive)))
+      .then(data => {
+        const activeZones = data.filter(z => z.isActive);
+        setZones(activeZones);
+        setSelectedZoneId(current => current || activeZones[0]?.id || '');
+      })
       .catch(() => toast.error('Impossible de charger les zones'))
       .finally(() => setZonesLoading(false));
   }, [eventId]);
 
-  const verifyAgent = async () => {
-    if (!agentCode.trim()) return;
-    setAgentChecking(true);
-    try {
-      await AccessAPI.verifyAgentCode(agentCode.trim());
-      sessionStorage.setItem('feeti_access_agent_code', agentCode.trim());
-      setAgentUnlocked(true);
-      toast.success('Code agent validé');
-    } catch {
-      setAgentUnlocked(false);
-      toast.error('Code agent invalide');
-    } finally {
-      setAgentChecking(false);
-    }
-  };
+  useEffect(() => {
+    if (mode !== 'camera' || !selectedZoneId) return;
+    if (scanning) return;
+
+    void startScanner();
+
+    return () => {
+      stopScanner();
+    };
+  }, [mode, selectedZoneId]);
 
   // ── Online/offline ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -138,7 +123,7 @@ export function WebScannerPage() {
 
   // ── Handle decoded QR ──────────────────────────────────────────────────
   const handleScan = useCallback(async (text: string) => {
-    if (processingRef.current || !selectedZoneId || !eventId || !agentUnlocked) return;
+    if (processingRef.current || !selectedZoneId || !eventId) return;
     processingRef.current = true;
 
     const entry: OfflineScan = { qrCode: text, zoneId: selectedZoneId, scannedAt: new Date().toISOString() };
@@ -154,7 +139,7 @@ export function WebScannerPage() {
     }
 
     try {
-      const result = await AccessAPI.scanBadge(text, selectedZoneId, agentCode.trim());
+      const result = await AccessAPI.scanBadge(text, selectedZoneId);
       setLastResult({ ...result, ts: new Date() });
       playTone(result.result === 'granted' ? 'ok' : result.result === 'conditional' ? 'warn' : 'error');
     } catch {
@@ -164,11 +149,10 @@ export function WebScannerPage() {
 
     // Reprendre après 2.5s
     resumeTimerRef.current = setTimeout(() => { processingRef.current = false; }, 2500);
-  }, [selectedZoneId, eventId, isOnline, offlineQueue, agentUnlocked, agentCode]);
+  }, [selectedZoneId, eventId, isOnline, offlineQueue]);
 
   // ── Start scanner ──────────────────────────────────────────────────────
   const startScanner = async () => {
-    if (!agentUnlocked) { toast.error('Validez le code agent d\'abord'); return; }
     if (!selectedZoneId) { toast.error('Sélectionnez une zone d\'abord'); return; }
     if (!videoRef.current) return;
 
@@ -199,7 +183,7 @@ export function WebScannerPage() {
   // ── Saisie manuelle ────────────────────────────────────────────────────
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!manualInput.trim() || !selectedZoneId || !agentUnlocked) return;
+    if (!manualInput.trim() || !selectedZoneId) return;
     await handleScan(manualInput.trim());
     setManualInput('');
   };
@@ -243,88 +227,80 @@ export function WebScannerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+    <div className="min-h-screen bg-gray-50 text-slate-900 flex flex-col">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <button onClick={() => { stopScanner(); navigate(-1); }}
-            className="p-1.5 hover:bg-gray-700 rounded-lg transition">
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <p className="font-bold text-sm">Scanner Feeti Access</p>
+            <p className="font-bold text-sm text-slate-900">Scanner Feeti Access</p>
             {selectedZone && (
-              <p className="text-xs text-gray-400 flex items-center gap-1.5">
+              <p className="text-xs text-slate-500 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: selectedZone.color }} />
                 {selectedZone.code} — {selectedZone.name}
               </p>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {offlineQueue.length > 0 && (
-            <Badge className="text-xs bg-amber-600 text-white border-0">
-              {offlineQueue.length} hors-ligne
-            </Badge>
-          )}
-          {isOnline
-            ? <Wifi className="w-4 h-4 text-emerald-400" />
-            : <WifiOff className="w-4 h-4 text-red-400" />
-          }
-          <button
-            onClick={() => switchMode('camera')}
-            className={`p-1.5 rounded-lg transition ${mode === 'camera' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}
-            title="Mode caméra"
-          >
-            <Camera className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => switchMode('manual')}
-            className={`p-1.5 rounded-lg transition ${mode === 'manual' ? 'bg-indigo-600' : 'hover:bg-gray-700'}`}
-            title="Saisie manuelle"
-          >
-            <Keyboard className="w-4 h-4" />
-          </button>
-        </div>
+        {offlineQueue.length > 0 ? (
+          <Badge className="text-xs bg-amber-100 text-amber-800 border border-amber-200">
+            {offlineQueue.length} hors-ligne
+          </Badge>
+        ) : (
+          <Badge className={isOnline ? 'text-xs bg-emerald-100 text-emerald-800 border border-emerald-200' : 'text-xs bg-red-100 text-red-800 border border-red-200'}>
+            {isOnline ? 'En ligne' : 'Hors ligne'}
+          </Badge>
+        )}
       </div>
 
-      <div className="flex-1 flex flex-col gap-4 p-4 max-w-lg mx-auto w-full">
+      <div className="flex-1 flex flex-col gap-4 p-4 max-w-2xl mx-auto w-full">
 
-        {!agentUnlocked && (
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4 space-y-3">
-              <Label className="text-gray-200">Code agent</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={agentCode}
-                  onChange={e => setAgentCode(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') verifyAgent(); }}
-                  className="bg-gray-900 border-gray-600 text-white"
-                  placeholder="Code d'accès terrain"
-                />
-                <Button onClick={verifyAgent} disabled={agentChecking || !agentCode.trim()}>
-                  {agentChecking ? '...' : 'OK'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardContent className="p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-lg font-semibold text-slate-900">Scanner d'accès</h1>
+              <p className="text-sm text-slate-500">
+                Choisissez une zone, puis scannez le badge ou saisissez le QR code manuellement.
+              </p>
+            </div>
+            <div className="flex flex-row items-center gap-2 flex-nowrap">
+              <button
+                type="button"
+                onClick={() => switchMode('camera')}
+                className={`flex-1 sm:flex-none rounded-full px-4 py-2 text-sm font-medium border transition ${mode === 'camera' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-gray-300 hover:bg-gray-50'}`}
+              >
+                Caméra
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode('manual')}
+                className={`flex-1 sm:flex-none rounded-full px-4 py-2 text-sm font-medium border transition ${mode === 'manual' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-gray-300 hover:bg-gray-50'}`}
+              >
+                Manuel
+              </button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* ── Zone selector (visible seulement si inactif) ──────────────── */}
         {!scanning && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-300">Zone à contrôler</label>
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-4 space-y-2">
+              <label className="text-sm font-medium text-slate-700">Zone à contrôler</label>
             {zonesLoading ? (
-              <div className="h-10 bg-gray-700 rounded animate-pulse" />
+              <div className="h-10 bg-gray-100 rounded animate-pulse" />
             ) : (
               <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
-                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                <SelectTrigger className="bg-white border-gray-300 text-slate-900">
                   <SelectValue placeholder="Choisir une zone..." />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-600">
+                <SelectContent className="bg-white border-gray-300">
                   {zones.map(z => (
-                    <SelectItem key={z.id} value={z.id} className="text-white focus:bg-gray-700">
+                    <SelectItem key={z.id} value={z.id} className="text-slate-900 focus:bg-gray-100">
                       <div className="flex items-center gap-2">
                         <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: z.color }} />
                         {z.code} — {z.name}
@@ -334,13 +310,16 @@ export function WebScannerPage() {
                 </SelectContent>
               </Select>
             )}
-          </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* ── Mode caméra ───────────────────────────────────────────────── */}
         {mode === 'camera' && (
           <>
-            <div className="relative bg-black rounded-2xl overflow-hidden aspect-square flex items-center justify-center">
+            <Card className="bg-white border border-gray-200 shadow-sm overflow-hidden">
+              <CardContent className="p-0">
+            <div className="relative bg-black rounded-none overflow-hidden aspect-square flex items-center justify-center">
               <video
                 ref={videoRef}
                 className={`w-full h-full object-cover ${scanning ? 'block' : 'hidden'}`}
@@ -349,7 +328,7 @@ export function WebScannerPage() {
               />
               {scanning && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-56 h-56 border-2 border-white/60 rounded-xl relative">
+                  <div className="w-64 h-64 border-2 border-white/60 rounded-xl relative">
                     <span className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-indigo-400 rounded-tl-lg" />
                     <span className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-indigo-400 rounded-tr-lg" />
                     <span className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-indigo-400 rounded-bl-lg" />
@@ -357,17 +336,13 @@ export function WebScannerPage() {
                   </div>
                 </div>
               )}
-              {!scanning && (
-                <div className="flex flex-col items-center gap-3 text-gray-500">
-                  <Camera className="w-14 h-14 opacity-40" />
-                  <p className="text-sm">Caméra inactive</p>
-                </div>
-              )}
             </div>
+              </CardContent>
+            </Card>
             <Button
               onClick={scanning ? stopScanner : startScanner}
               disabled={!scanning && !selectedZoneId}
-              className={`w-full py-6 text-base font-semibold rounded-xl transition-colors ${
+              className={`w-full py-6 text-base font-semibold rounded-xl transition-colors shadow-sm ${
                 scanning ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'
               }`}
             >
@@ -381,29 +356,29 @@ export function WebScannerPage() {
 
         {/* ── Mode saisie manuelle ───────────────────────────────────────── */}
         {mode === 'manual' && (
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardContent className="p-4">
               <form onSubmit={handleManualSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-gray-300 flex items-center gap-2">
-                    <Keyboard className="w-4 h-4 text-indigo-400" />
+                  <Label className="text-slate-700 flex items-center gap-2">
+                    <Keyboard className="w-4 h-4 text-indigo-500" />
                     Données du QR code
                   </Label>
                   <Input
                     value={manualInput}
                     onChange={e => setManualInput(e.target.value)}
                     placeholder="Collez les données du QR code ici…"
-                    className="bg-gray-900 border-gray-600 text-white placeholder-gray-500"
+                    className="bg-white border-gray-300 text-slate-900 placeholder-gray-400"
                     autoFocus
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-slate-500">
                     Copiez la valeur du QR code depuis le badge du participant
                   </p>
                 </div>
                 <Button
                   type="submit"
-                  className="w-full py-6 text-base font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700"
-                  disabled={!manualInput.trim() || !selectedZoneId || !agentUnlocked}
+                  className="w-full py-6 text-base font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-sm"
+                  disabled={!manualInput.trim() || !selectedZoneId}
                 >
                   <CheckCircle className="w-5 h-5 mr-2" />Valider le badge
                 </Button>
@@ -414,7 +389,7 @@ export function WebScannerPage() {
 
         {/* ── Last result ───────────────────────────────────────────────── */}
         {lastResult && cfg && (
-          <Card className={`border-2 ${cfg.border} ${cfg.bg}`}>
+          <Card className={`border-2 shadow-sm ${cfg.border} ${cfg.bg}`}>
             <CardContent className="pt-4 pb-3 px-4">
               <div className="flex items-start gap-3">
                 {lastResult.holder?.photo && (

@@ -9,6 +9,8 @@ import {
   ArrowLeft,
   Search,
   Loader2,
+  ArrowRight,
+  Star,
 } from 'lucide-react';
 import { BonPlanCard } from '../BonPlanCard';
 import { toast } from 'sonner@2.0.3';
@@ -172,6 +174,29 @@ export function BonPlansPage({ onBack, onNavigate, filter }: BonPlansPageProps) 
             />
           </div>
         </div>
+
+        {/* Bannière programme fidélité quand l'onglet Feeti Na Feeti est actif */}
+        {selectedCategory === 'feeti-na-feeti' && (
+          <div className="mb-6 rounded-xl bg-linear-to-r from-violet-600 to-purple-700 text-white p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-white/20 rounded-full p-2 shrink-0">
+                <Star className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-bold text-lg leading-tight">Programme Feeti Na Feeti</p>
+                <p className="text-white/80 text-sm mt-0.5">
+                  Ces bons plans sont réservés aux membres du programme de fidélité. Gagnez des points, montez de niveau et débloquez des avantages exclusifs.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => onNavigate?.('feeti-na-feeti')}
+              className="flex items-center gap-1.5 bg-white text-violet-700 font-semibold text-sm px-4 py-2 rounded-lg hover:bg-white/90 transition-colors shrink-0"
+            >
+              Mon programme <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16">

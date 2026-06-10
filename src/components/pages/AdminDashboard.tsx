@@ -2420,6 +2420,19 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
               </Card>
             </div>
 
+            {/* Feeti Na Feeti CTA */}
+            <Card className="border-dashed border-2 border-violet-200 bg-violet-50/50">
+              <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
+                <div>
+                  <p className="font-semibold text-violet-900">🎁 Feeti Na Feeti — Programme de fidélité</p>
+                  <p className="text-sm text-violet-700">Gérez les points, niveaux, récompenses, missions, partenaires et la communauté.</p>
+                </div>
+                <Button onClick={() => navigate('/admin/feeti-na-feeti')} className="bg-violet-600 hover:bg-violet-700 shrink-0">
+                  Gérer la fidélité <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
@@ -3135,6 +3148,9 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => navigate('/admin/audit')}>
                   Journal d'audit
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => navigate('/admin/feeti-na-feeti')}>
+                  Feeti Na Feeti
                 </Button>
                 <Button size="sm" onClick={() => navigate('/admin/finance')}>
                   Tableau de bord financier complet <ArrowRight className="h-4 w-4 ml-1" />

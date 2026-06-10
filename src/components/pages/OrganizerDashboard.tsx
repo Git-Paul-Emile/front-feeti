@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import EventsBackendAPI from '../../services/api/EventsBackendAPI';
-import AccessAPI, { type BadgePricing, type BadgeOrder } from '../../services/api/AccessAPI';
+import AccessAPI from '../../services/api/AccessAPI';
 import { EventPromotionBadge, isEventPromotionActive } from '../PromotionBadge';
 import { PromoteEventModal } from '../PromoteEventModal';
 import CategoriesAPI from '../../services/api/CategoriesAPI';
@@ -104,17 +104,13 @@ export function OrganizerDashboard({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   // Wizard : 'wizard' = choix du type, 'public' = form public, 'badges' = form privé badges
   const [createMode, setCreateMode] = useState<'wizard' | 'public' | 'badges'>('wizard');
-  // Étapes du tunnel badges : 0=form, 1=tarification, 2=confirmation paiement, 3=succès
-  const [badgeStep, setBadgeStep] = useState<0 | 1 | 2 | 3>(0);
+  // Étapes du tunnel badges : 0=form, 1=succès
+  const [badgeStep, setBadgeStep] = useState<0 | 1>(0);
   // Événement privé pour badges — form simplifié
   const [privateEvent, setPrivateEvent] = useState({ title: '', location: '', date: '', time: '', description: '' });
   const [privateCreating, setPrivateCreating] = useState(false);
-  // Badge order tunnel
+  // Id de l'événement créé pour navigation post-création
   const [badgeOrderEventId, setBadgeOrderEventId] = useState<string | null>(null);
-  const [badgePricing, setBadgePricing] = useState<BadgePricing | null>(null);
-  const [badgeQty, setBadgeQty] = useState(0);
-  const [paidOrder, setPaidOrder] = useState<BadgeOrder | null>(null);
-  const [orderPaying, setOrderPaying] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [newEvent, setNewEvent] = useState({
     title: '',
@@ -184,15 +180,6 @@ export function OrganizerDashboard({
       .then(cats => setCategories(cats.map(c => c.name)))
       .catch(() => setCategories([]));
   }, []);
-
-  // Charger le pricing badges quand l'étape 1 s'affiche
-  useEffect(() => {
-    if (createMode === 'badges' && badgeStep === 1 && !badgePricing) {
-      AccessAPI.getBadgePricing()
-        .then(setBadgePricing)
-        .catch(() => toast.error('Erreur chargement tarification'));
-    }
-  }, [createMode, badgeStep, badgePricing]);
 
   useEffect(() => {
     setStatsLoading(true);
@@ -345,10 +332,7 @@ export function OrganizerDashboard({
     setBadgeStep(0);
     setPrivateEvent({ title: '', location: '', date: '', time: '', description: '' });
     setBadgeOrderEventId(null);
-    setBadgePricing(null);
-    setBadgeQty(0);
-    setPaidOrder(null);
-    setOrderPaying(false);
+    setPrivateCreating(false);
   };
 
   const handleOpenCreate = async () => {
@@ -356,8 +340,8 @@ export function OrganizerDashboard({
     setIsCreateModalOpen(true);
   };
 
-  // Étape 0 → 1 : valider uniquement, pas d'appel API
-  const handleValidatePrivateForm = (e: React.FormEvent) => {
+  // Étape 0 → 1 : valider et créer l'événement directement
+  const handleValidatePrivateForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!privateEvent.title.trim()) { toast.error('Le nom est obligatoire'); return; }
     if (!privateEvent.location.trim()) { toast.error("L'adresse est obligatoire"); return; }
@@ -366,19 +350,7 @@ export function OrganizerDashboard({
       ev => ev.title.trim().toLowerCase() === privateEvent.title.trim().toLowerCase()
     );
     if (duplicate) { toast.error('Un événement avec ce nom existe déjà'); return; }
-    setBadgeStep(1);
-  };
-
-  // Étape 1 → 2 : passer à la confirmation
-  const handleGoToPaymentConfirm = () => {
-    if (!badgeQty || badgeQty < 1) { toast.error('La quantité doit être ≥ 1'); return; }
-    setBadgeStep(2);
-  };
-
-  // Étape 2 → 3 : créer l'événement + commande + paiement simulé en une seule action
-  const handlePayAndCreate = async () => {
-    if (!badgePricing) return;
-    setOrderPaying(true);
+    setPrivateCreating(true);
     try {
       const created = await EventsBackendAPI.createEvent({
         title: privateEvent.title.trim(),
@@ -393,16 +365,22 @@ export function OrganizerDashboard({
         isPrivateForBadges: true,
         salesBlocked: true,
       });
-      const order = await AccessAPI.createBadgeOrder(created.id, badgeQty);
-      const paid  = await AccessAPI.payBadgeOrder(order.id);
       setBadgeOrderEventId(created.id);
-      setPaidOrder(paid);
-      setBadgeStep(3);
-      toast.success('Paiement confirmé !');
+      try {
+        await Promise.all([
+          AccessAPI.applyDefaultZones(created.id),
+          AccessAPI.applyDefaultCategories(created.id),
+        ]);
+        await AccessAPI.applyDefaultMatrix(created.id);
+      } catch {
+        // Configuration Access à compléter manuellement si nécessaire
+      }
+      setBadgeStep(1);
+      toast.success('Événement créé !');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Erreur lors du paiement');
+      toast.error(err?.response?.data?.message ?? 'Erreur lors de la création');
     } finally {
-      setOrderPaying(false);
+      setPrivateCreating(false);
     }
   };
 
@@ -448,9 +426,7 @@ export function OrganizerDashboard({
                     {createMode === 'wizard' && 'Que souhaitez-vous faire ?'}
                     {createMode === 'public' && 'Créer un événement public'}
                     {createMode === 'badges' && badgeStep === 0 && 'Créer un événement privé pour badges'}
-                    {createMode === 'badges' && badgeStep === 1 && 'Choisir le nombre de badges'}
-                    {createMode === 'badges' && badgeStep === 2 && 'Confirmer le paiement'}
-                    {createMode === 'badges' && badgeStep === 3 && 'Commande confirmée'}
+                    {createMode === 'badges' && badgeStep === 1 && 'Événement créé'}
                   </DialogTitle>
                 </DialogHeader>
                 <div>
@@ -539,103 +515,24 @@ export function OrganizerDashboard({
                     </button>
                     <button
                       type="submit"
-                      style={{ flex: 1, height: '36px', padding: '0 16px', borderRadius: '6px', border: 'none', background: '#059669', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+                      disabled={privateCreating}
+                      style={{ flex: 1, height: '36px', padding: '0 16px', borderRadius: '6px', border: 'none', background: privateCreating ? '#6ee7b7' : '#059669', color: 'white', cursor: privateCreating ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500' }}
                     >
-                      Suivant
+                      {privateCreating ? 'Création…' : "Créer l'événement"}
                     </button>
                   </div>
                 </form>
               )}
 
-              {/* ── Étape 1 : choix du nombre de badges + tarification ── */}
-              {createMode === 'badges' && badgeStep === 1 && badgePricing && (
-                <div className="space-y-5 mt-2">
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm text-blue-800">
-                    <strong>{privateEvent.title}</strong> — {privateEvent.location} — {privateEvent.date}
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Nombre de badges souhaité</Label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={10000}
-                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={badgeQty || ''}
-                      onChange={e => {
-                        const v = parseInt(e.target.value);
-                        if (!isNaN(v) && v >= 1) setBadgeQty(v);
-                        else if (e.target.value === '') setBadgeQty(0);
-                      }}
-                      onBlur={() => { if (!badgeQty || badgeQty < 1) setBadgeQty(1); }}
-                      placeholder="Ex : 50"
-                    />
-                  </div>
-                  <div className="rounded-lg border bg-gray-50 p-4 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Coût unitaire</span>
-                      <span className="font-medium">{badgePricing.unitCost.toLocaleString('fr-FR')} {badgePricing.currency}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Quantité</span>
-                      <span className="font-medium">{badgeQty || '—'}</span>
-                    </div>
-                    <div className="flex justify-between border-t pt-2 text-base font-bold">
-                      <span>Total à payer</span>
-                      <span className="text-emerald-700">
-                        {badgeQty > 0 ? (badgeQty * badgePricing.unitCost).toLocaleString('fr-FR') : '—'} {badgePricing.currency}
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button type="button" onClick={() => setBadgeStep(0)}
-                      style={{ flex: 1, height: '40px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
-                      Retour
-                    </button>
-                    <button type="button" onClick={handleGoToPaymentConfirm}
-                      disabled={!badgeQty || badgeQty < 1}
-                      style={{ flex: 1, height: '40px', borderRadius: '6px', border: 'none', background: badgeQty >= 1 ? '#059669' : '#d1d5db', color: 'white', cursor: badgeQty >= 1 ? 'pointer' : 'not-allowed', fontSize: '14px', fontWeight: '500' }}>
-                      Procéder au paiement
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Étape 2 : confirmation paiement ── */}
-              {createMode === 'badges' && badgeStep === 2 && badgePricing && (
-                <div className="space-y-5 mt-2">
-                  <div className="rounded-lg border bg-gray-50 p-4 space-y-2 text-sm">
-                    <p className="font-semibold text-gray-800">Récapitulatif</p>
-                    <div className="flex justify-between"><span className="text-gray-600">Événement</span><span className="font-medium">{privateEvent.title}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600">Lieu</span><span>{privateEvent.location}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600">Date</span><span>{privateEvent.date}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-600">Badges</span><span className="font-medium">{badgeQty}</span></div>
-                    <div className="flex justify-between border-t pt-2 font-bold text-base">
-                      <span>Total</span>
-                      <span className="text-emerald-700">{(badgeQty * badgePricing.unitCost).toLocaleString('fr-FR')} {badgePricing.currency}</span>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button type="button" onClick={() => setBadgeStep(1)} disabled={orderPaying}
-                      style={{ flex: 1, height: '40px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
-                      Retour
-                    </button>
-                    <button type="button" onClick={handlePayAndCreate} disabled={orderPaying}
-                      style={{ flex: 2, height: '40px', borderRadius: '6px', border: 'none', background: orderPaying ? '#6ee7b7' : '#059669', color: 'white', cursor: orderPaying ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500' }}>
-                      {orderPaying ? 'Création en cours…' : 'Confirmer et payer (simulation)'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Étape 3 : succès ── */}
-              {createMode === 'badges' && badgeStep === 3 && paidOrder && (
+              {/* ── Étape 1 : succès ── */}
+              {createMode === 'badges' && badgeStep === 1 && (
                 <div className="space-y-4 mt-2 text-center">
                   <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-8 h-8 text-emerald-600" />
                   </div>
-                  <p className="font-semibold text-gray-900">Paiement confirmé !</p>
+                  <p className="font-semibold text-gray-900">Événement créé !</p>
                   <p className="text-sm text-gray-600">
-                    <strong>{paidOrder.quantity} badges</strong> pour <strong>{privateEvent.title}</strong> sont prêts à être configurés.
+                    L'événement <strong>{privateEvent.title}</strong> est prêt. Configurez maintenant les zones et badges d'accès.
                   </p>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button type="button" onClick={() => { resetCreateModal(); setIsCreateModalOpen(false); }}

@@ -26,6 +26,7 @@ import EventsBackendAPI, { type BackendEvent } from '../../services/api/EventsBa
 import { toast } from 'sonner';
 import { useAuth } from '../../context/AuthContext';
 import { CategoryTab, getCategoryIcon } from '../CategorySelector';
+import { loyaltyApi, type LoyaltyProfile } from '../../api/loyalty';
 
 const EVENT_CATEGORIES = [
   { slug: 'musique',     label: 'Musique' },
@@ -159,6 +160,13 @@ export function UserDashboard({}: UserDashboardProps) {
       .then(setFavorites)
       .catch(() => {})
       .finally(() => setFavoritesLoading(false));
+  }, [currentUser?.id]);
+
+  const [loyaltyProfile, setLoyaltyProfile] = useState<LoyaltyProfile | null>(null);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    loyaltyApi.getMyProfile().then(setLoyaltyProfile).catch(() => {});
   }, [currentUser?.id]);
 
   const [removingFavId, setRemovingFavId] = useState<string | null>(null);
@@ -315,6 +323,63 @@ export function UserDashboard({}: UserDashboardProps) {
               </CardContent>
             </Card>
           </div>
+
+          {/* Feeti Na Feeti — widget fidélité */}
+          {loyaltyProfile && (() => {
+            const LEVELS = ['Mobembo','Elengi','Momi','Mwana','Boboto'];
+            const LEVEL_MINS = [0, 1000, 2000, 3000, 4000];
+            const idx = LEVELS.indexOf(loyaltyProfile.level);
+            const nextMin = LEVEL_MINS[idx + 1] ?? loyaltyProfile.points;
+            const curMin  = LEVEL_MINS[idx] ?? 0;
+            const progress = nextMin > curMin
+              ? Math.min(100, Math.round(((loyaltyProfile.points - curMin) / (nextMin - curMin)) * 100))
+              : 100;
+            const LEVEL_COLORS: Record<string, string> = {
+              Mobembo: 'from-gray-500 to-gray-700',
+              Elengi:  'from-blue-500 to-blue-700',
+              Momi:    'from-purple-500 to-purple-700',
+              Mwana:   'from-orange-500 to-orange-700',
+              Boboto:  'from-yellow-400 to-amber-600',
+            };
+            return (
+              <Card className="bg-linear-to-r from-gray-900 to-gray-800 text-white overflow-hidden">
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-full bg-linear-to-br ${LEVEL_COLORS[loyaltyProfile.level] ?? 'from-gray-500 to-gray-700'} flex items-center justify-center shrink-0`}>
+                        <Star className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-white/60">Feeti Na Feeti</span>
+                          <span className="text-xs bg-white/20 rounded-full px-2 py-0.5 font-medium">{loyaltyProfile.level}</span>
+                        </div>
+                        <p className="text-2xl font-bold">{loyaltyProfile.points.toLocaleString('fr-FR')} pts</p>
+                        {idx < LEVELS.length - 1 && (
+                          <div className="mt-1.5">
+                            <div className="w-40 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                              <div className="h-full bg-[#cdff71] rounded-full transition-all" style={{ width: `${progress}%` }} />
+                            </div>
+                            <p className="text-xs text-white/60 mt-1">
+                              {(nextMin - loyaltyProfile.points).toLocaleString('fr-FR')} pts avant {LEVELS[idx + 1]}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="bg-[#cdff71] text-gray-900 hover:bg-[#b8e860] font-semibold shrink-0"
+                      onClick={() => navigate('/feeti-na-feeti')}
+                    >
+                      <Gift className="w-4 h-4 mr-1.5" />
+                      Mon programme
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
         </div>
 
         <Tabs defaultValue={initialTab || 'tickets'} className="space-y-6">

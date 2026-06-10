@@ -241,17 +241,10 @@ export function QRScannerPage({ onBack }: QRScannerPageProps) {
                 />
                 <canvas ref={canvasRef} className="hidden" />
 
-                {!cameraActive && !cameraError && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400">
-                    <CameraOff className="w-12 h-12" />
-                    <p className="text-sm">Caméra inactive</p>
-                  </div>
-                )}
-
                 {/* Scanning overlay */}
                 {cameraActive && !verifying && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-56 h-56 border-2 border-indigo-400 rounded-xl relative">
+                    <div className="w-64 h-64 border-2 border-indigo-400 rounded-xl relative">
                       <div className="absolute -top-0.5 -left-0.5 w-8 h-8 border-t-4 border-l-4 border-indigo-400 rounded-tl-xl" />
                       <div className="absolute -top-0.5 -right-0.5 w-8 h-8 border-t-4 border-r-4 border-indigo-400 rounded-tr-xl" />
                       <div className="absolute -bottom-0.5 -left-0.5 w-8 h-8 border-b-4 border-l-4 border-indigo-400 rounded-bl-xl" />

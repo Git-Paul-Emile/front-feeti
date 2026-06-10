@@ -3,17 +3,18 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
+import * as XLSX from 'xlsx';
 import {
   ArrowLeft, Plus, RefreshCw, Download, Shield, Users, Map,
   TicketCheck, CheckCircle2, XCircle, AlertTriangle, Mail,
-  RotateCcw, Trash2, Eye, ChevronRight, Layers, Zap, Copy, QrCode, Upload, UserCheck,
+  Trash2, Eye, ChevronRight, Layers, Zap, Copy, QrCode, Upload, UserCheck, FileText, X as XIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
@@ -23,7 +24,7 @@ import AccessAPI from '../../services/api/AccessAPI';
 import ControllerAPI, { type EventControllerAssignment, type ControllerUser } from '../../services/api/ControllerAPI';
 import type {
   EventZone, ParticipantCategory, ZoneAccessLevel,
-  AccessBadge, AccessLog, ZoneTracking, SuspectReport,
+  AccessBadge, AccessLog, ZoneTracking, SuspectReport, BadgePricing,
 } from '../../services/api/AccessAPI';
 import { useAccessSocket } from '../../hooks/useAccessSocket';
 
@@ -49,6 +50,82 @@ function fmt(dateStr: string) {
   return new Date(dateStr).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
+function normalizeCsvOrXlsxRow(row: Array<string | number | boolean | null | undefined>) {
+  const parts = row.map(value => String(value ?? '').trim());
+  return {
+    holderName: parts[0] ?? '',
+    holderEmail: parts[1] ?? '',
+    holderPhone: parts[2] ?? '',
+    categoryName: parts[3] ?? '',
+  };
+}
+
+function parseCsvOrXlsxRows(file: File, raw: string | ArrayBuffer) {
+  const lowerName = file.name.toLowerCase();
+  if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls')) {
+    const workbook = XLSX.read(raw, { type: 'array' });
+    const firstSheet = workbook.SheetNames[0];
+    if (!firstSheet) return [];
+    const worksheet = workbook.Sheets[firstSheet];
+    const rows = XLSX.utils.sheet_to_json<Array<string | number | boolean | null | undefined>>(worksheet, { header: 1, blankrows: false });
+    return rows.slice(1).map(normalizeCsvOrXlsxRow);
+  }
+
+  const text = typeof raw === 'string' ? raw : new TextDecoder('utf-8').decode(raw);
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  return lines.slice(1).map(line => {
+    const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+    return normalizeCsvOrXlsxRow(parts);
+  });
+}
+
+function normalizeCategoryKey(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function normalizeBadgeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function findDuplicateBadgeEmail(rows: { holderEmail: string }[], existingBadges: AccessBadge[]) {
+  const seen = new Set(existingBadges.map(badge => normalizeBadgeEmail(badge.holderEmail)));
+  for (const row of rows) {
+    const email = normalizeBadgeEmail(row.holderEmail);
+    if (seen.has(email)) return row.holderEmail;
+    seen.add(email);
+  }
+  return null;
+}
+
+function reviewImportedRows(rows: CsvOrXlsxRow[], categories: ParticipantCategory[]): CsvUploadReview {
+  const categoriesByName = new Map(categories.map(category => [normalizeCategoryKey(category.name), category]));
+  const validRows: CsvOrXlsxRow[] = [];
+  const ignoredReasons = new Set<string>();
+
+  for (const row of rows) {
+    const hasRequiredFields = row.holderName.trim() && row.holderEmail.trim() && row.holderEmail.includes('@');
+    if (!hasRequiredFields) {
+      ignoredReasons.add('nom ou email invalide');
+      continue;
+    }
+
+    if (row.categoryName.trim()) {
+      if (!categoriesByName.has(normalizeCategoryKey(row.categoryName))) {
+        ignoredReasons.add("catégorie non reconnue pour l'événement");
+        continue;
+      }
+    }
+
+    validRows.push(row);
+  }
+
+  return {
+    validRows,
+    ignoredCount: rows.length - validRows.length,
+    ignoredReasons: Array.from(ignoredReasons),
+  };
+}
+
 // ─── Props ──────────────────────────────────────────────────────────────────────
 
 interface FeetiAccessDashboardProps {
@@ -56,6 +133,19 @@ interface FeetiAccessDashboardProps {
   eventTitle: string;
   onBack: () => void;
 }
+
+type CsvOrXlsxRow = {
+  holderName: string;
+  holderEmail: string;
+  holderPhone: string;
+  categoryName: string;
+};
+
+type CsvUploadReview = {
+  validRows: CsvOrXlsxRow[];
+  ignoredCount: number;
+  ignoredReasons: string[];
+};
 
 // ─── Composant principal ────────────────────────────────────────────────────────
 
@@ -85,8 +175,19 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
   const [badges, setBadges] = useState<AccessBadge[]>([]);
   const [badgesLoading, setBadgesLoading] = useState(false);
   const [badgeDialog, setBadgeDialog] = useState(false);
+  const [badgeStep, setBadgeStep] = useState<0 | 1 | 2>(0);
   const [badgeForm, setBadgeForm] = useState({ categoryId: '', holderName: '', holderEmail: '', holderPhone: '', holderPhoto: '', ticketId: '' });
   const [badgePhotoPreview, setBadgePhotoPreview] = useState<string | null>(null);
+  const [badgeCategoryFormOpen, setBadgeCategoryFormOpen] = useState(false);
+  const [badgeCategoryForm, setBadgeCategoryForm] = useState({ name: '', description: '', color: '#6B7280' });
+  const [csvMode, setCsvMode] = useState(false);
+  const [csvRows, setCsvRows] = useState<CsvOrXlsxRow[]>([]);
+  const [csvFileName, setCsvFileName] = useState('');
+  const [csvError, setCsvError] = useState('');
+  const [csvIgnoredSummary, setCsvIgnoredSummary] = useState('');
+  const [badgePricing, setBadgePricing] = useState<BadgePricing | null>(null);
+  const [badgeWizardPaying, setBadgeWizardPaying] = useState(false);
+  const [generatedBadges, setGeneratedBadges] = useState<AccessBadge[]>([]);
   const [qrDialog, setQrDialog] = useState<{ open: boolean; badge?: AccessBadge }>({ open: false });
   const [sourceEventId, setSourceEventId] = useState('');
 
@@ -103,6 +204,21 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
   const [suspectLoading, setSuspectLoading] = useState(false);
   const [reportDialog, setReportDialog] = useState<{ open: boolean; badge?: AccessBadge }>({ open: false });
   const [reportReason, setReportReason] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    loading: boolean;
+    onConfirm: (() => Promise<void> | void) | null;
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    confirmLabel: 'Confirmer',
+    loading: false,
+    onConfirm: null,
+  });
 
   // ── Contrôleurs ─────────────────────────────────────────────────────────────
   const [controllers, setControllers] = useState<EventControllerAssignment[]>([]);
@@ -285,12 +401,22 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
   };
 
   const handleDeleteZone = async (zone: EventZone) => {
-    if (!confirm(`Supprimer la zone "${zone.name}" ?`)) return;
-    try {
-      await AccessAPI.deleteZone(eventId, zone.id);
-      setZones(prev => prev.filter(z => z.id !== zone.id));
-      toast.success('Zone supprimée');
-    } catch { toast.error('Erreur lors de la suppression'); }
+    setConfirmDialog({
+      open: true,
+      title: 'Supprimer la zone',
+      description: `Supprimer la zone "${zone.name}" ? Cette action est définitive.`,
+      confirmLabel: 'Supprimer',
+      loading: false,
+      onConfirm: async () => {
+        try {
+          await AccessAPI.deleteZone(eventId, zone.id);
+          setZones(prev => prev.filter(z => z.id !== zone.id));
+          toast.success('Zone supprimée');
+        } catch {
+          toast.error('Erreur lors de la suppression');
+        }
+      },
+    });
   };
 
   // ── Category actions ──────────────────────────────────────────────────────
@@ -324,12 +450,22 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
   };
 
   const handleDeleteCategory = async (cat: ParticipantCategory) => {
-    if (!confirm(`Supprimer la catégorie "${cat.name}" ?`)) return;
-    try {
-      await AccessAPI.deleteCategory(eventId, cat.id);
-      setCategories(prev => prev.filter(c => c.id !== cat.id));
-      toast.success('Catégorie supprimée');
-    } catch { toast.error('Erreur'); }
+    setConfirmDialog({
+      open: true,
+      title: 'Supprimer la catégorie',
+      description: `Supprimer la catégorie "${cat.name}" ? Cette action est définitive.`,
+      confirmLabel: 'Supprimer',
+      loading: false,
+      onConfirm: async () => {
+        try {
+          await AccessAPI.deleteCategory(eventId, cat.id);
+          setCategories(prev => prev.filter(c => c.id !== cat.id));
+          toast.success('Catégorie supprimée');
+        } catch {
+          toast.error('Erreur');
+        }
+      },
+    });
   };
 
   // ── Matrix actions ────────────────────────────────────────────────────────
@@ -372,7 +508,22 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
     }
   };
 
-  // ── Badge actions ─────────────────────────────────────────────────────────
+  // ── Badge wizard ──────────────────────────────────────────────────────────
+
+  const resetBadgeWizard = () => {
+    setBadgeStep(0);
+    setCsvMode(false);
+    setCsvRows([]);
+    setCsvFileName('');
+    setCsvError('');
+    setBadgePricing(null);
+    setBadgeWizardPaying(false);
+    setGeneratedBadges([]);
+    setBadgeForm({ categoryId: '', holderName: '', holderEmail: '', holderPhone: '', holderPhoto: '', ticketId: '' });
+    setBadgePhotoPreview(null);
+    setBadgeCategoryFormOpen(false);
+    setBadgeCategoryForm({ name: '', description: '', color: '#6B7280' });
+  };
 
   const handleBadgePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -386,22 +537,242 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
     reader.readAsDataURL(file);
   };
 
-  const handleGenerateBadge = async () => {
-    try {
-      const badge = await AccessAPI.generateBadge(eventId, {
-        categoryId: badgeForm.categoryId,
-        holderName: badgeForm.holderName,
-        holderEmail: badgeForm.holderEmail,
-        ...(badgeForm.holderPhone ? { holderPhone: badgeForm.holderPhone } : {}),
-        ...(badgeForm.holderPhoto ? { holderPhoto: badgeForm.holderPhoto } : {}),
-        ...(badgeForm.ticketId ? { ticketId: badgeForm.ticketId } : {}),
-      });
-      setBadges(prev => [badge, ...prev]);
-      setBadgeDialog(false);
+  const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvFileName(file.name);
+    setCsvError('');
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const raw = ev.target?.result;
+      if (!raw) { setCsvError('Impossible de lire le fichier'); return; }
+      const rows = parseCsvOrXlsxRows(file, raw).filter(r => r.holderName && r.holderEmail && r.holderEmail.includes('@'));
+      if (rows.length === 0) { setCsvError('Aucune ligne valide — format attendu : Nom, Email, Téléphone, Catégorie'); return; }
+      setCsvRows(rows);
+      setCsvMode(true);
       setBadgeForm({ categoryId: '', holderName: '', holderEmail: '', holderPhone: '', holderPhoto: '', ticketId: '' });
       setBadgePhotoPreview(null);
-      toast.success('Badge généré');
-    } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Erreur'); }
+    };
+    if (/\.(xlsx|xls)$/i.test(file.name)) {
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+    reader.readAsText(file);
+  };
+
+  const handleClearCsv = () => { setCsvMode(false); setCsvRows([]); setCsvFileName(''); setCsvError(''); };
+
+  const downloadCsvTemplate = () => {
+    const content = 'Nom,Email,Téléphone,Catégorie\nJean Dupont,jean@exemple.com,+242 06 123 456,VIP';
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'modele-badges-feeti.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const badgeCount = csvMode ? csvRows.length : (badgeForm.holderName.trim() && badgeForm.holderEmail.trim() ? 1 : 0);
+
+  const handleBadgeWizardNext = async () => {
+    if (!csvMode) {
+      if (!badgeForm.categoryId) { toast.error('Choisissez une catégorie'); return; }
+      if (!badgeForm.holderName.trim()) { toast.error('Le nom est obligatoire'); return; }
+      if (!badgeForm.holderEmail.trim()) { toast.error("L'email est obligatoire"); return; }
+      const duplicateEmail = findDuplicateBadgeEmail([{ holderEmail: badgeForm.holderEmail }], badges);
+      if (duplicateEmail) {
+        toast.error(`Un badge existe déjà pour ${duplicateEmail}`);
+        return;
+      }
+    } else if (csvRows.length === 0) {
+      toast.error('Aucune ligne valide dans le fichier'); return;
+    } else {
+      const duplicateEmail = findDuplicateBadgeEmail(csvRows, badges);
+      if (duplicateEmail) {
+        toast.error(`Un badge existe déjà pour ${duplicateEmail}`);
+        return;
+      }
+    }
+    if (!badgePricing) {
+      try { setBadgePricing(await AccessAPI.getBadgePricing()); }
+      catch { toast.error('Erreur chargement tarification'); return; }
+    }
+    setBadgeStep(1);
+  };
+
+  const handlePayAndGenerate = async () => {
+    if (!badgePricing) return;
+    const duplicateEmail = csvMode
+      ? findDuplicateBadgeEmail(csvRows, badges)
+      : findDuplicateBadgeEmail([{ holderEmail: badgeForm.holderEmail }], badges);
+    if (duplicateEmail) {
+      toast.error(`Un badge existe déjà pour ${duplicateEmail}`);
+      return;
+    }
+    setBadgeWizardPaying(true);
+    try {
+      const order = await AccessAPI.createBadgeOrder(eventId, badgeCount);
+      await AccessAPI.payBadgeOrder(order.id);
+      let created: AccessBadge[];
+      if (csvMode) {
+        created = await AccessAPI.generateBulkBadges(eventId, {
+          badges: csvRows.map(r => ({
+            holderName: r.holderName,
+            holderEmail: r.holderEmail,
+            ...(r.holderPhone ? { holderPhone: r.holderPhone } : {}),
+            ...(r.categoryName ? { categoryName: r.categoryName } : {}),
+          })),
+        });
+      } else {
+        const badge = await AccessAPI.generateBadge(eventId, {
+          categoryId:  badgeForm.categoryId,
+          holderName:  badgeForm.holderName,
+          holderEmail: badgeForm.holderEmail,
+          ...(badgeForm.holderPhone  ? { holderPhone:  badgeForm.holderPhone }  : {}),
+          ...(badgeForm.holderPhoto  ? { holderPhoto:  badgeForm.holderPhoto }  : {}),
+          ...(badgeForm.ticketId     ? { ticketId:     badgeForm.ticketId }     : {}),
+        });
+        created = [badge];
+      }
+      setGeneratedBadges(created);
+      setBadges(prev => [...created, ...prev]);
+      setBadgeStep(2);
+      toast.success(`${created.length} badge${created.length > 1 ? 's' : ''} généré${created.length > 1 ? 's' : ''} !`);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Erreur lors de la génération');
+    } finally {
+      setBadgeWizardPaying(false);
+    }
+  };
+
+  const handleCreateBadgeCategory = async () => {
+    if (!badgeCategoryForm.name.trim()) {
+      toast.error('Le nom de la catégorie est obligatoire');
+      return;
+    }
+    try {
+      const created = await AccessAPI.createCategory(eventId, {
+        name: badgeCategoryForm.name.trim(),
+        description: badgeCategoryForm.description.trim() || undefined,
+        color: badgeCategoryForm.color,
+      });
+      await loadCategories();
+      setBadgeCategoryForm({ name: '', description: '', color: '#6B7280' });
+      setBadgeCategoryFormOpen(false);
+      setBadgeForm(prev => ({ ...prev, categoryId: prev.categoryId || created.id }));
+      toast.success('Catégorie ajoutée');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? 'Erreur lors de la création de la catégorie');
+    }
+  };
+
+  const handleDeleteBadgeCategory = async (category: ParticipantCategory) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Supprimer la catégorie',
+      description: `Supprimer la catégorie "${category.name}" ? Cette action est définitive.`,
+      confirmLabel: 'Supprimer',
+      loading: false,
+      onConfirm: async () => {
+        try {
+          await AccessAPI.deleteCategory(eventId, category.id);
+          await loadCategories();
+          if (badgeForm.categoryId === category.id) {
+            setBadgeForm(prev => ({ ...prev, categoryId: '' }));
+          }
+          toast.success('Catégorie supprimée');
+        } catch (e: any) {
+          toast.error(e?.response?.data?.message ?? 'Erreur lors de la suppression de la catégorie');
+        }
+      },
+    });
+  };
+
+  const downloadGeneratedPdf = async () => {
+    if (generatedBadges.length === 0) return;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    for (let i = 0; i < generatedBadges.length; i++) {
+      const badge = generatedBadges[i];
+      if (i > 0) doc.addPage();
+      doc.setFillColor(79, 70, 229);
+      doc.rect(0, 0, 210, 28, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+      doc.text('Fééti Access', 14, 12);
+      doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+      doc.text(eventTitle, 14, 20);
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+      doc.text(badge.holderName, 14, 40);
+      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80, 80, 80);
+      doc.text(badge.holderEmail, 14, 48);
+      if (badge.holderPhone) doc.text(badge.holderPhone, 14, 55);
+      const catY = badge.holderPhone ? 63 : 56;
+      doc.setFontSize(9); doc.setTextColor(100, 100, 100);
+      doc.text(`Catégorie : ${badge.category?.name ?? badge.categoryLabel ?? '—'}`, 14, catY);
+      doc.text(`Statut : Actif`, 14, catY + 7);
+      try {
+        const dataUrl = await QRCode.toDataURL(badge.qrCode, { width: 300, margin: 1, errorCorrectionLevel: 'M' });
+        doc.addImage(dataUrl, 'PNG', (210 - 80) / 2, 85, 80, 80);
+      } catch { /* fallback */ }
+      doc.setFontSize(7); doc.setTextColor(160, 160, 160);
+      doc.text(`Badge ID: ${badge.id}`, 14, 280);
+      doc.text('Fééti Access — Contrôle d\'accès sécurisé', 105, 280, { align: 'center' });
+    }
+    doc.save(`badges-feeti-access-${eventId}.pdf`);
+  };
+
+  const downloadBadgePdf = async (badge: AccessBadge) => {
+    try {
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      doc.setFillColor(79, 70, 229);
+      doc.rect(0, 0, 210, 28, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Fééti Access', 14, 12);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(eventTitle, 14, 20);
+
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(badge.holderName, 14, 40);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80, 80, 80);
+      doc.text(badge.holderEmail, 14, 48);
+      if (badge.holderPhone) doc.text(badge.holderPhone, 14, 55);
+      const categoryY = badge.holderPhone ? 63 : 56;
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Catégorie : ${badge.category?.name ?? badge.categoryLabel ?? '—'}`, 14, categoryY);
+      doc.text(`Statut : ${badge.status === 'active' ? 'Actif' : badge.status === 'revoked' ? 'Révoqué' : 'Expiré'}`, 14, categoryY + 7);
+
+      const dataUrl = await QRCode.toDataURL(badge.qrCode, { width: 300, margin: 1, errorCorrectionLevel: 'M' });
+      doc.addImage(dataUrl, 'PNG', (210 - 80) / 2, 85, 80, 80);
+
+      doc.setFontSize(7);
+      doc.setTextColor(160, 160, 160);
+      doc.text(`Badge ID: ${badge.id}`, 14, 280);
+      doc.text('Fééti Access — Contrôle d\'accès sécurisé', 105, 280, { align: 'center' });
+      doc.save(`badge-${badge.holderName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+      toast.success('Badge téléchargé');
+    } catch {
+      toast.error('Erreur lors du téléchargement du badge');
+    }
+  };
+
+  const downloadGeneratedCsv = () => {
+    if (generatedBadges.length === 0) return;
+    const header = 'Nom,Email,Téléphone,Catégorie,Statut,QR Code';
+    const rows = generatedBadges.map(b =>
+      `"${b.holderName}","${b.holderEmail}","${b.holderPhone ?? ''}","${b.category?.name ?? b.categoryLabel ?? ''}","${b.status}","${b.qrCode}"`
+    );
+    const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `badges-generes-${eventId}.csv`; a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleSendBadge = async (badge: AccessBadge) => {
@@ -420,19 +791,29 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
   };
 
   const handleRevokeBadge = async (badge: AccessBadge) => {
-    if (!confirm(`Révoquer le badge de ${badge.holderName} ?`)) return;
-    try {
-      const updated = await AccessAPI.revokeBadge(eventId, badge.id);
-      setBadges(prev => prev.map(b => b.id === updated.id ? updated : b));
-      toast.success('Badge révoqué');
-    } catch { toast.error('Erreur'); }
+    setConfirmDialog({
+      open: true,
+      title: 'Révoquer le badge',
+      description: `Révoquer le badge de ${badge.holderName} ? La personne ne pourra plus passer les contrôles tant que le badge reste révoqué.`,
+      confirmLabel: 'Révoquer',
+      loading: false,
+      onConfirm: async () => {
+        try {
+          const updated = await AccessAPI.revokeBadge(eventId, badge.id);
+          setBadges(prev => prev.map(b => b.id === updated.id ? updated : b));
+          toast.success('Badge révoqué');
+        } catch {
+          toast.error('Erreur');
+        }
+      },
+    });
   };
 
-  const handleRegenerateBadge = async (badge: AccessBadge) => {
+  const handleActivateBadge = async (badge: AccessBadge) => {
     try {
-      const updated = await AccessAPI.regenerateBadge(eventId, badge.id);
+      const updated = await AccessAPI.activateBadge(eventId, badge.id);
       setBadges(prev => prev.map(b => b.id === updated.id ? updated : b));
-      toast.success('Badge régénéré');
+      toast.success('Badge activé');
     } catch { toast.error('Erreur'); }
   };
 
@@ -443,6 +824,31 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
       await AccessAPI.exportCsv(eventId);
       toast.success('Export CSV téléchargé');
     } catch { toast.error('Erreur lors de l\'export'); }
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({
+      open: false,
+      title: '',
+      description: '',
+      confirmLabel: 'Confirmer',
+      loading: false,
+      onConfirm: null,
+    });
+  };
+
+  const handleConfirmDialogConfirm = async () => {
+    const action = confirmDialog.onConfirm;
+    if (!action || confirmDialog.loading) return;
+    setConfirmDialog(prev => ({ ...prev, loading: true }));
+    if (action) {
+      try {
+        await action();
+        closeConfirmDialog();
+      } catch {
+        setConfirmDialog(prev => ({ ...prev, loading: false }));
+      }
+    }
   };
 
   const handleExportBadgesCsv = async () => {
@@ -918,30 +1324,29 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
                               onClick={() => setQrDialog({ open: true, badge })}>
                               <Eye className="w-3.5 h-3.5" />
                             </Button>
-                            {badge.status === 'active' && (
-                              <>
-                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Envoyer par email"
-                                  onClick={() => handleSendBadge(badge)}>
-                                  <Mail className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Envoyer par SMS"
-                                  onClick={() => handleSendBadgeSms(badge)}>
-                                  <Zap className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Régénérer"
-                                  onClick={() => handleRegenerateBadge(badge)}>
-                                  <RotateCcw className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" title="Révoquer"
-                                  onClick={() => handleRevokeBadge(badge)}>
-                                  <XCircle className="w-3.5 h-3.5" />
-                                </Button>
-                              </>
-                            )}
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-amber-500 hover:text-amber-600" title="Signaler badge suspect"
-                              onClick={() => { setReportDialog({ open: true, badge }); setReportReason(''); }}>
-                              <AlertTriangle className="w-3.5 h-3.5" />
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Télécharger le badge"
+                              onClick={() => downloadBadgePdf(badge)}>
+                              <Download className="w-3.5 h-3.5" />
                             </Button>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Envoyer par email"
+                              onClick={() => handleSendBadge(badge)}>
+                              <Mail className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Envoyer par SMS"
+                              onClick={() => handleSendBadgeSms(badge)}>
+                              <Zap className="w-3.5 h-3.5" />
+                            </Button>
+                            {badge.status === 'active' ? (
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" title="Désactiver"
+                                onClick={() => handleRevokeBadge(badge)}>
+                                <XCircle className="w-3.5 h-3.5" />
+                              </Button>
+                            ) : (
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700" title="Activer"
+                                onClick={() => handleActivateBadge(badge)}>
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -949,6 +1354,7 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
                   </TableBody>
                 </Table>
               </div>
+
             )}
           </TabsContent>
 
@@ -1079,6 +1485,7 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
                 </div>
               </DialogContent>
             </Dialog>
+
           </TabsContent>
 
           {/* ── TAB TRACKING ──────────────────────────────────────────────────── */}
@@ -1318,6 +1725,21 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
 
           </TabsContent>
         </Tabs>
+
+        <Dialog open={confirmDialog.open} onOpenChange={(open: boolean) => { if (!open) closeConfirmDialog(); }} modal={false}>
+          <DialogContent className="max-w-md" hideOverlay>
+            <DialogHeader>
+              <DialogTitle>{confirmDialog.title}</DialogTitle>
+              <DialogDescription>{confirmDialog.description}</DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="pt-2">
+              <Button variant="outline" onClick={closeConfirmDialog} disabled={confirmDialog.loading}>Annuler</Button>
+              <Button variant="destructive" onClick={handleConfirmDialogConfirm} disabled={confirmDialog.loading}>
+                {confirmDialog.loading ? 'Traitement...' : confirmDialog.confirmLabel}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* ── Dialog Zone ──────────────────────────────────────────────────────── */}
@@ -1407,65 +1829,241 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
         </DialogContent>
       </Dialog>
 
-      {/* ── Dialog Générer Badge ───────────────────────────────────────────────── */}
-      <Dialog open={badgeDialog} onOpenChange={(o) => { setBadgeDialog(o); if (!o) { setBadgePhotoPreview(null); setBadgeForm({ categoryId: '', holderName: '', holderEmail: '', holderPhone: '', holderPhoto: '', ticketId: '' }); } }}>
-        <DialogContent className="max-w-sm">
+      {/* ── Dialog Générer Badge — wizard 3 étapes ────────────────────────────── */}
+      <Dialog open={badgeDialog} onOpenChange={(o) => { if (!o) resetBadgeWizard(); setBadgeDialog(o); }}>
+        <DialogContent className="max-w-lg" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
           <DialogHeader>
-            <DialogTitle>Générer un badge QR</DialogTitle>
+            <DialogTitle>
+              {badgeStep === 0 && 'Générer un badge QR'}
+              {badgeStep === 1 && 'Confirmer le paiement'}
+              {badgeStep === 2 && 'Badges générés'}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div>
-              <Label>Catégorie <span className="text-red-500">*</span></Label>
-              <Select value={badgeForm.categoryId} onValueChange={v => setBadgeForm(p => ({ ...p, categoryId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
-                <SelectContent>
-                  {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Nom <span className="text-red-500">*</span></Label>
-              <Input value={badgeForm.holderName} onChange={e => setBadgeForm(p => ({ ...p, holderName: e.target.value }))} placeholder="Nom complet" />
-            </div>
-            <div>
-              <Label>Email <span className="text-red-500">*</span></Label>
-              <Input type="email" value={badgeForm.holderEmail} onChange={e => setBadgeForm(p => ({ ...p, holderEmail: e.target.value }))} placeholder="email@exemple.com" />
-            </div>
-            <div>
-              <Label>Téléphone (SMS)</Label>
-              <Input value={badgeForm.holderPhone} onChange={e => setBadgeForm(p => ({ ...p, holderPhone: e.target.value }))} placeholder="+242..." />
-            </div>
-            <div>
-              <Label>Photo (optionnel)</Label>
-              <label className="flex items-center gap-3 mt-1 cursor-pointer p-3 border-2 border-dashed border-gray-200 rounded-lg hover:border-indigo-400 transition-colors">
-                <Upload className="w-4 h-4 text-gray-400 shrink-0" />
-                <span className="text-sm text-gray-500 flex-1 truncate">
-                  {badgePhotoPreview ? 'Photo sélectionnée — cliquer pour changer' : 'Cliquer pour choisir une photo...'}
-                </span>
-                <input type="file" accept="image/*" className="sr-only" onChange={handleBadgePhotoChange} />
-              </label>
-              {badgePhotoPreview && (
-                <div className="mt-2 flex items-center gap-2">
-                  <img src={badgePhotoPreview} alt="Aperçu" className="w-14 h-14 rounded-full object-cover border-2 border-indigo-200" />
-                  <button type="button" className="text-xs text-red-500 hover:text-red-700"
-                    onClick={() => { setBadgePhotoPreview(null); setBadgeForm(p => ({ ...p, holderPhoto: '' })); }}>
-                    Supprimer
-                  </button>
+
+          {/* ── Étape 0 : formulaire + CSV ── */}
+          {badgeStep === 0 && (
+            <div className="space-y-4 pt-2">
+
+              {/* Formulaire (désactivé si CSV chargé) */}
+              <div className={csvMode ? 'opacity-40 pointer-events-none select-none' : ''}>
+                <div className="space-y-3">
+                  <div>
+                    <Label>Catégorie <span className="text-red-500">*</span></Label>
+                    <Select value={badgeForm.categoryId} onValueChange={v => setBadgeForm(p => ({ ...p, categoryId: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                      <SelectContent>
+                        {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Nom <span className="text-red-500">*</span></Label>
+                      <Input value={badgeForm.holderName} onChange={e => setBadgeForm(p => ({ ...p, holderName: e.target.value }))} placeholder="Nom complet" />
+                    </div>
+                    <div>
+                      <Label>Email <span className="text-red-500">*</span></Label>
+                      <Input type="email" value={badgeForm.holderEmail} onChange={e => setBadgeForm(p => ({ ...p, holderEmail: e.target.value }))} placeholder="email@exemple.com" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Téléphone</Label>
+                      <Input value={badgeForm.holderPhone} onChange={e => setBadgeForm(p => ({ ...p, holderPhone: e.target.value }))} placeholder="+242..." />
+                    </div>
+                    <div>
+                      <Label>ID Billet</Label>
+                      <Input value={badgeForm.ticketId} onChange={e => setBadgeForm(p => ({ ...p, ticketId: e.target.value }))} placeholder="Optionnel" />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Photo (optionnel)</Label>
+                    <label className="flex items-center gap-3 mt-1 cursor-pointer p-2.5 border-2 border-dashed border-gray-200 rounded-lg hover:border-indigo-400 transition-colors">
+                      <Upload className="w-4 h-4 text-gray-400 shrink-0" />
+                      <span className="text-sm text-gray-500 flex-1 truncate">
+                        {badgePhotoPreview ? 'Photo sélectionnée' : 'Cliquer pour choisir…'}
+                      </span>
+                      <input type="file" accept="image/*" className="sr-only" onChange={handleBadgePhotoChange} />
+                    </label>
+                    {badgePhotoPreview && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img src={badgePhotoPreview} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-indigo-200" />
+                        <button type="button" className="text-xs text-red-500"
+                          onClick={() => { setBadgePhotoPreview(null); setBadgeForm(p => ({ ...p, holderPhoto: '' })); }}>
+                          Supprimer
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Séparateur */}
+              <div className="relative my-1">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-200" /></div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-white px-3 text-gray-400 uppercase tracking-wide">ou importer un fichier CSV</span>
+                </div>
+              </div>
+
+              {/* Zone CSV */}
+              <div className="space-y-2">
+                <div className="rounded-lg border border-dashed border-indigo-200 bg-indigo-50/70 p-3 text-xs text-indigo-800">
+                  <p className="font-semibold mb-1">Colonnes attendues dans le CSV</p>
+                  <p>Le fichier doit contenir exactement ces colonnes, dans cet ordre : <span className="font-medium">Nom, Email, Téléphone, Catégorie</span>.</p>
+                  <p className="mt-1">Les formats acceptés sont <span className="font-medium">.csv</span>, <span className="font-medium">.xlsx</span> et <span className="font-medium">.xls</span>.</p>
+                  <p className="mt-1 text-indigo-700">Le téléphone et la catégorie sont facultatifs, mais le nom et l'email sont obligatoires pour chaque ligne.</p>
+                </div>
+                {!csvMode ? (
+                  <label className="flex items-center gap-3 cursor-pointer p-3 border-2 border-dashed border-gray-200 rounded-lg hover:border-indigo-400 transition-colors">
+                    <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                    <span className="text-sm text-gray-500 flex-1">Cliquer pour importer un fichier CSV…</span>
+                    <input type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="sr-only" onChange={handleCsvUpload} />
+                  </label>
+                ) : (
+                  <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
+                        <span className="text-sm font-medium text-indigo-800 truncate max-w-[200px]">{csvFileName}</span>
+                        <span className="text-xs text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">{csvRows.length} ligne{csvRows.length > 1 ? 's' : ''}</span>
+                      </div>
+                      <button type="button" onClick={handleClearCsv} className="text-gray-400 hover:text-gray-600">
+                        <XIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {/* Aperçu des 3 premières lignes */}
+                    <div className="overflow-x-auto rounded border border-indigo-200 bg-white">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-50 text-gray-500">
+                          <tr>
+                            <th className="px-2 py-1 text-left font-medium">Nom</th>
+                            <th className="px-2 py-1 text-left font-medium">Email</th>
+                            <th className="px-2 py-1 text-left font-medium">Catégorie</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {csvRows.slice(0, 3).map((r, i) => (
+                            <tr key={i} className="border-t border-gray-100">
+                              <td className="px-2 py-1 truncate max-w-[80px]">{r.holderName}</td>
+                              <td className="px-2 py-1 truncate max-w-[100px]">{r.holderEmail}</td>
+                              <td className="px-2 py-1 text-gray-500">{r.categoryName || '—'}</td>
+                            </tr>
+                          ))}
+                          {csvRows.length > 3 && (
+                            <tr className="border-t border-gray-100">
+                              <td colSpan={3} className="px-2 py-1 text-center text-gray-400 italic">
+                                … et {csvRows.length - 3} autre{csvRows.length - 3 > 1 ? 's' : ''} ligne{csvRows.length - 3 > 1 ? 's' : ''}
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                {csvError && <p className="text-red-500 text-xs">{csvError}</p>}
+                <button type="button" onClick={downloadCsvTemplate}
+                  className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700">
+                  <Download className="w-3 h-3" /> Télécharger le modèle CSV
+                </button>
+              </div>
+
+              {/* Récapitulatif prix */}
+              {badgeCount > 0 && badgePricing && (
+                <div className="flex items-center justify-between px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm">
+                  <span className="text-gray-600">{badgeCount} badge{badgeCount > 1 ? 's' : ''} × {badgePricing.unitCost.toLocaleString('fr-FR')} {badgePricing.currency}</span>
+                  <span className="font-bold text-emerald-700">{(badgeCount * badgePricing.unitCost).toLocaleString('fr-FR')} {badgePricing.currency}</span>
                 </div>
               )}
+
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" className="flex-1" onClick={() => setBadgeDialog(false)}>Annuler</Button>
+                <Button className="flex-1" onClick={handleBadgeWizardNext} disabled={badgeCount === 0}>
+                  Continuer →
+                </Button>
+              </div>
             </div>
-            <div>
-              <Label>ID Billet (optionnel)</Label>
-              <Input value={badgeForm.ticketId} onChange={e => setBadgeForm(p => ({ ...p, ticketId: e.target.value }))} placeholder="Lier à un billet existant" />
+          )}
+
+          {/* ── Étape 1 : paiement ── */}
+          {badgeStep === 1 && (
+            <div className="space-y-4 pt-2">
+              <div className="rounded-lg border bg-gray-50 p-4 space-y-2 text-sm">
+                <p className="font-semibold text-gray-800 mb-1">Récapitulatif</p>
+                <div className="flex justify-between"><span className="text-gray-500">Événement</span><span className="font-medium truncate ml-4 max-w-[200px]">{eventTitle}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Badges</span><span className="font-medium">{badgeCount}</span></div>
+                {badgePricing ? (
+                  <>
+                    <div className="flex justify-between"><span className="text-gray-500">Prix unitaire</span><span>{badgePricing.unitCost.toLocaleString('fr-FR')} {badgePricing.currency}</span></div>
+                    <div className="flex justify-between border-t pt-2 font-bold text-base">
+                      <span>Total</span>
+                      <span className="text-emerald-700">{(badgeCount * badgePricing.unitCost).toLocaleString('fr-FR')} {badgePricing.currency}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-gray-300 bg-white/80 p-3 text-sm text-gray-600">
+                    <p className="font-semibold">Tarification en cours de chargement...</p>
+                    <p>Le montant s'affichera dès que la tarification sera prête.</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBadgeStep(0)}
+                  disabled={badgeWizardPaying}
+                  className="flex-1 rounded-xl border border-gray-300 bg-white text-gray-700 px-4 py-3 font-semibold transition hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Retour
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePayAndGenerate}
+                  disabled={badgeWizardPaying || !badgePricing}
+                  className="flex-1 rounded-xl bg-emerald-600 text-white text-center px-4 py-3 font-semibold transition hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    color: '#ffffff',
+                    backgroundColor: '#059669',
+                    borderColor: '#059669',
+                  }}
+                >
+                  {badgeWizardPaying ? (
+                    <span className="inline-flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span className="relative z-10">Génération…</span>
+                    </span>
+                  ) : (
+                    <span className="relative z-10">Confirmer et payer</span>
+                  )}
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setBadgeDialog(false)}>Annuler</Button>
-              <Button className="flex-1" onClick={handleGenerateBadge}
-                disabled={!badgeForm.categoryId || !badgeForm.holderName.trim() || !badgeForm.holderEmail.trim()}>
-                Générer
+          )}
+
+          {/* ── Étape 2 : succès + téléchargements ── */}
+          {badgeStep === 2 && (
+            <div className="space-y-4 pt-2 text-center">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+              </div>
+              <p className="font-semibold text-gray-900">
+                {generatedBadges.length} badge{generatedBadges.length > 1 ? 's' : ''} généré{generatedBadges.length > 1 ? 's' : ''} !
+              </p>
+              <p className="text-sm text-gray-500">Téléchargez les badges pour les distribuer à vos participants.</p>
+              <div className="flex gap-2 justify-center">
+                <Button variant="outline" onClick={downloadGeneratedPdf} className="flex-1">
+                  <Download className="w-4 h-4 mr-1" />PDF (QR codes)
+                </Button>
+                <Button variant="outline" onClick={downloadGeneratedCsv} className="flex-1">
+                  <Download className="w-4 h-4 mr-1" />CSV
+                </Button>
+              </div>
+              <Button className="w-full" onClick={() => { resetBadgeWizard(); setBadgeDialog(false); }}>
+                Fermer
               </Button>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -1477,6 +2075,60 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
           </DialogHeader>
           {qrDialog.badge && (
             <div className="flex flex-col items-center gap-4 pt-2">
+              <div className="w-full rounded-xl border bg-white p-3 space-y-3 text-left">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Catégories</p>
+                    <p className="text-xs text-gray-500">Gérez les catégories depuis la vue QR du badge.</p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setBadgeCategoryFormOpen(v => !v)}>
+                    <Plus className="w-4 h-4 mr-1" />{badgeCategoryFormOpen ? 'Fermer' : 'Ajouter'}
+                  </Button>
+                </div>
+                {categories.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map(category => (
+                      <span key={category.id} className="inline-flex items-center gap-2 rounded-full border bg-gray-50 px-3 py-1 text-xs text-gray-700">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: category.color }} />
+                        <span className="max-w-[140px] truncate">{category.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBadgeCategory(category)}
+                          className="text-gray-400 hover:text-red-500"
+                          title="Supprimer la catégorie"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {badgeCategoryFormOpen && (
+                  <div className="grid gap-3 sm:grid-cols-[1fr_140px_auto]">
+                    <Input
+                      value={badgeCategoryForm.name}
+                      onChange={e => setBadgeCategoryForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Nom de la catégorie"
+                    />
+                    <Input
+                      type="color"
+                      value={badgeCategoryForm.color}
+                      onChange={e => setBadgeCategoryForm(prev => ({ ...prev, color: e.target.value }))}
+                      className="h-10 px-2"
+                    />
+                    <Button type="button" onClick={handleCreateBadgeCategory}>
+                      <Plus className="w-4 h-4 mr-1" />Créer
+                    </Button>
+                    <Input
+                      className="sm:col-span-2"
+                      value={badgeCategoryForm.description}
+                      onChange={e => setBadgeCategoryForm(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Description facultative"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="p-4 bg-white rounded-xl border-2 border-gray-200">
                 <QRCodeSVG value={qrDialog.badge.qrCode} size={200} level="M" />
               </div>

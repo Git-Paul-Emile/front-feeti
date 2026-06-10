@@ -235,6 +235,11 @@ const AccessAPI = {
     return res.data.data;
   },
 
+  async generateBulkBadges(eventId: string, data: { badges: { holderName: string; holderEmail: string; holderPhone?: string; categoryId?: string; categoryName?: string }[] }): Promise<AccessBadge[]> {
+    const res = await api.post<{ data: AccessBadge[] }>(`/api/access/events/${eventId}/badges/bulk`, data);
+    return res.data.data;
+  },
+
   async sendBadge(eventId: string, badgeId: string): Promise<AccessBadge> {
     const res = await api.post<{ data: AccessBadge }>(`/api/access/events/${eventId}/badges/${badgeId}/send`);
     return res.data.data;
@@ -250,6 +255,11 @@ const AccessAPI = {
 
   async revokeBadge(eventId: string, badgeId: string): Promise<AccessBadge> {
     const res = await api.post<{ data: AccessBadge }>(`/api/access/events/${eventId}/badges/${badgeId}/revoke`);
+    return res.data.data;
+  },
+
+  async activateBadge(eventId: string, badgeId: string): Promise<AccessBadge> {
+    const res = await api.post<{ data: AccessBadge }>(`/api/access/events/${eventId}/badges/${badgeId}/activate`);
     return res.data.data;
   },
 

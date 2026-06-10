@@ -130,12 +130,12 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
           <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
 
             {hasPermission === null && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-white">
-                <div className="text-center">
-                  <Loader className="w-12 h-12 animate-spin mx-auto mb-4" />
-                  <p>Initialisation de la caméra...</p>
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-white">
+                  <div className="text-center">
+                    <Loader className="w-12 h-12 animate-spin mx-auto mb-4" />
+                    <p>Initialisation de la caméra...</p>
+                  </div>
                 </div>
-              </div>
             )}
 
             {hasPermission === false && (
@@ -166,7 +166,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
             {hasPermission === true && (
               <>
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="relative w-64 h-64">
+                  <div className="relative w-64 h-64 sm:w-72 sm:h-72">
                     <div
                       className="absolute inset-0 rounded-lg"
                       style={{ boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.75)' }}

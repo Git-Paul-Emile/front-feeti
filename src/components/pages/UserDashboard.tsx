@@ -19,6 +19,7 @@ import {
   CreditCard,
   Star,
   Heart,
+  Gift,
 } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import TicketAPI from '../../services/api/TicketAPI';

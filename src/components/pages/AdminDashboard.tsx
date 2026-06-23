@@ -71,6 +71,7 @@ import DeliveryAPI, { type DeliveryZone, type DeliveryCity } from '../../service
 import CountryAPI, { type Country } from '../../services/api/CountryAPI';
 import SettingsAPI, { type PlatformSettings } from '../../services/api/SettingsAPI';
 import PromotionAPI, { type PackConfig, type PromotionPurchase, type AdminPromotionStats } from '../../services/api/PromotionAPI';
+import NotificationsAPI from '../../services/api/NotificationsAPI';
 import type { EstablishmentPricing, EstablishmentSubscription as EOwnerSubscription, DealPayment as EOwnerDealPayment } from '../../services/api/EstablishmentOwnerAPI';
 
 type Event = BackendEvent;
@@ -1156,6 +1157,12 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState('events');
   const tabsListRef = useRef<HTMLDivElement>(null);
 
+  // Notification form state
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifMessage, setNotifMessage] = useState('');
+  const [notifAllUsers, setNotifAllUsers] = useState(true);
+  const [notifSending, setNotifSending] = useState(false);
+
   useEffect(() => {
     const container = tabsListRef.current;
     if (!container) return;
@@ -1648,6 +1655,48 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la suppression'));
     }
   };
+
+  const handleSendNotification = async () => {
+    if (!notifTitle.trim() || !notifMessage.trim()) {
+      toast.error('Titre et message requis');
+      return;
+    }
+    setNotifSending(true);
+    try {
+      await NotificationsAPI.sendEmail({
+        to: notifAllUsers ? [] : [],
+        subject: notifTitle,
+        html: `<p>${notifMessage}</p>`,
+      });
+      toast.success('Notification envoyée avec succès');
+      setNotifTitle('');
+      setNotifMessage('');
+    } catch (err: any) {
+      toast.error(firebaseClientErrorToUserMessage(err, "Erreur lors de l'envoi"));
+    } finally {
+      setNotifSending(false);
+    }
+  };
+
+  const handlePushNotification = async () => {
+    if (!notifTitle.trim() || !notifMessage.trim()) {
+      toast.error('Titre et message requis');
+      return;
+    }
+    setNotifSending(true);
+    try {
+      await NotificationsAPI.sendPushNotification({
+        token: 'broadcast',
+        title: notifTitle,
+        body: notifMessage,
+      });
+      toast.success('Notification push envoyée');
+    } catch (err: any) {
+      toast.error(firebaseClientErrorToUserMessage(err, "Erreur lors de l'envoi push"));
+    } finally {
+      setNotifSending(false);
+    }
+ };
 
   const handleAddLeisureCat = async () => {
     const name = newLeisureCat.name.trim();
@@ -3667,32 +3716,53 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
               </DialogContent>
             </Dialog>
 
-            <Card>
-                <CardHeader>
-                  <CardTitle>Notifications Push</CardTitle>
-                  <CardDescription>Communication avec les utilisateurs</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="title">Titre de la notification</Label>
-                      <Input id="title" placeholder="Nouveau événement disponible !" />
+              <Card>
+                  <CardHeader>
+                    <CardTitle>Notifications Push</CardTitle>
+                    <CardDescription>Communication avec les utilisateurs</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="notif-title">Titre</Label>
+                        <Input
+                          id="notif-title"
+                          value={notifTitle}
+                          onChange={e => setNotifTitle(e.target.value)}
+                          placeholder="Nouveau événement disponible !"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="notif-message">Message</Label>
+                        <Textarea
+                          id="notif-message"
+                          value={notifMessage}
+                          onChange={e => setNotifMessage(e.target.value)}
+                          placeholder="Ne manquez pas le Festival Électro Summer..."
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="message">Message</Label>
-                      <Textarea id="message" placeholder="Ne manquez pas le Festival Électro Summer..." />
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1"
+                        onClick={handleSendNotification}
+                        disabled={notifSending}
+                      >
+                        {notifSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Mail className="w-4 h-4 mr-2" />}
+                        Envoyer par email
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={handlePushNotification}
+                        disabled={notifSending}
+                      >
+                        {notifSending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                        Notification push
+                      </Button>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch id="all-users" />
-                      <Label htmlFor="all-users">Envoyer à tous les utilisateurs</Label>
-                    </div>
-                  </div>
-                  <Button className="w-full flex items-center space-x-2">
-                    <Send className="w-4 h-4" />
-                    <span>Envoyer notification</span>
-                  </Button>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
           </TabsContent>
 
           {/* Gestion Live Streaming */}

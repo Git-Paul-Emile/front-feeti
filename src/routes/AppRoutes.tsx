@@ -184,6 +184,7 @@ const FeetiNaFeetiAdminPage       = lazy(() => import('../components/pages/Feeti
 const UserProfilePage             = lazy(() => import('../components/pages/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
 const AdminAuditPage              = lazy(() => import('../components/pages/AdminAuditPage').then(m => ({ default: m.AdminAuditPage })));
 const GoogleCompletionPage        = lazy(() => import('../components/pages/GoogleCompletionPage').then(m => ({ default: m.GoogleCompletionPage })));
+const CreatorDashboard            = lazy(() => import('../components/pages/CreatorDashboard').then(m => ({ default: m.CreatorDashboard })));
 
 // ── Correspondance page-name → route ─────────────────────────────────────────
 const PAGE_ROUTES: Record<string, string> = {
@@ -208,6 +209,7 @@ const PAGE_ROUTES: Record<string, string> = {
   'feeti-na-feeti': '/feeti-na-feeti',
   'user-profile': '/profile',
   'feeti-access': '/organizer',
+  'creator-dashboard': '/creator',
 };
 
 // ── Loader ────────────────────────────────────────────────────────────────────
@@ -949,13 +951,21 @@ function OrganizerRoute() {
 function LoginRoute() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, register: registerUser, startGoogleAuth } = useAuth();
+  const { user, isLoading, login, register: registerUser, startGoogleAuth } = useAuth();
 
   useEffect(() => {
     if (window.sessionStorage.getItem("feeti2_google_pending_token")) {
       navigate("/login/google-complete", { replace: true });
+      return;
     }
-  }, [navigate]);
+    // Si déjà connecté (profil trouvé), rediriger vers le dashboard approprié
+    if (!isLoading && user) {
+      if (user.role === 'controller') { navigate('/controller', { replace: true }); return; }
+      const isAdminLike = user.adminRole && ['super_admin', 'admin', 'moderator', 'support'].includes(user.adminRole);
+      if (isAdminLike) { navigate('/admin', { replace: true }); return; }
+      navigate(user.role === 'organizer' ? '/organizer' : user.role === 'establishment_owner' ? '/establishment' : '/dashboard', { replace: true });
+    }
+  }, [isLoading, user, navigate]);
 
   const handleLogin = async (email: string, password: string) => {
     const user = await login(email, password);
@@ -1140,6 +1150,7 @@ export function AppRoutes() {
           <Route path="/events/:id/buy"   element={<PaymentRoute />} />
           <Route path="/favorites"        element={<MyFavoritesRoute />} />
           <Route path="/feeti-na-feeti"   element={<FeetiNaFeetiRoute />} />
+          <Route path="/creator"          element={<CreatorDashboard />} />
         </Route>
 
         {/* Routes protégées — propriétaire d'établissement */}

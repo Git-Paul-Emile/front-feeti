@@ -2,6 +2,8 @@
 
 Guide complet pour configurer et déployer le backend de votre plateforme de billetterie Feeti.
 
+> **Note sur la réalité du code** : le backend réel du projet est le dossier `back/` (Express + Prisma/PostgreSQL), déployé sur Render (voir `back/render.yaml`) — pas un dossier `backend/` séparé déployé sur Vercel/Heroku. Les intégrations Stripe/Paystack/Mobile Money décrites ci-dessous restent **en simulation intentionnelle** (harmonisée avec FeetiPlayWeb) : l'intégration réelle avec ces prestataires est prévue plus tard. Le dossier `functions/` (Cloud Functions Firebase) a été retiré du projet, non utilisé en production. Ce guide reste indicatif pour la structure des endpoints, mais les chemins de déploiement (Heroku, dossier `backend/`) ne reflètent pas l'organisation réelle du repo.
+
 ---
 
 ## 📋 Prérequis
@@ -153,7 +155,9 @@ DELETE /api/payments/methods/:methodId
 # Email
 POST /api/notifications/email/send
 POST /api/notifications/email/ticket-confirmation
-POST /api/notifications/email/password-reset
+# Le reset de mot de passe est géré exclusivement par Firebase Auth
+# (sendPasswordResetEmail, front/src/services/firebase-auth.ts) —
+# il n'existe pas d'endpoint backend fait-maison pour ça (supprimé, mort/inutilisé)
 
 # SMS
 POST /api/notifications/sms/send

@@ -5,7 +5,6 @@ export { TicketPurchasePage } from './TicketPurchasePage';
 export { TicketVerificationPage } from './TicketVerificationPage';
 export { LoginPage } from './LoginPage';
 export { OrganizerDashboard } from './OrganizerDashboard';
-export { StreamingPage } from './StreamingPage';
 export { LegalPages } from './LegalPages';
 export { BonPlansPage } from './BonPlansPage';
 export { BonPlanListPage } from './BonPlanListPage';

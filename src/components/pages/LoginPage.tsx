@@ -170,7 +170,7 @@ function DrapeauCongo() {
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="mt-1 text-[13px] text-red-400 font-['Inter',sans-serif] pl-1">
+    <p data-testid="field-error" className="mt-1 text-[13px] text-red-400 font-['Inter',sans-serif] pl-1">
       {message}
     </p>
   );
@@ -316,7 +316,7 @@ function LoginForm({ onLogin, onGoogleLogin, onSwitchToRegister, onForgotPasswor
 
       {/* Erreur serveur globale */}
       {serverError && (
-        <p className="text-red-400 text-[14px] font-['Inter',sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2">
+        <p data-testid="server-error" className="text-red-400 text-[14px] font-['Inter',sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2">
           {serverError}
         </p>
       )}
@@ -468,7 +468,7 @@ function InterestsStep({
       )}
 
       {serverError && (
-        <p className="text-red-400 text-[14px] font-['Inter',sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2 mb-4">
+        <p data-testid="server-error" className="text-red-400 text-[14px] font-['Inter',sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2 mb-4">
           {serverError}
         </p>
       )}
@@ -828,7 +828,7 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
 
       {/* Erreur serveur globale */}
       {serverError && (
-        <p className="text-red-400 text-[14px] font-['Inter',sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2">
+        <p data-testid="server-error" className="text-red-400 text-[14px] font-['Inter',sans-serif] text-center bg-red-400/10 rounded-lg px-4 py-2">
           {serverError}
         </p>
       )}

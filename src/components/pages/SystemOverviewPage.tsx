@@ -216,7 +216,7 @@ export function SystemOverviewPage({ onBack }: SystemOverviewPageProps) {
                   <div className="flex items-center space-x-2">
                     <Zap className="w-5 h-5 text-yellow-500" />
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">< 3s</p>
+                      <p className="text-2xl font-bold text-gray-900">{"< 3s"}</p>
                       <p className="text-sm text-gray-600">Temps de paiement</p>
                     </div>
                   </div>

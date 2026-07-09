@@ -13,21 +13,26 @@ React 18.x + TypeScript + Vite
 └── State: React Hooks (useState, useMemo, useCallback)
 ```
 
-### Backend (NoSQL)
+### Backend (réel)
 ```
-Firebase (Backend-as-a-Service)
-├── Database: Firestore (NoSQL)
-├── Authentication: Firebase Auth
-├── Storage: Firebase Storage
-├── Analytics: Firebase Analytics
-└── Hosting: Firebase Hosting (optionnel)
+back/ (Express + TypeScript, déployé sur Render)
+├── Base de données : PostgreSQL via Prisma (source de vérité)
+├── Authentication : Firebase Auth (email/password + Google OAuth + reset password)
+├── Firestore : synchronisation optionnelle secondaire (FIRESTORE_SYNC_ENABLED),
+│   désactivable — jamais la source de vérité
+├── Storage : Firebase Storage (médias) ou équivalent
+└── Analytics : Firebase Analytics
 ```
+
+Le dossier `functions/` (Cloud Functions Firebase) a été retiré du projet — il n'était pas utilisé en production. Le backend réel est `back/`.
 
 ---
 
-## Architecture des Données (NoSQL)
+## Architecture des Données (réelle : PostgreSQL/Prisma)
 
-### Firestore Collections
+La base de données applicative est PostgreSQL, gérée par Prisma (`back/prisma/schema.prisma`). Le schéma est riche et comprend notamment : `User`, `Event`, `Ticket`, `Transaction`, `Wallet`, `WalletLedger`, `Payout`, `LoyaltyProfile`, `Category`, `Deal`, `BlogPost`, `Creator`, `AuditLog`, etc. Les sections ci-dessous décrivent un ancien modèle "collections Firestore" conservé à titre d'illustration conceptuelle (forme des données), mais **Firestore n'est plus la source de vérité** : il ne sert qu'à une synchronisation optionnelle en lecture (miroir), activable/désactivable via `FIRESTORE_SYNC_ENABLED` (voir `back/src/services/firestore-sync.service.ts`).
+
+### Firestore Collections (miroir optionnel — schéma logique équivalent, pas la source de vérité)
 
 #### 1. Collection `users`
 ```javascript
@@ -139,48 +144,22 @@ transactions/{transactionId}
 
 ## Architecture des Services
 
-### Services Layer (`/services/FirebaseService.ts`)
+### Authentification (`front/src/services/firebase-auth.ts`)
 
-```typescript
-FirebaseService
-├── AuthService
-│   ├── register()
-│   ├── login()
-│   ├── logout()
-│   ├── getUserProfile()
-│   └── resetPassword()
-│
-├── EventService
-│   ├── createEvent()
-│   ├── getAllEvents()
-│   ├── getEventById()
-│   ├── updateEvent()
-│   ├── deleteEvent()
-│   ├── getEventsByOrganizer()
-│   └── incrementAttendees()
-│
-├── TicketService
-│   ├── createTickets()
-│   ├── getUserTickets()
-│   ├── getTicketById()
-│   ├── verifyAndUseTicket()
-│   └── cancelTicket()
-│
-├── TransactionService
-│   ├── createTransaction()
-│   ├── updateTransactionStatus()
-│   ├── getUserTransactions()
-│   └── getAllTransactions()
-│
-├── StorageService
-│   ├── uploadImage()
-│   └── deleteImage()
-│
-└── AnalyticsService
-    ├── getEventStats()
-    ├── getTransactionStats()
-    └── getUserStats()
+Firebase Auth gère exclusivement l'authentification : inscription/connexion email + mot de passe, connexion Google, et mot de passe oublié via `sendPasswordResetEmail` (fonction `resetPassword()`). Il n'y a pas de flux de reset password fait-maison côté backend (JWT + email) — ce système mort a été supprimé.
+
+### Backend applicatif (`back/src/`)
+
 ```
+back/src/
+├── controllers/    # Points d'entrée HTTP
+├── services/       # Logique métier
+├── repositories/    # Accès Prisma/PostgreSQL
+├── routes/          # Définition des routes Express
+└── middlewares/     # Auth (vérification Firebase ID token), rôles, etc.
+```
+
+Toutes les opérations CRUD (événements, billets, transactions, wallets, deals, blog, loyalty, etc.) passent par ces couches Express/Prisma — il n'y a pas d'accès direct du front à Firestore pour ces données métier.
 
 ---
 
@@ -242,7 +221,7 @@ Dialog Form
     ↓ (Submit)
 EventService.createEvent()
     ↓
-Firestore Collection "events"
+API back/ (Express) → Prisma → PostgreSQL (+ Firestore en miroir optionnel)
     ↓ (Success)
 Toast Notification + Reload Data
 ```
@@ -258,7 +237,7 @@ TicketPurchasePage
     ↓ (Submit Payment)
 TransactionService.createTransaction()
     ↓
-Firestore "transactions" + "tickets"
+API back/ (Express) → Prisma → tables "Transaction" + "Ticket" (PostgreSQL)
     ↓
 Email avec QR Code
     ↓
@@ -274,7 +253,7 @@ TicketVerificationPage
     ↓ (Scan QR Code)
 TicketService.verifyAndUseTicket()
     ↓
-Firestore Update "tickets" (status: used)
+API back/ (Express) → Prisma update "Ticket" (status: used) en PostgreSQL
     ↓
 Toast: "Billet validé ✅"
 ```
@@ -283,38 +262,9 @@ Toast: "Billet validé ✅"
 
 ## Sécurité
 
-### Règles Firestore
+### Contrôle d'accès (réalité : middlewares Express, pas de règles Firestore côté data métier)
 
-```javascript
-// users - Lecture pour tous authentifiés, écriture par propriétaire
-match /users/{userId} {
-  allow read: if request.auth != null;
-  allow write: if request.auth.uid == userId || isAdmin();
-}
-
-// events - Lecture publique, écriture admin/organizer
-match /events/{eventId} {
-  allow read: if true;
-  allow create: if request.auth != null;
-  allow update, delete: if isAdmin() || isOrganizer(resource.data.organizerId);
-}
-
-// tickets - Lecture par propriétaire, création par tous authentifiés
-match /tickets/{ticketId} {
-  allow read: if request.auth != null && 
-    (resource.data.userId == request.auth.uid || isAdmin());
-  allow create: if request.auth != null;
-  allow update: if isAdmin();
-}
-
-// transactions - Lecture par propriétaire, création par tous
-match /transactions/{transactionId} {
-  allow read: if request.auth != null && 
-    (resource.data.userId == request.auth.uid || isAdmin());
-  allow create: if request.auth != null;
-  allow update: if isAdmin();
-}
-```
+Les données métier vivant dans PostgreSQL, le contrôle d'accès est réalisé par les middlewares Express (`back/src/middlewares/`) qui vérifient le token Firebase (authentification) puis le rôle de l'utilisateur avant d'exécuter les requêtes Prisma. Il n'y a pas de "Security Rules" Firestore protégeant ces données puisque Firestore n'en est qu'un miroir optionnel en lecture (`FIRESTORE_SYNC_ENABLED`).
 
 ### Authentication Flow
 
@@ -323,9 +273,9 @@ match /transactions/{transactionId} {
 2. Click "Se connecter"
 3. LoginPage appears
 4. Enter email/password
-5. AuthService.login()
-6. Firebase Auth validates
-7. Create/Fetch user profile from Firestore
+5. AuthService.login() → Firebase Auth (authentification uniquement)
+6. Firebase Auth validates, renvoie un ID token
+7. Le backend (Express) vérifie l'ID token et crée/récupère le profil utilisateur dans PostgreSQL (Prisma)
 8. Store in App state (currentUser)
 9. Redirect based on role:
    - user → UserDashboard
@@ -364,10 +314,10 @@ match /transactions/{transactionId} {
    }, [currentPage, measureRender, cleanupResources]);
    ```
 
-4. **Firestore Indexes**
-   - Index composite pour requêtes complexes
-   - Pagination avec `limit()`
-   - Cache local activé
+4. **Index PostgreSQL (Prisma)**
+   - Index composites pour requêtes complexes (`back/prisma/schema.prisma`)
+   - Pagination via `take`/`skip` Prisma
+   - Cache applicatif côté API
 
 5. **Images**
    - Lazy loading natif
@@ -378,34 +328,22 @@ match /transactions/{transactionId} {
 
 ## Scalabilité
 
-### Limites Firebase (Plan Gratuit)
-
-| Ressource | Limite Gratuite | Recommandation |
-|-----------|-----------------|----------------|
-| Firestore Stockage | 1 GB | ~100k événements |
-| Firestore Lectures | 50k/jour | Utilisez le cache |
-| Firestore Écritures | 20k/jour | Batch operations |
-| Storage | 5 GB | Optimisez les images |
-| Auth | Illimité | ✅ OK |
+La donnée métier étant sur PostgreSQL (et non Firestore), les limites de quota Firestore ne s'appliquent pas au volume principal de données. Firestore n'est concerné que par le miroir optionnel (`FIRESTORE_SYNC_ENABLED`) et reste dimensionné en conséquence (volume réduit, lecture/écriture liées à la synchronisation uniquement). Firebase Auth reste illimité en usage (authentification uniquement).
 
 ### Passage à l'Échelle
 
-**Si vous atteignez les limites** :
-
-1. **Plan Blaze (Pay-as-you-go)**
-   - Coût : ~$0.06 / 100k lectures
-   - Recommandé à partir de 10k utilisateurs/mois
+1. **Base de données**
+   - Scaling PostgreSQL (connexions, index, réplication en lecture)
+   - Pagination stricte (max 50 items/page)
 
 2. **Optimisations**
-   - Activer le cache Firestore (offline)
-   - Pagination stricte (max 50 items/page)
    - Lazy loading des images
    - CDN pour assets statiques
+   - Cache applicatif côté API
 
-3. **Migration Progressive**
-   - Garder Firestore pour données temps réel
-   - Migrer analytics vers BigQuery
-   - Utiliser Cloud Functions pour traitements lourds
+3. **Firestore (miroir optionnel)**
+   - Peut être désactivé (`FIRESTORE_SYNC_ENABLED=false`) sans impact sur la source de vérité
+   - Sert uniquement de secours/replica, pas de scaling primaire
 
 ---
 
@@ -413,21 +351,23 @@ match /transactions/{transactionId} {
 
 ### Environnements
 
+Backend réel : `back/` (Express + Prisma/PostgreSQL) déployé sur Render. Le dossier `functions/` (Cloud Functions Firebase) a été retiré du projet, non utilisé en production.
+
 ```
 Development
 ├── Local: npm run dev
-├── Firebase: Mode Emulator
-└── Database: Mode Test
+├── Firebase: Auth (émulateur ou projet dev)
+└── Database: PostgreSQL local
 
 Staging
-├── Vercel/Netlify Preview
-├── Firebase: Projet staging
-└── Database: Règles strictes
+├── Vercel/Netlify Preview (frontend) + Render (backend)
+├── Firebase: Auth projet staging
+└── Database: PostgreSQL staging
 
 Production
-├── Firebase Hosting / Vercel
-├── Firebase: Projet production
-└── Database: Règles production + Backups
+├── Vercel (frontend) + Render (backend `back/`)
+├── Firebase: Auth projet production
+└── Database: PostgreSQL production + Backups
 ```
 
 ### CI/CD Pipeline
@@ -444,7 +384,7 @@ jobs:
     - Install dependencies
     - Run tests
     - Build production
-    - Deploy to Firebase Hosting
+    - Deploy frontend to Vercel (front/vercel.json) + backend to Render (back/render.yaml)
     - Send notification
 ```
 
@@ -515,14 +455,15 @@ tests/
 ## Roadmap
 
 ### Phase 1 : MVP (Actuel) ✅
-- [x] Backend Firebase configuré
+- [x] Backend Express + Prisma/PostgreSQL configuré (`back/`)
+- [x] Firebase Auth pour l'authentification
 - [x] Back office fonctionnel
 - [x] CRUD événements
-- [x] Système de billets
+- [x] Système de billets, wallets, transactions
 - [x] Analytics basiques
 
 ### Phase 2 : Intégrations
-- [ ] Paiements Stripe/Paystack
+- [ ] Paiements Stripe/Paystack réels (actuellement en simulation intentionnelle, harmonisée avec FeetiPlayWeb)
 - [ ] Emails transactionnels (SendGrid)
 - [ ] SMS confirmations (Twilio)
 - [ ] Webhooks système
@@ -557,6 +498,6 @@ tests/
 ---
 
 **Version** : 1.0.0  
-**Architecture** : React + Firebase (NoSQL)  
+**Architecture** : React (front) + Express/Prisma/PostgreSQL (back), Firebase Auth pour l'authentification, Firestore en miroir optionnel  
 **Status** : ✅ Production Ready  
-**Dernière mise à jour** : Décembre 2024
+**Dernière mise à jour** : Juillet 2026

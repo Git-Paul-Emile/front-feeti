@@ -77,6 +77,8 @@ const AuthAPI = {
         phone: data.phone,
         role: data.role,
         interests: data.interests,
+        country: data.country,
+        city: data.city,
       });
       if (res.data.data.accessToken) {
         localStorage.setItem("accessToken", res.data.data.accessToken);

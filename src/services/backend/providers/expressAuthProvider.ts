@@ -83,6 +83,8 @@ export class ExpressAuthProvider implements AuthProvider {
         phone: data.phone,
         role: data.role,
         interests: data.interests,
+        country: data.country,
+        city: data.city,
       }, idToken);
 
       if (!user) throw new Error("Erreur lors de la création du profil backend");

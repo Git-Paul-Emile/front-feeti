@@ -2,7 +2,9 @@
 
 ## Vue d'Ensemble
 
-Cette documentation explique l'architecture backend complète de la plateforme de billetterie **Feeti**, incluant la base de données, les services, et l'intégration Firebase.
+Cette documentation explique l'architecture backend complète de la plateforme de billetterie **Feeti**.
+
+> **Note sur la réalité du code** : la source de vérité pour toutes les données métier (utilisateurs, événements, billets, transactions, wallets, etc.) est **PostgreSQL via Prisma**, servi par le backend Express réel du dossier `back/` (déployé sur Render). **Firebase Auth** gère exclusivement l'authentification (email/password, Google OAuth, mot de passe oublié). **Firestore n'est qu'un miroir optionnel** de synchronisation (activable/désactivable via `FIRESTORE_SYNC_ENABLED`, voir `back/src/services/firestore-sync.service.ts`) — ce n'est pas la base de données applicative. Le dossier `functions/` (Cloud Functions Firebase) a été retiré du projet, non utilisé en production. Les sections ci-dessous décrivant des "Collections Firestore" comme source de vérité, des règles de sécurité Firestore protégeant les données métier, ou un déploiement via `firebase deploy`, sont obsolètes et conservées uniquement à titre d'illustration historique du schéma logique — se référer à `back/prisma/schema.prisma` pour le schéma réel.
 
 ---
 
@@ -29,28 +31,22 @@ Cette documentation explique l'architecture backend complète de la plateforme d
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
 └────────────────────────────┬────────────────────────────────┘
                              │
-                             ▼
-              ┌──────────────────────────┐
-              │   Firebase Services      │
-              │  (Services Layer)        │
-              └──────────────────────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-        ▼                    ▼                    ▼
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│   Firestore  │    │     Auth     │    │   Storage    │
-│  (Database)  │    │ (Auth Users) │    │   (Images)   │
-└──────────────┘    └──────────────┘    └──────────────┘
-        │                    │                    │
-        └────────────────────┴────────────────────┘
-                             │
-                             ▼
-                    ┌─────────────────┐
-                    │  Firebase Cloud │
-                    │   (Hosting)     │
-                    └─────────────────┘
+              ┌──────────────┴──────────────┐
+              ▼                             ▼
+   ┌──────────────────────┐      ┌──────────────────────────┐
+   │      Firebase Auth    │      │   API back/ (Express)     │
+   │ (authentification uniquement) │  → Prisma → PostgreSQL   │
+   └──────────────────────┘      │  (source de vérité)       │
+                                  └─────────────┬─────────────┘
+                                                │ (optionnel)
+                                                ▼
+                                    ┌──────────────────────┐
+                                    │  Firestore (miroir)    │
+                                    │  FIRESTORE_SYNC_ENABLED│
+                                    └──────────────────────┘
 ```
+
+Backend déployé sur **Render** (`back/render.yaml`), frontend sur **Vercel** (`front/vercel.json`).
 
 ---
 
@@ -58,13 +54,16 @@ Cette documentation explique l'architecture backend complète de la plateforme d
 
 ### Backend
 
-| Technologie | Version | Usage |
-|-------------|---------|-------|
-| **Firebase** | 10.x | Backend as a Service |
-| **Firestore** | Latest | Base de données NoSQL |
-| **Firebase Auth** | Latest | Authentification |
-| **Firebase Storage** | Latest | Stockage de fichiers |
-| **Firebase Functions** | Latest | Cloud Functions (optionnel) |
+| Technologie | Usage |
+|-------------|-------|
+| **Express (Node.js)** | API backend réelle (`back/`), déployée sur Render |
+| **Prisma** | ORM vers PostgreSQL (source de vérité des données) |
+| **PostgreSQL** | Base de données applicative |
+| **Firebase Auth** | Authentification uniquement (email/password, Google) |
+| **Firestore** | Miroir de synchronisation optionnel (`FIRESTORE_SYNC_ENABLED`), pas la source de vérité |
+| **Firebase Storage** | Stockage de fichiers (médias) |
+
+Le dossier `functions/` (Cloud Functions Firebase) a été retiré du projet.
 
 ### Frontend
 
@@ -200,7 +199,7 @@ AnalyticsService.getUserStats()        // Statistiques utilisateurs
 
 ## 🗄️ Schéma de Base de Données
 
-### Collections Firestore
+### Modèles (schéma logique — la source de vérité réelle est Prisma/PostgreSQL, `back/prisma/schema.prisma`)
 
 #### Collection `users`
 ```javascript
@@ -317,7 +316,9 @@ transactions: {
 
 ## 🔐 Sécurité
 
-### Règles de Sécurité Firestore
+> Le contrôle d'accès réel sur les données métier est appliqué par les middlewares Express (`back/src/middlewares/`) sur PostgreSQL, pas par des règles Firestore. Les règles ci-dessous ne s'appliqueraient qu'au miroir Firestore optionnel (lecture), pas aux données de production.
+
+### Règles de Sécurité Firestore (miroir optionnel uniquement)
 
 ```javascript
 rules_version = '2';
@@ -417,57 +418,15 @@ function validateEvent(event: Partial<Event>): boolean {
 
 ---
 
-## 🚀 Déploiement
+## 🚀 Déploiement (réalité)
 
-### Prérequis
+Le déploiement réel n'utilise pas `firebase deploy` pour le backend. Il repose sur :
 
-1. **Compte Firebase** créé et configuré
-2. **Firebase CLI** installé : `npm install -g firebase-tools`
-3. **Variables d'environnement** configurées
+- **Backend** (`back/`, Express + Prisma/PostgreSQL) : déployé sur **Render** via `back/render.yaml`
+- **Frontend** (`front/`) : déployé sur **Vercel** via `front/vercel.json`
+- **Firebase** : uniquement pour l'authentification (Firebase Auth), configurée via les variables `VITE_FIREBASE_*` côté front et `FIREBASE_PROJECT_ID`/`FIREBASE_CLIENT_EMAIL`/`FIREBASE_PRIVATE_KEY` côté back (vérification des ID tokens)
 
-### Étapes de Déploiement
-
-#### 1. Configuration Firebase
-
-```bash
-# Se connecter à Firebase
-firebase login
-
-# Initialiser le projet
-firebase init
-
-# Sélectionner :
-# - Hosting
-# - Firestore
-# - Storage
-# - Authentication
-```
-
-#### 2. Build de Production
-
-```bash
-# Créer le build optimisé
-npm run build
-
-# Tester localement
-firebase serve
-```
-
-#### 3. Déploiement
-
-```bash
-# Déployer tout
-firebase deploy
-
-# Ou déployer sélectivement
-firebase deploy --only hosting
-firebase deploy --only firestore:rules
-firebase deploy --only storage:rules
-```
-
-### Variables d'Environnement
-
-Créez un fichier `.env.production` :
+### Variables d'Environnement (Frontend)
 
 ```bash
 VITE_FIREBASE_API_KEY=your_api_key
@@ -476,41 +435,18 @@ VITE_FIREBASE_PROJECT_ID=your_project_id
 VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
 VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+VITE_API_URL=https://api.feeti.com
 ```
 
-### CI/CD avec GitHub Actions
+### Variables d'Environnement (Backend `back/`)
 
-Créez `.github/workflows/deploy.yml` :
-
-```yaml
-name: Deploy to Firebase
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  build_and_deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Build
-        run: npm run build
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
-          # ... autres variables
-      
-      - name: Deploy to Firebase
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
-          projectId: feeti-app
+```bash
+DATABASE_URL=postgresql://...
+FIREBASE_PROJECT_ID=...
+FIREBASE_CLIENT_EMAIL=...
+FIREBASE_PRIVATE_KEY=...
+FIRESTORE_SYNC_ENABLED=true
+JWT_SECRET=...
 ```
 
 ---
@@ -555,43 +491,19 @@ crashlytics().recordError(error);
 
 ---
 
-## 🔄 Migrations et Backups
+## 🔄 Migrations et Backups (réalité : PostgreSQL/Prisma)
 
-### Backup Automatique
+### Backup
 
-```typescript
-// Script de backup (à exécuter régulièrement)
-import { exec } from 'child_process';
-
-const backupFirestore = () => {
-  const date = new Date().toISOString().split('T')[0];
-  exec(`gcloud firestore export gs://feeti-backups/backup-${date}`, 
-    (error, stdout, stderr) => {
-      if (error) console.error('Backup failed:', error);
-      else console.log('Backup successful:', stdout);
-    }
-  );
-};
-```
+La base PostgreSQL est sauvegardée via l'offre de l'hébergeur (PITR/snapshots) et/ou `pg_dump` planifié — pas via `gcloud firestore export` (Firestore n'étant qu'un miroir optionnel, il n'a pas besoin d'une stratégie de backup dédiée).
 
 ### Migration de Données
 
-```typescript
-// Exemple de migration
-async function migrateEventsAddSlug() {
-  const events = await getDocs(collection(db, 'events'));
-  
-  for (const doc of events.docs) {
-    const event = doc.data();
-    if (!event.slug) {
-      const slug = event.title.toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
-      
-      await updateDoc(doc.ref, { slug });
-    }
-  }
-}
+Les migrations de schéma passent par Prisma Migrate :
+
+```bash
+cd back
+npx prisma migrate dev --name add_event_slug
 ```
 
 ---
@@ -685,5 +597,6 @@ Avant de déployer en production :
 ---
 
 **Version** : 1.0.0  
-**Dernière mise à jour** : Décembre 2024  
+**Architecture réelle** : Firebase Auth (authentification) + Express/Prisma/PostgreSQL (`back/`, données métier), Firestore en miroir optionnel  
+**Dernière mise à jour** : Juillet 2026  
 **Auteur** : Équipe Technique Feeti

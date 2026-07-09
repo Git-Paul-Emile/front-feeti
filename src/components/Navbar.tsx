@@ -87,7 +87,7 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
         <div className="flex items-center space-x-2 sm:space-x-4">
           {/* User Account Button */}
           {currentUser ? (
-            <div className="relative">
+            <div className="relative" data-testid="nav-user-menu">
               {/* Direct click to dashboard based on role */}
               <button
                 onClick={() => {

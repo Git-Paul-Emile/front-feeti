@@ -148,62 +148,6 @@ export interface CatalogEventsProvider {
 
 export type PaymentProvider = "stripe" | "paystack" | "mobile_money";
 
-export interface PaymentIntent {
-  id: string;
-  amount: number;
-  currency: string;
-  provider: PaymentProvider;
-  clientSecret?: string;
-  authorizationUrl?: string;
-  reference?: string;
-}
-
-export interface PaymentMethod {
-  id: string;
-  type: "card" | "mobile_money" | "bank_transfer";
-  last4?: string;
-  brand?: string;
-  expiryMonth?: number;
-  expiryYear?: number;
-  phoneNumber?: string;
-}
-
-export interface PaymentConfig {
-  stripePublicKey?: string;
-  paystackPublicKey?: string;
-  currency: string;
-  supportedMethods: PaymentProvider[];
-}
-
-export interface PaymentsProvider {
-  readonly mode: BackendProviderMode;
-  createPaymentIntent(
-    amount: number,
-    provider: PaymentProvider,
-    metadata?: Record<string, any>
-  ): Promise<PaymentIntent>;
-  confirmPayment(
-    paymentIntentId: string,
-    provider: PaymentProvider
-  ): Promise<{ status: string; transactionId: string }>;
-  checkPaymentStatus(
-    reference: string,
-    provider: PaymentProvider
-  ): Promise<{
-    status: "pending" | "completed" | "failed" | "cancelled";
-    amount?: number;
-    currency?: string;
-  }>;
-  refundPayment(
-    transactionId: string,
-    amount?: number,
-    reason?: string
-  ): Promise<{ refundId: string }>;
-  savePaymentMethod(userId: string, paymentMethod: Omit<PaymentMethod, "id">): Promise<string>;
-  getPaymentMethods(userId: string): Promise<PaymentMethod[]>;
-  deletePaymentMethod(methodId: string): Promise<void>;
-}
-
 export interface BackendTicket {
   id: string;
   eventId: string;
@@ -307,6 +251,5 @@ export interface BackendGateway {
   auth: AuthProvider;
   events: EventsProvider;
   catalogEvents: CatalogEventsProvider;
-  payments: PaymentsProvider;
   tickets: TicketsProvider;
 }

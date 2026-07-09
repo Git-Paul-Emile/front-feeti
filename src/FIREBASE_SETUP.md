@@ -2,6 +2,8 @@
 
 Ce guide vous explique comment configurer Firebase pour votre plateforme de billetterie Feeti.
 
+> **Note sur la réalité du code** : dans l'application réelle, **Firebase ne gère que l'authentification** (Email/Password, Google OAuth, mot de passe oublié via `sendPasswordResetEmail` — voir `front/src/services/firebase-auth.ts`). Toutes les données métier (utilisateurs, événements, billets, transactions, wallets, etc.) sont stockées dans **PostgreSQL via Prisma**, servies par le backend Express réel (`back/`, déployé sur Render). L'activation de **Firestore Database** décrite ci-dessous n'est nécessaire que si vous activez la synchronisation optionnelle (`FIRESTORE_SYNC_ENABLED`) — ce n'est jamais la base de données principale. Le dossier `functions/` (Cloud Functions Firebase) a été retiré du projet, non utilisé en production.
+
 ## 📋 Prérequis
 
 - Un compte Google
@@ -19,7 +21,9 @@ Ce guide vous explique comment configurer Firebase pour votre plateforme de bill
 
 ### 2. Activer les Services Nécessaires
 
-#### A. Firestore Database (Base de données)
+#### A. Firestore Database (optionnel — miroir de synchronisation uniquement)
+
+Cette étape n'est utile que si vous activez `FIRESTORE_SYNC_ENABLED` côté backend. La base de données applicative réelle est PostgreSQL (Prisma), pas Firestore.
 
 1. Dans le menu latéral, cliquez sur **"Firestore Database"**
 2. Cliquez sur **"Créer une base de données"**
@@ -149,9 +153,9 @@ service firebase.storage {
 }
 ```
 
-### 6. Structure de la Base de Données
+### 6. Structure de la Base de Données (miroir Firestore optionnel — la source de vérité est Prisma/PostgreSQL, `back/prisma/schema.prisma`)
 
-Voici la structure des collections Firestore :
+Voici la structure des collections Firestore (utilisée uniquement si la synchronisation optionnelle est activée) :
 
 #### Collection `users`
 ```
@@ -325,11 +329,11 @@ Les règles ci-dessus sont pour le développement. En production :
 ## ✅ Checklist de Configuration
 
 - [ ] Projet Firebase créé
-- [ ] Firestore Database activé
-- [ ] Authentication (Email/Password) activé
-- [ ] Storage activé
-- [ ] Credentials copiés dans `/config/firebase.ts`
-- [ ] Règles de sécurité configurées
+- [ ] Authentication (Email/Password + Google) activé
+- [ ] Firestore Database activé (optionnel, seulement si `FIRESTORE_SYNC_ENABLED`)
+- [ ] Storage activé (si upload de médias)
+- [ ] Credentials copiés dans `front/src/services/firebase-auth.ts` (front) et variables `FIREBASE_*` (back)
+- [ ] Backend `back/` (Express + Prisma/PostgreSQL) configuré et lancé — voir `README_BACKEND.md`
 - [ ] Application testée localement
 - [ ] Variables d'environnement configurées (production)
 

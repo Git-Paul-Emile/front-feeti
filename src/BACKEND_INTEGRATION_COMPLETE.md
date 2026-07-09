@@ -1,5 +1,10 @@
 # ✅ Intégration Backend Complète - Feeti
 
+> **Document obsolète (constaté le 2026-07-07) : `EventSubmissionAPI.ts` et `EventSubmissionPage` décrits
+> ci-dessous n'existent plus dans le code actuel.** Ce fichier date d'une étape antérieure du projet et
+> n'a pas été mis à jour après les refactors suivants. Ne pas s'y fier pour l'état réel de l'intégration —
+> se référer au code source (`src/services/api/`, `src/routes/AppRoutes.tsx`).
+
 Toutes les nouvelles fonctionnalités sont maintenant connectées au backend et à l'interface.
 
 ---

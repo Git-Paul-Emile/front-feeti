@@ -249,7 +249,8 @@ export function EventCard({ event, onSelect, onPurchase, onWishlist, onStreamWat
   // Best-off variant using the new design model
   if (variant === 'best-off' || variant === 'default') {
     return (
-      <div 
+      <div
+        data-testid="event-card"
         className="bg-white rounded-2xl border border-gray-200 hover:border-gray-300 transition-all duration-300 cursor-pointer group overflow-hidden w-full max-w-sm mx-auto"
         onClick={() => onSelect(event.id)}
       >

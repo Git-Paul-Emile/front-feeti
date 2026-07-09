@@ -16,6 +16,7 @@ import FeetiPlayEventsAPI from '../services/api/FeetiPlayEventsAPI';
 import type { FeetiPlayEvent } from '../services/api/FeetiPlayEventsAPI';
 import type { Ticket } from '../context/AppContext';
 import type { RegisterData } from '../services/api/AuthAPI';
+import { isEventPromotionActive } from '../components/PromotionBadge';
 
 // Adapter: BackendEvent → format attendu par les composants
 function adaptEvent(e: BackendEvent) {
@@ -57,6 +58,9 @@ function adaptEvent(e: BackendEvent) {
 
 const FEETIPLAY_URL = ((import.meta as any).env?.VITE_FEETIPLAY_URL ?? '').trim();
 const FEETIPLAY_EVENT_PREFIX = 'feetiplay_';
+// Préfixe utilisé côté backend (feetiPlaySync.service.ts) pour l'ID du miroir
+// créé sur FeetiPlay des événements STREAMING_LIVE/MIXTE créés sur feeti2.
+const FEETIPLAY_LIVE_MIRROR_PREFIX = 'feeti2_live_';
 
 type AppEvent = ReturnType<typeof adaptEvent>;
 
@@ -111,6 +115,18 @@ function adaptFeetiPlayEvent(e: FeetiPlayEvent): AppEvent {
   };
 }
 
+// Même priorité que le tri backend (event.repository.ts) : OR=4, ARGENT=3,
+// BRONZE=2, LITE=1, aucun=0. Sans ce rang, le tri par date écrase l'ordre de
+// mise en avant calculé côté serveur — les événements promus se retrouvent
+// noyés dans le flux une fois fusionnés avec les événements FeetiPlay
+// (particulièrement visible en mode "Tous les pays", où le pool fusionné est
+// bien plus grand).
+const PROMO_RANK: Record<string, number> = { OR: 4, ARGENT: 3, BRONZE: 2, LITE: 1 };
+
+function promoRank(event: AppEvent): number {
+  return isEventPromotionActive(event) ? (PROMO_RANK[event.promotionType ?? ''] ?? 0) : 0;
+}
+
 function mergeEvents(primary: AppEvent[], secondary: AppEvent[]) {
   const seen = new Set<string>();
   return [...primary, ...secondary]
@@ -120,6 +136,8 @@ function mergeEvents(primary: AppEvent[], secondary: AppEvent[]) {
       return true;
     })
     .sort((a, b) => {
+      const rankDiff = promoRank(b) - promoRank(a);
+      if (rankDiff !== 0) return rankDiff;
       const aTime = new Date(`${a.date}T${a.time || '00:00'}`).getTime();
       const bTime = new Date(`${b.date}T${b.time || '00:00'}`).getTime();
       return bTime - aTime;
@@ -135,11 +153,11 @@ import { CookiePreferences } from '../components/CookiePreferences';
 import { Toaster } from '../components/ui/sonner';
 import { HomePage } from '../components/pages/HomePage';
 import { LoginPage } from '../components/pages/LoginPage';
-import { AccountPage } from '../components/pages/AccountPage';
-import { UserDashboard } from '../components/pages/UserDashboard';
-import { ControllerDashboard } from '../components/pages/ControllerDashboard';
 
 // Lazy load des pages lourdes
+const AccountPage            = lazy(() => import('../components/pages/AccountPage').then(m => ({ default: m.AccountPage })));
+const UserDashboard          = lazy(() => import('../components/pages/UserDashboard').then(m => ({ default: m.UserDashboard })));
+const ControllerDashboard    = lazy(() => import('../components/pages/ControllerDashboard').then(m => ({ default: m.ControllerDashboard })));
 const EventsListPage         = lazy(() => import('../components/pages/EventsListPage').then(m => ({ default: m.EventsListPage })));
 const EventDetailPage        = lazy(() => import('../components/pages/EventDetailPage').then(m => ({ default: m.EventDetailPage })));
 const TicketPurchasePage     = lazy(() => import('../components/pages/TicketPurchasePage').then(m => ({ default: m.TicketPurchasePage })));
@@ -149,7 +167,6 @@ const EstablishmentOwnerSection = lazy(() => import('../components/pages/Establi
 const OrganizerEventDashboard= lazy(() => import('../components/pages/OrganizerEventDashboard').then(m => ({ default: m.OrganizerEventDashboard })));
 const AdminDashboard         = lazy(() => import('../components/pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const BackOfficeDashboard    = lazy(() => import('../components/pages/BackOfficeDashboard').then(m => ({ default: m.BackOfficeDashboard })));
-const StreamingPage          = lazy(() => import('../components/pages/StreamingPage').then(m => ({ default: m.StreamingPage })));
 const LiveEventsPage         = lazy(() => import('../components/pages/LiveEventsPage').then(m => ({ default: m.LiveEventsPage })));
 const ReplayPage             = lazy(() => import('../components/pages/ReplayPage').then(m => ({ default: m.ReplayPage })));
 const BlogPage               = lazy(() => import('../components/pages/BlogPage').then(m => ({ default: m.BlogPage })));
@@ -434,7 +451,9 @@ function StreamingRoute() {
         }
 
         // STREAMING_LIVE ou MIXTE → redirection FeetiPlay
-        if (FEETIPLAY_URL) window.location.href = `${FEETIPLAY_URL}/event/${id}`;
+        // Le miroir FeetiPlay de cet événement local est stocké sous l'ID
+        // préfixé feeti2_live_<id> (voir feetiPlaySync.service.ts côté backend).
+        if (FEETIPLAY_URL) window.location.href = `${FEETIPLAY_URL}/event/${FEETIPLAY_LIVE_MIRROR_PREFIX}${id}`;
       })
       .catch(() => navigate('/events', { replace: true }));
   }, [id, navigate]);

@@ -13,6 +13,9 @@ import {
   type UpdateProfileData,
 } from "../services/api/AuthAPI";
 import { backendGateway } from "../services/backend";
+import { loyaltyApi } from "../api/loyalty";
+
+const PENDING_REFERRAL_KEY = "feeti_pending_referral";
 
 export interface AppUser {
   id: string;
@@ -78,6 +81,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const pendingCode = localStorage.getItem(PENDING_REFERRAL_KEY);
+    if (!pendingCode) return;
+    localStorage.removeItem(PENDING_REFERRAL_KEY);
+    loyaltyApi.applyReferralCode(pendingCode).catch(() => {});
+  }, [user?.id]);
 
   const login = useCallback(async (email: string, password: string): Promise<AppUser> => {
     const authUser = await backendGateway.auth.login(email, password);

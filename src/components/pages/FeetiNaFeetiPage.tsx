@@ -47,6 +47,10 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
   const [postForm, setPostForm] = useState({ title: '', content: '' });
   const [postSaving, setPostSaving] = useState(false);
 
+  // Application d'un code de parrainage reçu
+  const [referralCodeInput, setReferralCodeInput] = useState('');
+  const [applyingReferral, setApplyingReferral] = useState(false);
+
   const loadAll = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -112,6 +116,23 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
       loadAll();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Déjà liké');
+    }
+  };
+
+  const handleApplyReferralCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = referralCodeInput.trim();
+    if (!code) return;
+    setApplyingReferral(true);
+    try {
+      await loyaltyApi.applyReferralCode(code);
+      toast.success('Code de parrainage appliqué !');
+      setReferralCodeInput('');
+      loadAll();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Code de parrainage invalide');
+    } finally {
+      setApplyingReferral(false);
     }
   };
 
@@ -784,6 +805,31 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                     Twitter
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Vous avez un code de parrainage ?</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-3">Un ami vous a partagé son code ? Entrez-le ici pour le soutenir.</p>
+                <form onSubmit={handleApplyReferralCode} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={referralCodeInput}
+                    onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
+                    placeholder="Ex: FNF-XXXXXXXX"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={applyingReferral || !referralCodeInput.trim()}
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                  >
+                    {applyingReferral ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Appliquer'}
+                  </Button>
+                </form>
               </CardContent>
             </Card>
 

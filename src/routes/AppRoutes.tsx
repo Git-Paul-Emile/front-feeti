@@ -1070,6 +1070,17 @@ function FeetiNaFeetiRoute() {
   return <FeetiNaFeetiPage onBack={() => navigate(-1)} currentUser={currentUser} />;
 }
 
+function ReferralCaptureRoute() {
+  const { code } = useParams();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (code) localStorage.setItem('feeti_pending_referral', code);
+  }, [code]);
+
+  return <Navigate to={user ? '/' : '/login'} replace />;
+}
+
 function FeetiNaFeetiAdminRoute() {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
@@ -1161,6 +1172,7 @@ export function AppRoutes() {
         <Route path="/legal/:page"        element={<LegalRoute />} />
         <Route path="/login"              element={<LoginRoute />} />
         <Route path="/login/google-complete" element={<GoogleCompletionPage />} />
+        <Route path="/ref/:code"          element={<ReferralCaptureRoute />} />
 
         {/* Routes protégées — utilisateur connecté */}
         <Route element={<ProtectedRoute />}>

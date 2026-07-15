@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import svgPaths from "../imports/svg-opchhfjrnf";
 import { Facebook, Twitter, Instagram, Youtube, Linkedin } from 'lucide-react';
+import { newsletterAPI } from '../services/api/NewsletterAPI';
 
 interface FooterProps {
   onNavigate: (page: string, params?: any) => void;
@@ -313,35 +315,68 @@ function Nav({ onNavigate, onLegalPageNavigate }: { onNavigate: (page: string, p
   );
 }
 
-// Contact Section
-function ContactInfo() {
+// Newsletter Section — inscription à "Les Fééties de la semaine" (remplace l'ancien tel/email placeholder)
+function NewsletterForm({ align = 'end' }: { align?: 'end' | 'start' }) {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [message, setMessage] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!trimmed) return;
+
+    setStatus('loading');
+    try {
+      await newsletterAPI.subscribe(trimmed);
+      setStatus('success');
+      setMessage('Inscription confirmée !');
+      setEmail('');
+    } catch (err: any) {
+      setStatus('error');
+      setMessage(err?.message || 'Une erreur est survenue, réessayez.');
+    }
+  };
+
   return (
-    <div className="content-stretch flex flex-col font-medium gap-[4px] items-end justify-start leading-[1.4] not-italic relative shrink-0 text-[#00bdd7] text-[20px] xl:text-[22px] 2xl:text-[24px] text-nowrap whitespace-pre" data-name="list">
-      <a 
-        href="tel:+242981-23-19" 
-        className="relative shrink-0 hover:text-[#16bda0] transition-colors duration-200"
-      >
-        +242 981-23-19
-      </a>
-      <a 
-        href="mailto:hello@logoipsum.com" 
-        className="relative shrink-0 text-right hover:text-[#16bda0] transition-colors duration-200"
-      >
-        hello@logoipsum.com
-      </a>
+    <div className={`flex flex-col ${align === 'end' ? 'items-end' : 'items-start'} gap-[10px] w-full`}>
+      <p className={`font-medium text-[14px] xl:text-[15px] text-white/70 ${align === 'end' ? 'text-right' : 'text-left'}`}>
+        Recevez « Les Fééties de la semaine »
+      </p>
+      <form onSubmit={handleSubmit} className="flex gap-[8px] w-full">
+        <input
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Votre email"
+          aria-label="Adresse email pour la newsletter"
+          className="min-w-0 flex-1 bg-white/10 border border-white/20 rounded-full px-4 py-2 text-white text-[13px] placeholder:text-white/40 focus:outline-none focus:border-[#16bda0] transition-colors duration-200"
+        />
+        <button
+          type="submit"
+          disabled={status === 'loading'}
+          className="shrink-0 bg-[#00bdd7] hover:bg-[#16bda0] transition-colors duration-200 text-white text-[13px] font-medium rounded-full px-4 py-2 disabled:opacity-60"
+        >
+          {status === 'loading' ? '...' : "S'inscrire"}
+        </button>
+      </form>
+      {(status === 'success' || status === 'error') && (
+        <p className={`text-[12px] ${status === 'success' ? 'text-[#16bda0]' : 'text-red-400'} ${align === 'end' ? 'text-right' : 'text-left'}`}>
+          {message}
+        </p>
+      )}
     </div>
   );
 }
 
 function Contacts() {
   return (
-    <div className="absolute content-stretch flex flex-col gap-[13px] items-end justify-start left-[1164px] top-[104px] w-[260px]" data-name="CONTACTS">
+    <div className="absolute content-stretch flex flex-col gap-[13px] items-end justify-start left-[1084px] top-[104px] w-[340px]" data-name="CONTACTS">
       <div className="content-stretch flex flex-col gap-[64px] items-end justify-start relative shrink-0 w-full" data-name="col">
-        <div className="grid-cols-[max-content] grid-rows-[max-content] inline-grid leading-[0] place-items-start relative shrink-0">
-          <div className="[grid-area:1_/_1] box-border content-stretch flex flex-col gap-[24px] items-end justify-start ml-0 mt-0 relative" data-name="contactUs">
-            <div className="bg-[#00bdd7] h-[3px] shrink-0 w-[77px]" data-name="border" />
-            <ContactInfo />
-          </div>
+        <div className="box-border content-stretch flex flex-col gap-[16px] items-end justify-start w-full" data-name="contactUs">
+          <div className="bg-[#00bdd7] h-[3px] shrink-0 w-[77px]" data-name="border" />
+          <NewsletterForm align="end" />
         </div>
       </div>
     </div>
@@ -651,13 +686,10 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             <div className="text-center sm:text-left">
               <div className="w-20 h-1 bg-[#00bdd7] mb-4 mx-auto sm:mx-0"></div>
-              <div className="space-y-2">
-                <a href="tel:+242981-23-19" className="block text-[#00bdd7] text-lg font-medium hover:text-[#16bda0] transition-colors">
-                  +242 981-23-19
-                </a>
-                <a href="mailto:hello@logoipsum.com" className="block text-[#00bdd7] text-lg font-medium hover:text-[#16bda0] transition-colors">
-                  hello@logoipsum.com
-                </a>
+              <div className="flex justify-center sm:justify-start">
+                <div className="w-full max-w-[280px]">
+                  <NewsletterForm align="start" />
+                </div>
               </div>
             </div>
             

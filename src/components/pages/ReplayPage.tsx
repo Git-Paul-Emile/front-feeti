@@ -637,7 +637,7 @@ export function ReplayPage({
           {/* Category Filters - À droite sur desktop, en dessous sur mobile */}
           <div 
             ref={categorySliderRef}
-            className="replay-category-slider overflow-x-auto category-slider scrollbar-hide"
+            className="replay-category-slider overflow-x-auto category-slider scrollbar-hide w-full min-w-0"
           >
             <div className="flex gap-2 md:gap-3 min-w-max">
               {categories.map((category) => (

@@ -435,6 +435,7 @@ const AdminFinancialDashboard: React.FC = () => {
             </div>
 
             <h4 className="text-sm font-semibold text-gray-700 mb-3">Détail par taux de TVA</h4>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
@@ -459,6 +460,7 @@ const AdminFinancialDashboard: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}

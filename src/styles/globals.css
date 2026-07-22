@@ -2928,3 +2928,45 @@ html {
 .hover\:bg-green-700:hover {
   background-color: oklch(.527 .154 150.069);
 }
+
+/* =========================================================================
+   Filet de sécurité responsive (audit UI 2026-07)
+   Empêche tout débordement horizontal / cassure de mise en page.
+   ========================================================================= */
+
+/* Contient les débordements horizontaux résiduels sans casser position: sticky
+   (`clip` ne crée pas de conteneur de défilement, contrairement à `hidden`). */
+html {
+  overflow-x: clip;
+}
+
+/* Médias fluides : ne dépassent jamais leur conteneur. */
+img,
+video,
+canvas,
+svg,
+iframe,
+embed,
+object {
+  max-width: 100%;
+}
+img,
+video {
+  height: auto;
+}
+
+/* Les longues chaînes non sécables (emails, URLs, IDs, montants) se coupent
+   au lieu d'élargir la page. */
+p,
+h1, h2, h3, h4, h5, h6,
+span, a, li, dd, dt, label,
+td, th,
+figcaption, blockquote, small, strong, em {
+  overflow-wrap: break-word;
+}
+
+/* Les tableaux restent dans leur conteneur ; le scroll horizontal se fait via
+   le wrapper .overflow-x-auto quand nécessaire. */
+table {
+  max-width: 100%;
+}

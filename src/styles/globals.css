@@ -2950,10 +2950,6 @@ embed,
 object {
   max-width: 100%;
 }
-img,
-video {
-  height: auto;
-}
 
 /* Les longues chaînes non sécables (emails, URLs, IDs, montants) se coupent
    au lieu d'élargir la page. */

@@ -1,6 +1,6 @@
 // Pack juridique & conformité Fééti — version 1.0 du 08 mars 2026.
 // Source : FEETI_Pack_Juridique_2026.docx. Ce fichier est partagé à l'identique
-// entre FeetiTicketWeb et FeetiPlayWeb : modifier les deux copies ensemble.
+// entre FeetiTicketWeb, FeetiPlayWeb et FeetiTicketMobile : modifier les trois copies ensemble.
 // Les valeurs entre crochets [ ] sont à compléter avant mise en ligne officielle.
 
 export type LegalBlock =

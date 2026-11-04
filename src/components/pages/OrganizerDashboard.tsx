@@ -7,6 +7,7 @@ import EventsBackendAPI from '../../services/api/EventsBackendAPI';
 import AccessAPI from '../../services/api/AccessAPI';
 import { EventPromotionBadge, isEventPromotionActive } from '../PromotionBadge';
 import { PromoteEventModal } from '../PromoteEventModal';
+import { EventPageModal } from '../EventPageModal';
 import CategoriesAPI from '../../services/api/CategoriesAPI';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -133,6 +134,8 @@ export function OrganizerDashboard({
 
   // Promote modal state
   const [promoteEvent, setPromoteEvent] = useState<Event | null>(null);
+  // Page événement publique ({slug}.feeti.io) : modale lien / publication / partage / QR
+  const [eventPageEventId, setEventPageEventId] = useState<string | null>(null);
 
   // Delete confirmation state
   const [deleteConfirmEvent, setDeleteConfirmEvent] = useState<Event | null>(null);
@@ -1478,6 +1481,17 @@ export function OrganizerDashboard({
                           >
                             {event.salesBlocked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                           </Button>
+                          {!event.id.startsWith('feeti2_live_') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEventPageEventId(event.id)}
+                              title="Page événement : lien, publication, partage et QR code"
+                            >
+                              <Globe className="w-4 h-4 mr-1" />
+                              Page
+                            </Button>
+                          )}
                           {event.eventType !== 'STREAMING_LIVE' && (
                             <Button
                               variant="outline"
@@ -1956,6 +1970,9 @@ export function OrganizerDashboard({
           if (deleteConfirmEvent) onEventDelete(deleteConfirmEvent.id);
         }}
       />
+
+      {/* Page événement publique ({slug}.feeti.io) */}
+      <EventPageModal eventId={eventPageEventId} onClose={() => setEventPageEventId(null)} />
 
       {/* Modal de promotion self-service */}
       {promoteEvent && (

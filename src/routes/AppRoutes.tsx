@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Routes, Route, Navigate, Outlet,
-  useNavigate, useParams, useLocation,
+  useNavigate, useParams, useLocation, useSearchParams,
 } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -184,12 +184,9 @@ const LoisirsPage            = lazy(() => import('../components/pages/LoisirsPag
 const BarNightPage           = lazy(() => import('../components/pages/BarNightPage').then(m => ({ default: m.BarNightPage })));
 const EstablishmentDetailPage= lazy(() => import('../components/pages/EstablishmentDetailPage').then(m => ({ default: m.EstablishmentDetailPage })));
 const LegalPages             = lazy(() => import('../components/pages/LegalPages').then(m => ({ default: m.LegalPages })));
-const TermsOfServicePage     = lazy(() => import('../components/pages/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
-const PrivacyPolicyPage      = lazy(() => import('../components/pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
-const CookiePolicyPage       = lazy(() => import('../components/pages/CookiePolicyPage').then(m => ({ default: m.CookiePolicyPage })));
-const LegalNoticePage        = lazy(() => import('../components/pages/LegalNoticePage').then(m => ({ default: m.LegalNoticePage })));
-const RefundPolicyPage       = lazy(() => import('../components/pages/RefundPolicyPage').then(m => ({ default: m.RefundPolicyPage })));
 const FAQPage                = lazy(() => import('../components/pages/FAQPage').then(m => ({ default: m.FAQPage })));
+const LegalDocumentPage      = lazy(() => import('../components/pages/LegalDocumentPage').then(m => ({ default: m.LegalDocumentPage })));
+const ContactPage            = lazy(() => import('../components/pages/ContactPage').then(m => ({ default: m.ContactPage })));
 const MyFavoritesPage        = lazy(() => import('../components/pages/MyFavoritesPage').then(m => ({ default: m.MyFavoritesPage })));
 const QRScannerPage          = lazy(() => import('../components/pages/QRScannerPage').then(m => ({ default: m.QRScannerPage })));
 const OrganizerFinancialDashboard = lazy(() => import('../components/pages/OrganizerFinancialDashboard'));
@@ -217,6 +214,7 @@ const PAGE_ROUTES: Record<string, string> = {
   login: '/login', replay: '/replay', streaming: '/streaming',
   'ticket-verification': '/verify',
   legal: '/legal/terms',
+  'legal-advertising': '/legal/advertising',
   'my-tickets': '/dashboard',
   'my-favorites': '/favorites',
   'qr-scanner': '/scan',
@@ -377,9 +375,29 @@ function EventDetailRoute() {
   );
 }
 
+/**
+ * return_url transmis par une page événement ({slug}.feeti.io) : accepté seulement
+ * pour un sous-domaine du domaine des pages (ou *.localhost en dev), jamais une URL arbitraire.
+ */
+const EVENT_PAGES_ROOT_DOMAIN = (import.meta.env.VITE_EVENT_PAGES_ROOT_DOMAIN as string | undefined) || 'feeti.io';
+function safeEventPageReturnUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    const host = url.hostname.toLowerCase();
+    const isPage = url.protocol === 'https:' && host.endsWith(`.${EVENT_PAGES_ROOT_DOMAIN}`);
+    const isDevPage = import.meta.env.DEV && url.protocol === 'http:' && host.endsWith('.localhost');
+    return isPage || isDevPage ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 function PaymentRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const eventPageReturnUrl = safeEventPageReturnUrl(searchParams.get('return_url'));
   const { user: currentUser } = useAuth();
   const { addTickets } = useApp();
   const { selectedCountry } = useCountry();
@@ -416,7 +434,7 @@ function PaymentRoute() {
   return (
     <TicketPurchasePage
       event={event}
-      onBack={() => navigate(`/events/${id}`)}
+      onBack={() => (eventPageReturnUrl ? window.location.assign(eventPageReturnUrl) : navigate(`/events/${id}`))}
       onPurchaseComplete={handleComplete}
       currentUser={currentUser}
       headerCountryCode={selectedCountry?.code ?? null}
@@ -1163,12 +1181,15 @@ export function AppRoutes() {
         <Route path="/leisure/loisirs"    element={<LoisirsPage onBack={() => {}} />} />
         <Route path="/leisure/bar-night"  element={<BarNightPage onBack={() => {}} />} />
         <Route path="/leisure/establishment/:id" element={<EstablishmentRoute />} />
-        <Route path="/legal/terms"        element={<TermsOfServicePage />} />
-        <Route path="/legal/privacy"      element={<PrivacyPolicyPage />} />
-        <Route path="/legal/cookies"      element={<CookiePolicyPage />} />
-        <Route path="/legal/notice"       element={<LegalNoticePage />} />
-        <Route path="/legal/refund"       element={<RefundPolicyPage />} />
+        <Route path="/legal/terms"        element={<LegalDocumentPage slug="terms" />} />
+        <Route path="/legal/privacy"      element={<LegalDocumentPage slug="privacy" />} />
+        <Route path="/legal/cookies"      element={<LegalDocumentPage slug="cookies" />} />
+        <Route path="/legal/notice"       element={<LegalDocumentPage slug="notice" />} />
+        <Route path="/legal/refund"       element={<LegalDocumentPage slug="refund" />} />
+        <Route path="/legal/advertising"  element={<LegalDocumentPage slug="advertising" />} />
         <Route path="/legal/faq"          element={<FAQPage />} />
+        <Route path="/legal/contact"      element={<Navigate to="/contact" replace />} />
+        <Route path="/contact"            element={<ContactPage />} />
         <Route path="/legal/:page"        element={<LegalRoute />} />
         <Route path="/login"              element={<LoginRoute />} />
         <Route path="/login/google-complete" element={<GoogleCompletionPage />} />

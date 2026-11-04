@@ -1,0 +1,52 @@
+/*
+ * Styles de la modale « Page événement » (back-office organisateur).
+ * Fichier dédié : src/index.css est un Tailwind précompilé, les nouvelles classes n'y existent pas.
+ */
+.epm { display: grid; gap: 1.25rem; font-size: 0.92rem; color: #1f1b24; }
+.epm-section { display: grid; gap: 0.6rem; padding-bottom: 1.1rem; border-bottom: 1px solid #ece8f1; }
+.epm-section:last-child { border-bottom: 0; padding-bottom: 0; }
+.epm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.epm-label { font-weight: 700; font-size: 0.95rem; margin: 0; }
+.epm-muted { color: #6a6474; margin: 0; }
+.epm-link { color: #6a12c9; font-weight: 600; word-break: break-all; }
+
+.epm-status { font-size: 0.8rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; background: #ecebef; color: #3d3846; }
+.epm-status-published { background: #e5f6ec; color: #135c32; }
+.epm-status-paused { background: #fdf0e1; color: #7a4206; }
+.epm-status-archived { background: #ecebef; color: #4a4553; }
+
+.epm-warning { margin: 0; padding: 0.6rem 0.75rem; border-radius: 8px; background: #fdf0e1; color: #6b3a05; }
+
+.epm-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.epm-actions-col { flex-direction: column; align-items: flex-start; }
+
+.epm-btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 0.85rem;
+  border: 1px solid #d9d3e2; border-radius: 8px; background: #fff; color: #1f1b24;
+  font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.epm-btn:hover:not(:disabled) { background: #f6f3fa; }
+.epm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.epm-btn:focus-visible, .epm-input:focus-visible, .epm-check input:focus-visible { outline: 3px solid #811aec; outline-offset: 2px; }
+.epm-btn-primary { background: #811aec; border-color: #811aec; color: #fff; }
+.epm-btn-primary:hover:not(:disabled) { background: #6a12c9; }
+
+.epm-input { width: 100%; padding: 0.55rem 0.7rem; border: 1px solid #d9d3e2; border-radius: 8px; font: inherit; background: #fff; }
+.epm-message { resize: vertical; color: #3d3846; }
+.epm-slug { display: flex; align-items: stretch; }
+.epm-slug .epm-input { border-radius: 8px 0 0 8px; }
+.epm-suffix { display: flex; align-items: center; padding: 0 0.7rem; border: 1px solid #d9d3e2; border-left: 0; border-radius: 0 8px 8px 0; background: #f6f3fa; color: #6a6474; white-space: nowrap; }
+.epm-help { margin: 0; font-size: 0.82rem; color: #6a6474; }
+.epm-help-ok { color: #135c32; font-weight: 600; }
+.epm-help-error { color: #9b1c12; font-weight: 600; }
+
+.epm-check { display: flex; gap: 0.6rem; align-items: flex-start; cursor: pointer; }
+.epm-check input { width: 18px; height: 18px; margin-top: 2px; accent-color: #811aec; }
+
+.epm-qr { grid-template-columns: auto 1fr; align-items: center; gap: 1rem; }
+.epm-qr-box { padding: 0.4rem; border: 1px solid #ece8f1; border-radius: 8px; background: #fff; line-height: 0; }
+
+@media (max-width: 520px) {
+  .epm-qr { grid-template-columns: 1fr; justify-items: start; }
+  .epm-suffix { font-size: 0.8rem; }
+}

@@ -41,6 +41,10 @@ export interface LeisureItem {
   leisurePackStatus?: string | null;
   leisurePackStartDate?: string | null;
   leisurePackEndDate?: string | null;
+  // Établissements récupérés depuis Google Places (non partenaires)
+  source?: 'feeti' | 'google';
+  googleMapsUri?: string;
+  photoAttribution?: string;
 }
 
 export interface LeisureItemInput {
@@ -77,6 +81,25 @@ const LeisureAPI = {
     if (filters.lng !== undefined) params.lng = String(filters.lng);
     const res = await api.get('/api/leisure', { params });
     return res.data.data;
+  },
+
+  async getGoogleItems(filters: { categorySlug?: string; countryCode: string }): Promise<LeisureItem[]> {
+    const params: Record<string, string> = { countryCode: filters.countryCode };
+    if (filters.categorySlug && filters.categorySlug !== 'all') params.categorySlug = filters.categorySlug;
+    const res = await api.get('/api/leisure/google', { params });
+    return res.data.data;
+  },
+
+  // Établissements Féeti d'abord, complétés par Google Places pour le pays choisi
+  async getItemsWithGoogle(filters: { categorySlug?: string; countryCode?: string }): Promise<LeisureItem[]> {
+    const [feeti, google] = await Promise.all([
+      LeisureAPI.getItems(filters).catch(() => [] as LeisureItem[]),
+      filters.countryCode
+        ? LeisureAPI.getGoogleItems({ categorySlug: filters.categorySlug, countryCode: filters.countryCode }).catch(() => [] as LeisureItem[])
+        : Promise.resolve([] as LeisureItem[]),
+    ]);
+    const known = new Set(feeti.map(i => i.name.trim().toLowerCase()));
+    return [...feeti, ...google.filter(i => !known.has(i.name.trim().toLowerCase()))];
   },
 
   async getItemById(id: string): Promise<LeisureItem> {

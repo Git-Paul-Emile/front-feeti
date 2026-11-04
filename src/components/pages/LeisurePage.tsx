@@ -47,7 +47,7 @@ export function LeisurePage({ onNavigate: _onNavigate }: LeisurePageProps) {
 
   useEffect(() => {
     setLoading(true);
-    LeisureAPI.getItems({
+    LeisureAPI.getItemsWithGoogle({
       categorySlug: selectedCategory === 'all' ? undefined : selectedCategory,
       countryCode: selectedCountry?.code,
     })
@@ -83,6 +83,7 @@ export function LeisurePage({ onNavigate: _onNavigate }: LeisurePageProps) {
   }, []);
 
   const handleLocation = useCallback((item: LeisureItem) => {
+    if (item.googleMapsUri) { window.open(item.googleMapsUri, '_blank'); return; }
     const query = encodeURIComponent(item.address || item.location);
     window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
   }, []);
@@ -188,6 +189,9 @@ export function LeisurePage({ onNavigate: _onNavigate }: LeisurePageProps) {
                         <h3 className="text-[28px] font-black text-[#1e1e1e] leading-[36px] tracking-[-0.25px] mb-3">
                           {item.name}
                         </h3>
+                          {item.source === 'google' && (
+                            <p className="text-xs text-gray-400 mb-3">Fiche Google Maps — établissement non partenaire</p>
+                          )}
                         {item.priceRange && (
                           <p className="text-sm font-semibold text-indigo-600 mb-3">{item.priceRange}</p>
                         )}
@@ -226,7 +230,7 @@ export function LeisurePage({ onNavigate: _onNavigate }: LeisurePageProps) {
                       <div className="absolute top-4 right-4">
                         <button
                           onClick={() => handleToggleFavorite(item.id)}
-                          className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${favoriteIds.has(item.id) ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-700 hover:bg-red-50'}`}
+                          className={`${item.source === 'google' ? 'hidden ' : ''}w-10 h-10 rounded-full flex items-center justify-center transition-colors ${favoriteIds.has(item.id) ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-700 hover:bg-red-50'}`}
                           title={favoriteIds.has(item.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={favoriteIds.has(item.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" className="w-5 h-5">
@@ -278,7 +282,7 @@ export function LeisurePage({ onNavigate: _onNavigate }: LeisurePageProps) {
                 )}
                 <button
                   onClick={() => handleToggleFavorite(detailItem.id)}
-                  className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${favoriteIds.has(detailItem.id) ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-700 hover:bg-red-50'}`}
+                  className={`${detailItem.source === 'google' ? 'hidden ' : ''}absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${favoriteIds.has(detailItem.id) ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-700 hover:bg-red-50'}`}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={favoriteIds.has(detailItem.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" className="w-5 h-5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
@@ -296,6 +300,7 @@ export function LeisurePage({ onNavigate: _onNavigate }: LeisurePageProps) {
                     ))}
                   </div>
                   <h2 className="text-2xl font-black text-[#1e1e1e] leading-tight">{detailItem.name}</h2>
+                  {detailItem.source === 'google' && <p className="text-xs text-gray-400 mt-1">Informations fournies par Google Maps</p>}
                   <p className="text-gray-500 text-sm mt-1">{detailItem.category?.name} · {detailItem.location}</p>
                 </div>
 

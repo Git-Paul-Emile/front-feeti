@@ -1,0 +1,506 @@
+// Pack juridique & conformité Fééti — version 1.0 du 08 mars 2026.
+// Source : FEETI_Pack_Juridique_2026.docx. Ce fichier est partagé à l'identique
+// entre FeetiTicketWeb et FeetiPlayWeb : modifier les deux copies ensemble.
+// Les valeurs entre crochets [ ] sont à compléter avant mise en ligne officielle.
+
+export type LegalBlock =
+  | { type: 'p'; text: string }
+  | { type: 'h2'; text: string }
+  | { type: 'h3'; text: string }
+  | { type: 'list'; items: string[] }
+  | { type: 'note'; text: string };
+
+export interface LegalDocument {
+  slug: LegalSlug;
+  letter: string;
+  title: string;
+  shortTitle: string;
+  description: string;
+  intro?: string;
+  blocks: LegalBlock[];
+}
+
+export type LegalSlug = 'privacy' | 'terms' | 'cookies' | 'notice' | 'refund' | 'advertising';
+
+export const LEGAL_VERSION = 'Version 1.0';
+export const LEGAL_EFFECTIVE_DATE = '08 mars 2026';
+
+const p = (text: string): LegalBlock => ({ type: 'p', text });
+const h2 = (text: string): LegalBlock => ({ type: 'h2', text });
+const h3 = (text: string): LegalBlock => ({ type: 'h3', text });
+const list = (...items: string[]): LegalBlock => ({ type: 'list', items });
+const note = (text: string): LegalBlock => ({ type: 'note', text });
+
+export const LEGAL_DOCUMENTS: Record<LegalSlug, LegalDocument> = {
+  privacy: {
+    slug: 'privacy',
+    letter: 'A',
+    title: 'Politique de confidentialité',
+    shortTitle: 'Confidentialité',
+    description: 'Quelles données Fééti collecte, pourquoi, combien de temps et comment exercer vos droits.',
+    intro:
+      "Chez Feeti, votre vie privée n'est pas une formalité, c'est une priorité. Ce document vous explique, de manière claire et honnête, quelles informations nous collectons, pourquoi nous les utilisons, et comment nous les protégeons. Nous vous invitons à le lire attentivement.",
+    blocks: [
+      h2('1. Qui sommes-nous ?'),
+      p("Feeti est une plateforme numérique spécialisée dans la billetterie en ligne, la promotion d'événements et le live streaming pour le bassin du Congo. Notre mission : connecter les artistes, les promoteurs et le public à travers une expérience digitale simple et enrichissante."),
+      list(
+        'Raison sociale : Feeti SAS',
+        'Siège social : [Adresse complète - République du Congo / RDC]',
+        'Courriel de contact : privacy@feeti.com',
+        'Délégué à la Protection des Données (DPD) : dpo@feeti.com',
+      ),
+      h2('2. Quelles données collectons-nous ?'),
+      p('Nous collectons uniquement les données nécessaires à vous offrir le meilleur service possible. Voici ce que nous pouvons collecter selon votre utilisation :'),
+      h3('2.1 Données que vous nous fournissez directement'),
+      list(
+        'Prénom, nom, adresse e-mail, numéro de téléphone lors de votre inscription',
+        'Informations de paiement (via nos partenaires sécurisés - nous ne stockons jamais votre numéro de carte bancaire)',
+        "Photo de profil si vous choisissez d'en ajouter une",
+        'Contenu que vous partagez : commentaires, avis, messages envoyés au support',
+      ),
+      h3('2.2 Données collectées automatiquement'),
+      list(
+        "Adresse IP, type de navigateur, système d'exploitation",
+        'Pages visitées, durée de visite, événements consultés',
+        'Données de géolocalisation approximative (avec votre accord)',
+        'Identifiants cookies et traceurs (voir notre Politique de cookies)',
+      ),
+      h3('2.3 Données reçues de tiers'),
+      list(
+        'Si vous vous connectez via Google, Facebook ou un autre réseau social, nous recevons uniquement les informations que vous autorisez',
+        'Données issues de nos partenaires de paiement mobile money (Airtel, Orange, etc.)',
+      ),
+      h2('3. Pourquoi utilisons-nous vos données ?'),
+      p("Chaque donnée a une raison d'être précise. Voici comment nous les utilisons :"),
+      list(
+        'Créer et gérer votre compte utilisateur',
+        'Traiter vos achats de billets et vous envoyer vos confirmations',
+        "Vous permettre d'accéder aux lives et événements que vous avez payés",
+        'Vous envoyer des notifications sur les événements susceptibles de vous intéresser (avec votre accord)',
+        "Améliorer continuellement notre plateforme grâce à l'analyse des usages",
+        'Lutter contre la fraude, les faux billets et les usages abusifs',
+        'Respecter nos obligations légales et comptables',
+      ),
+      h2('4. Sur quelle base traitons-nous vos données ?'),
+      list(
+        'Exécution du contrat : lorsque vous achetez un billet ou vous inscrivez, le traitement est nécessaire pour réaliser ce service',
+        'Votre consentement : pour les communications marketing, les cookies non essentiels',
+        'Intérêt légitime : pour améliorer nos services, détecter les fraudes',
+        'Obligation légale : pour respecter la réglementation fiscale et comptable en vigueur',
+      ),
+      h2('5. Combien de temps conservons-nous vos données ?'),
+      list(
+        'Données de compte actif : pendant toute la durée de votre utilisation + 3 ans après fermeture',
+        'Données de transaction : 10 ans (obligation comptable et fiscale)',
+        'Données de navigation / cookies : de 30 jours à 13 mois maximum',
+        "Données relatives aux billets : 5 ans à compter de l'événement",
+      ),
+      note("À l'issue de ces délais, vos données sont supprimées ou anonymisées de manière sécurisée."),
+      h2('6. Partageons-nous vos données ?'),
+      p('Nous ne vendons jamais vos données personnelles. Nous pouvons cependant les partager dans les cas suivants :'),
+      list(
+        'Avec nos prestataires techniques (hébergement, paiement, SMS, e-mail) qui sont contractuellement tenus de les protéger',
+        "Avec les organisateurs d'événements : uniquement les informations nécessaires à la validation des billets",
+        "Avec les autorités compétentes si la loi l'exige ou en cas de procédure judiciaire",
+        "En cas de fusion, acquisition ou cession d'activité, après vous en avoir informé",
+      ),
+      h2('7. Vos droits'),
+      p("Conformément aux réglementations applicables (notamment les lois nationales sur la protection des données dans les pays du bassin du Congo et les Actes uniformes de l'OHADA), vous disposez des droits suivants :"),
+      list(
+        "Droit d'accès : obtenir une copie de vos données",
+        'Droit de rectification : corriger des informations inexactes',
+        "Droit à l'effacement : demander la suppression de vos données (sous réserve de nos obligations légales)",
+        "Droit d'opposition : vous opposer à certains traitements, notamment le marketing",
+        'Droit à la portabilité : recevoir vos données dans un format lisible',
+        'Droit de retirer votre consentement à tout moment',
+      ),
+      p('Pour exercer vos droits, écrivez-nous à : privacy@feeti.com. Nous répondons dans un délai de 30 jours.'),
+      h2('8. Sécurité de vos données'),
+      p('Nous mettons en place des mesures techniques et organisationnelles adaptées pour protéger vos données contre toute perte, accès non autorisé ou utilisation abusive :'),
+      list(
+        'Chiffrement SSL/TLS de toutes les communications',
+        'Accès aux données limité au personnel autorisé',
+        'Audits de sécurité réguliers',
+        'Procédures de gestion des incidents',
+      ),
+      h2('9. Transferts internationaux'),
+      p('Feeti opère principalement dans le bassin du Congo. Si des données sont transférées vers des pays tiers pour des raisons techniques (hébergement cloud par exemple), nous veillons à ce que des garanties adéquates soient en place (clauses contractuelles types, standards de protection équivalents).'),
+      h2('10. Mineurs'),
+      p("Feeti n'est pas destinée aux personnes de moins de 16 ans. Si vous pensez qu'un mineur nous a fourni ses données, contactez-nous immédiatement à privacy@feeti.com et nous procéderons à leur suppression."),
+      h2('11. Modifications de cette politique'),
+      p("Cette politique peut évoluer. En cas de changement important, nous vous en informerons par e-mail ou via une notification sur la plateforme au moins 15 jours avant l'entrée en vigueur. La version en vigueur est toujours accessible sur notre site."),
+    ],
+  },
+
+  terms: {
+    slug: 'terms',
+    letter: 'B',
+    title: "Conditions générales d'utilisation",
+    shortTitle: 'CGU',
+    description: 'Les règles qui encadrent votre utilisation de la plateforme Fééti : compte, achats, live streaming, responsabilités.',
+    intro:
+      "Les présentes Conditions générales d'utilisation (CGU) définissent les règles qui encadrent votre utilisation de la plateforme Feeti. En vous inscrivant ou en utilisant nos services, vous acceptez ces conditions. Si quelque chose n'est pas clair, notre équipe est disponible à support@feeti.com.",
+    blocks: [
+      h2('1. Présentation de Feeti'),
+      p('Feeti est une plateforme numérique dédiée aux événements du bassin du Congo. Elle vous permet de :'),
+      list(
+        'Trouver et acheter des billets pour des événements culturels, musicaux, sportifs et autres',
+        'Regarder des événements en direct (live streaming) depuis chez vous',
+        'Rester informé des actualités culturelles et événementielles de votre région',
+        'Pour les organisateurs : promouvoir vos événements et vendre des billets en ligne',
+      ),
+      h2('2. Inscription et compte utilisateur'),
+      h3('2.1 Création de compte'),
+      p('Pour accéder à la plupart de nos services, vous devez créer un compte en fournissant des informations exactes et à jour. Vous êtes responsable de la confidentialité de vos identifiants.'),
+      h3("2.2 Conditions d'inscription"),
+      list(
+        'Être âgé d’au moins 16 ans',
+        'Fournir une adresse e-mail valide et un numéro de téléphone actif',
+        "Ne pas usurper l'identité d'une autre personne",
+        'Ne pas créer plusieurs comptes pour contourner des restrictions',
+      ),
+      h3('2.3 Sécurité de votre compte'),
+      p("Vous êtes seul responsable des activités réalisées depuis votre compte. En cas d'accès non autorisé ou de compromission, contactez-nous immédiatement à security@feeti.com."),
+      h2('3. Utilisation de la plateforme'),
+      h3('3.1 Ce que vous pouvez faire'),
+      list(
+        'Consulter les événements disponibles et acheter des billets',
+        'Accéder aux lives payants que vous avez acquis',
+        'Partager des événements sur vos réseaux sociaux',
+        'Contacter le support en cas de problème',
+      ),
+      h3('3.2 Ce qui est interdit'),
+      p('Les comportements suivants sont strictement interdits et peuvent entraîner la suspension ou suppression de votre compte :'),
+      list(
+        "Revente non autorisée de billets au-delà du prix d'achat (scalping)",
+        'Utilisation de robots ou scripts pour acheter des billets en masse',
+        "Toute tentative de fraude, d'escroquerie ou de contournement du système de paiement",
+        'Partage non autorisé de liens de streaming payants',
+        "Publication de contenus illégaux, diffamatoires ou portant atteinte aux droits d'autrui",
+        "Collecte non autorisée de données personnelles d'autres utilisateurs",
+      ),
+      h2('4. Achats de billets'),
+      h3("4.1 Processus d'achat"),
+      p("L'achat d'un billet sur Feeti se fait en quelques étapes : sélection de l'événement, choix du type de billet, paiement sécurisé, réception de la confirmation par e-mail et/ou SMS. Votre billet est valide uniquement s'il porte un QR code authentifié par notre système."),
+      h3('4.2 Prix et paiement'),
+      list(
+        'Les prix sont affichés en franc CFA (FCFA) ou en la monnaie locale applicable, toutes taxes comprises',
+        'Feeti accepte les paiements par mobile money (Airtel Money, Orange Money, M-Pesa, etc.), carte bancaire et autres moyens sécurisés',
+        "Le paiement est exigé au moment de la commande. La réservation n'est confirmée qu'après réception du paiement",
+      ),
+      h3('4.3 Frais de service'),
+      p("Des frais de service peuvent s'appliquer à chaque transaction. Ces frais sont clairement indiqués avant la validation de votre commande. Ils couvrent les coûts de traitement, d'émission et de gestion des billets."),
+      h3('4.4 Authenticité des billets'),
+      p("Chaque billet Feeti est doté d'un QR code unique sécurisé. Toute falsification, duplication ou revente non autorisée constitue une fraude pouvant donner lieu à des poursuites judiciaires."),
+      h2('5. Live streaming'),
+      p('Feeti propose des accès à des événements en direct via des systèmes Pay-Per-View ou des abonnements ponctuels. En achetant un accès :'),
+      list(
+        "Vous bénéficiez d'un accès personnel et non transférable au contenu",
+        'Il est strictement interdit d’enregistrer, copier, redistribuer ou diffuser ce contenu',
+        "L'accès peut être révoqué sans remboursement en cas de violation de ces conditions",
+      ),
+      note('En cas de problème technique de notre côté (coupure serveur, qualité dégradée), des solutions de compensation seront proposées. Voir notre Politique de remboursement.'),
+      h2('6. Propriété intellectuelle'),
+      p('Tout le contenu de Feeti (logo, design, textes, code, vidéos, données) est la propriété exclusive de Feeti ou de ses partenaires. Toute reproduction, même partielle, sans autorisation écrite préalable est interdite et constitue une contrefaçon.'),
+      p("Les organisateurs d'événements conservent leurs droits sur leurs contenus. En les publiant sur Feeti, ils nous accordent une licence d'utilisation limitée à la promotion de leur événement sur notre plateforme."),
+      h2('7. Responsabilités'),
+      h3('7.1 Notre responsabilité'),
+      p("Feeti s'engage à fournir une plateforme fiable et sécurisée. Cependant, notre responsabilité ne peut être engagée pour :"),
+      list(
+        "Les annulations ou modifications d'événements décidées par les organisateurs",
+        'Les problèmes de connexion ou de réseau qui ne dépendent pas de notre infrastructure',
+        "Les dommages indirects liés à l'utilisation de la plateforme",
+      ),
+      h3('7.2 Responsabilité des utilisateurs'),
+      p("Chaque utilisateur est responsable de l'utilisation qu'il fait de la plateforme et des contenus qu'il publie. Feeti se réserve le droit de supprimer tout contenu non conforme et de signaler aux autorités compétentes toute activité illicite."),
+      h2('8. Suspension et résiliation'),
+      p('Feeti peut suspendre ou résilier votre compte en cas de :'),
+      list(
+        'Violation de ces CGU',
+        'Comportement frauduleux avéré',
+        'Non-paiement de sommes dues',
+        'Inactivité prolongée (plus de 24 mois sans connexion)',
+      ),
+      p('Vous pouvez également clôturer votre compte à tout moment depuis vos paramètres ou en nous contactant. Les billets valides restent accessibles pendant 30 jours après la clôture.'),
+      h2('9. Droit applicable et règlement des litiges'),
+      p("Les présentes CGU sont régies par le droit de la République du Congo, par les Actes uniformes de l'OHADA applicables, et par les réglementations sectorielles en vigueur dans les pays du bassin du Congo."),
+      p("En cas de litige, nous vous encourageons à nous contacter en premier lieu à support@feeti.com. À défaut d'accord amiable, les parties pourront recourir à la médiation ou aux juridictions compétentes du siège social de Feeti."),
+      h2('10. Modifications des CGU'),
+      p("Feeti peut modifier ces CGU à tout moment. Toute modification substantielle sera communiquée par e-mail ou notification sur la plateforme au moins 15 jours avant son entrée en vigueur. La poursuite de l'utilisation de la plateforme vaut acceptation des nouvelles conditions."),
+    ],
+  },
+
+  cookies: {
+    slug: 'cookies',
+    letter: 'C',
+    title: 'Politique de cookies',
+    shortTitle: 'Cookies',
+    description: 'Les cookies utilisés par Fééti, leur durée de conservation et comment gérer vos choix.',
+    intro:
+      "Pour vous offrir la meilleure expérience possible, Feeti utilise des cookies et technologies similaires. Cette politique vous explique clairement de quoi il s'agit et comment vous pouvez les contrôler.",
+    blocks: [
+      h2("1. Qu'est-ce qu'un cookie ?"),
+      p("Un cookie est un petit fichier texte déposé sur votre appareil (ordinateur, smartphone, tablette) lorsque vous visitez un site web. Les cookies permettent au site de mémoriser vos préférences, d'assurer votre connexion et d'analyser l'utilisation du service."),
+      p("Les cookies ne peuvent pas accéder à d'autres fichiers sur votre appareil, ni contenir de virus."),
+      h2('2. Les cookies que nous utilisons'),
+      h3('2.1 Cookies strictement nécessaires (toujours actifs)'),
+      p('Ces cookies sont indispensables au fonctionnement de la plateforme. Sans eux, vous ne pourriez pas vous connecter, acheter des billets ou accéder à votre compte. Ils ne peuvent pas être désactivés.'),
+      list(
+        'Cookie de session : maintient votre connexion active pendant votre visite',
+        "Cookie de panier : mémorise vos billets en cours d'achat",
+        'Cookie de sécurité : protège contre les attaques CSRF et fraudes',
+      ),
+      h3("2.2 Cookies de performance et d'analyse (avec votre accord)"),
+      p("Ces cookies nous aident à comprendre comment vous utilisez Feeti afin d'améliorer notre service."),
+      list(
+        "Mesure d'audience : pages les plus visitées, temps passé, parcours utilisateur",
+        "Cartes de chaleur : pour améliorer l'interface utilisateur",
+      ),
+      note('Les données collectées par ces cookies sont anonymisées. Elles ne permettent pas de vous identifier personnellement.'),
+      h3('2.3 Cookies de personnalisation (avec votre accord)'),
+      p('Ces cookies mémorisent vos préférences pour personnaliser votre expérience.'),
+      list(
+        'Langue et région préférées',
+        "Types d'événements favoris",
+        'Historique de navigation pour des recommandations pertinentes',
+      ),
+      h3('2.4 Cookies publicitaires (avec votre accord)'),
+      p("Ces cookies sont utilisés pour vous proposer des publicités et des événements qui correspondent à vos centres d'intérêt, sur Feeti et sur d'autres sites."),
+      list(
+        'Ciblage basé sur vos interactions avec la plateforme',
+        "Mesure de l'efficacité des campagnes publicitaires",
+        'Partage limité avec nos partenaires publicitaires de confiance',
+      ),
+      h2('3. Durée de conservation des cookies'),
+      list(
+        'Cookies de session : supprimés à la fermeture de votre navigateur',
+        'Cookies de préférence : 12 mois maximum',
+        'Cookies analytiques : 13 mois maximum',
+        'Cookies publicitaires : 13 mois maximum',
+      ),
+      h2('4. Comment gérer vos cookies ?'),
+      p("Vous avez le contrôle. À votre première visite sur Feeti, un bandeau vous permet d'accepter ou de refuser les cookies non essentiels. Vous pouvez modifier vos choix à tout moment via :"),
+      list(
+        'Le centre de gestion des cookies accessible dans le pied de page du site (lien « Gérer mes cookies »)',
+        'Les paramètres de votre navigateur (Chrome, Firefox, Safari, Opera, etc.)',
+        'Les outils de désactivation des régies publicitaires',
+      ),
+      note('Refuser certains cookies peut limiter certaines fonctionnalités de la plateforme, comme les recommandations personnalisées.'),
+      h2('5. Cookies tiers'),
+      p('Certains de nos partenaires déposent leurs propres cookies sur notre plateforme (réseaux sociaux, outils de paiement, solutions analytiques). Ces tiers ont leur propre politique de cookies. Nous vous encourageons à la consulter sur leurs sites respectifs.'),
+      h2('6. Contact'),
+      p('Pour toute question relative à notre utilisation des cookies, contactez-nous à : privacy@feeti.com'),
+    ],
+  },
+
+  notice: {
+    slug: 'notice',
+    letter: 'D',
+    title: 'Mentions légales',
+    shortTitle: 'Mentions légales',
+    description: "Éditeur, hébergeur, propriété intellectuelle et droit applicable de la plateforme Fééti.",
+    blocks: [
+      h2('1. Éditeur de la plateforme'),
+      p('La plateforme Feeti est éditée par :'),
+      list(
+        'Raison sociale : Feeti SAS',
+        'Forme juridique : Société par actions simplifiée',
+        'Capital social : [Montant] FCFA',
+        'Siège social : [Adresse complète], [Ville], [Pays]',
+        "Numéro d'enregistrement au RCCM : [Numéro]",
+        "Numéro d'identification fiscale (NIF) : [Numéro]",
+        'Directeur de la publication : [Nom du Directeur général]',
+        'E-mail : contact@feeti.com',
+        'Téléphone : [+XXX XX XXX XXXX]',
+      ),
+      h2('2. Hébergement'),
+      p('La plateforme Feeti est hébergée par :'),
+      list(
+        "Prestataire : [Nom de l'hébergeur, ex : AWS, OVH, Scaleway]",
+        "Adresse : [Adresse de l'hébergeur]",
+        'Contact : [Contact hébergeur]',
+      ),
+      h2('3. Directeur de la publication'),
+      p('Le Directeur de la publication au sens de la loi est [Nom et Prénom], en sa qualité de représentant légal de Feeti SAS.'),
+      h2('4. Propriété intellectuelle'),
+      p("L'ensemble des éléments composant la plateforme Feeti (marque, logo, chartes graphiques, textes, images, vidéos, bases de données, logiciels, structure du site) sont la propriété exclusive de Feeti SAS ou de ses partenaires, et sont protégés par les droits de la propriété intellectuelle applicables en zone OHADA et dans les pays du bassin du Congo."),
+      p('Toute reproduction, représentation, modification, publication ou transmission de ces éléments, sans autorisation écrite préalable, est illicite et constitue une contrefaçon susceptible de poursuites judiciaires.'),
+      h2('5. Liens hypertextes'),
+      p('La plateforme Feeti peut contenir des liens vers des sites externes. Ces liens sont fournis à titre informatif. Feeti ne saurait être responsable du contenu ou des pratiques de ces sites tiers.'),
+      p("Toute demande d'autorisation pour créer un lien pointant vers Feeti doit être adressée à : contact@feeti.com"),
+      h2('6. Limitation de responsabilité'),
+      p("Feeti s'engage à faire ses meilleurs efforts pour assurer la disponibilité et la sécurité de la plateforme. Cependant, Feeti ne peut garantir une disponibilité ininterrompue et décline toute responsabilité en cas de :"),
+      list(
+        'Interruption temporaire pour maintenance ou mise à jour',
+        'Événement de force majeure (panne réseau nationale, catastrophe naturelle, etc.)',
+        'Utilisation frauduleuse par un tiers',
+      ),
+      h2('7. Droit applicable'),
+      p("La plateforme Feeti et ses mentions légales sont régies par le droit de la République du Congo et les Actes uniformes de l'OHADA. Tout litige relatif à l'utilisation de la plateforme sera soumis à la juridiction compétente du ressort du siège social de Feeti."),
+      h2('8. Contact'),
+      p('Pour toute question ou réclamation relative à la plateforme, vous pouvez nous contacter à :'),
+      list('E-mail : contact@feeti.com', 'Adresse postale : [Adresse complète de Feeti]'),
+    ],
+  },
+
+  refund: {
+    slug: 'refund',
+    letter: 'E',
+    title: 'Politique de remboursement de ticket',
+    shortTitle: 'Remboursement',
+    description: 'Cas de remboursement, délais, procédure et modalités pour les billets achetés sur Fééti.',
+    intro:
+      'Nous comprenons que les imprévus arrivent. Cette politique définit les conditions dans lesquelles vous pouvez obtenir un remboursement pour vos achats de billets sur Feeti, de manière équitable et transparente.',
+    blocks: [
+      h2('1. Principe général'),
+      p("Les billets achetés sur Feeti sont en principe non remboursables une fois la transaction finalisée, sauf dans les cas expressément prévus ci-dessous. Nous vous encourageons à vérifier attentivement les détails de l'événement avant tout achat."),
+      h2('2. Cas donnant droit à un remboursement intégral'),
+      p('Vous avez droit à un remboursement complet du prix du billet (hors frais de service non remboursables) dans les situations suivantes :'),
+      h3("2.1 Annulation de l'événement par l'organisateur"),
+      p("Si un événement est annulé définitivement par l'organisateur, vous serez automatiquement remboursé dans un délai de 7 à 14 jours ouvrables. Vous recevrez une notification par e-mail et/ou SMS dès que l'annulation est confirmée."),
+      h3("2.2 Report ou modification majeure de l'événement"),
+      p("Si l'événement est reporté à une date significativement différente (plus de 30 jours) ou si des éléments essentiels changent (lieu, artiste principal), vous avez 72 heures à compter de la notification pour demander un remboursement ou conserver votre billet pour la nouvelle date."),
+      h3('2.3 Problème technique imputable à Feeti'),
+      p("Si une panne technique de notre plateforme vous empêche d'accéder à un live streaming ou de valider votre billet à l'entrée, un remboursement ou un avoir vous sera proposé après vérification du problème."),
+      h2("3. Remboursement à la demande de l'acheteur"),
+      h3('3.1 Délai de rétractation'),
+      p("Conformément aux pratiques commerciales équitables, vous disposez d'un délai de 24 heures après l'achat pour annuler votre commande, à condition que l'événement ait lieu dans plus de 7 jours. Au-delà de ce délai, aucun remboursement ne sera accordé pour un changement d'avis."),
+      h3('3.2 Cas non éligibles au remboursement'),
+      list(
+        'Billet non utilisé par choix personnel',
+        "Erreur lors de l'achat (mauvaise date, mauvaise catégorie) si non signalée dans les 24 h",
+        "Refus d'entrée dû à un non-respect des conditions de l'événement (tenue vestimentaire, âge requis, etc.)",
+        "Accès impossible en raison d'un problème de connexion côté utilisateur pour un live streaming",
+        'Billet perdu ou volé (une réédition peut cependant être demandée)',
+      ),
+      h2('4. Procédure de demande de remboursement'),
+      p('Pour formuler une demande de remboursement :'),
+      list(
+        'Rendez-vous dans la rubrique « Mes billets » de votre compte Feeti',
+        'Sélectionnez le billet concerné et cliquez sur « Demander un remboursement »',
+        'Décrivez le motif de votre demande',
+        'Notre équipe vous répond dans un délai de 3 jours ouvrables',
+      ),
+      p('Vous pouvez également envoyer votre demande à : remboursement@feeti.com en précisant votre numéro de commande.'),
+      h2('5. Modalités de remboursement'),
+      list(
+        "Le remboursement est effectué via le même moyen de paiement utilisé lors de l'achat",
+        'Pour les paiements mobile money : remboursement sous 3 à 7 jours ouvrables',
+        'Pour les paiements par carte bancaire : remboursement sous 5 à 10 jours ouvrables selon votre banque',
+        "Feeti peut proposer un avoir (crédit Feeti) d'une valeur équivalente comme alternative au remboursement",
+      ),
+      note("Les frais de service appliqués lors de l'achat ne sont pas remboursables, sauf en cas d'annulation totale de l'événement par l'organisateur."),
+      h2("6. Organisateurs d'événements"),
+      p("Les organisateurs qui annulent ou reportent un événement s'engagent à en informer Feeti au moins 48 h à l'avance (sauf cas de force majeure). Feeti se réserve le droit de retenir un pourcentage des frais de service pour couvrir les coûts de traitement des remboursements en cas d'annulation."),
+      h2('7. Litiges'),
+      p('En cas de désaccord sur une décision de remboursement, vous pouvez escalader votre réclamation à notre service client senior : reclamations@feeti.com. Si le litige persiste, vous pouvez recourir à toute procédure de médiation ou voie judiciaire disponible dans votre pays.'),
+    ],
+  },
+
+  advertising: {
+    slug: 'advertising',
+    letter: 'F',
+    title: 'Règlement publicitaire pour les annonceurs',
+    shortTitle: 'Règlement publicitaire',
+    description: 'Qui peut annoncer sur Fééti, contenus autorisés et interdits, formats, validation et tarification.',
+    intro:
+      "Ce règlement s'applique à toute personne physique ou morale souhaitant diffuser des publicités ou promouvoir des événements sur la plateforme Feeti. En soumettant une annonce, l'annonceur accepte l'intégralité de ces dispositions.",
+    blocks: [
+      h2('1. Qui peut devenir annonceur sur Feeti ?'),
+      p("Feeti accueille différents types d'annonceurs :"),
+      list(
+        "Organisateurs d'événements (concerts, festivals, spectacles, conférences, événements sportifs…)",
+        "Marques et entreprises souhaitant toucher l'audience de la plateforme",
+        'Artistes et créateurs souhaitant promouvoir leur contenu',
+        'Toute entité légalement constituée dans un pays du bassin du Congo',
+      ),
+      p("Pour devenir annonceur, il est nécessaire de créer un compte annonceur vérifié sur Feeti et d'accepter ce règlement ainsi que les CGU générales."),
+      h2('2. Contenu publicitaire autorisé'),
+      p('Feeti encourage une publicité créative, authentique et respectueuse. Les contenus suivants sont les bienvenus :'),
+      list(
+        "Promotion d'événements culturels, musicaux, artistiques et sportifs",
+        'Promotion de services et produits légaux destinés au grand public',
+        "Campagnes de sensibilisation d'intérêt général",
+        "Publicités institutionnelles d'entreprises et d'administrations",
+      ),
+      h2('3. Contenus publicitaires interdits'),
+      p('Feeti se réserve le droit de refuser, retirer ou suspendre tout contenu publicitaire qui :'),
+      h3("3.1 Contenu illégal ou contraire à l'ordre public"),
+      list(
+        'Incite à la haine, à la discrimination ou à la violence envers une personne ou un groupe',
+        'Diffuse des informations fausses ou mensongères',
+        "Fait la promotion d'activités illicites (jeux d'argent non autorisés, trafics, etc.)",
+        'Contrevient aux lois nationales des pays du bassin du Congo',
+      ),
+      h3('3.2 Contenu trompeur ou abusif'),
+      list(
+        'Promet des gains ou résultats non garantis ou invérifiables',
+        "Imite l'apparence de contenu éditorial de Feeti pour tromper l'utilisateur",
+        'Utilise des techniques publicitaires agressives (pop-ups forcés, auto-play sonore non sollicité)',
+      ),
+      h3('3.3 Contenu sensible ou inapproprié'),
+      list(
+        'Publicités pour des produits à base de tabac, alcool ou substances contrôlées, sauf autorisation réglementaire explicite',
+        'Contenu à caractère sexuel ou suggestif',
+        'Contenu politique partisan à caractère électoral',
+        'Contenu ciblant spécifiquement les mineurs pour des produits ou services qui leur sont inadaptés',
+      ),
+      h2('4. Exigences techniques et qualité'),
+      p('Pour garantir une expérience utilisateur optimale, toute publicité soumise doit respecter les standards suivants :'),
+      h3('4.1 Formats acceptés'),
+      list(
+        'Bannières : JPG, PNG, GIF animé (max. 3 boucles), MP4 (max. 15 secondes)',
+        'Contenu sponsorisé : texte + image, conformes aux gabarits fournis par Feeti',
+        'Publicités vidéo : MP4, H.264, résolution minimale 720p, durée max. 30 secondes',
+      ),
+      h3('4.2 Règles de qualité'),
+      list(
+        'Image en haute résolution (minimum 72 DPI, idéalement 150 DPI)',
+        "Texte lisible, sans faute d'orthographe majeure",
+        "Le logo ou le nom de la marque annonceur doit être clairement visible",
+        'Tout contenu sponsorisé doit être clairement identifié comme « Sponsorisé » ou « Publicité »',
+      ),
+      h2('5. Processus de validation des annonces'),
+      p('Toute annonce soumise à Feeti est soumise à une vérification avant publication :'),
+      list(
+        'Délai de validation standard : 24 à 48 heures ouvrables',
+        'Feeti peut demander des modifications ou des informations complémentaires',
+        "En cas de refus, l'annonceur est informé du motif et peut reformuler sa demande",
+        "Feeti se réserve le droit de refuser toute annonce sans avoir à se justifier si elle contrevient à l'esprit de la plateforme",
+      ),
+      note('Une annonce approuvée reste soumise à des contrôles continus. Feeti peut la suspendre à tout moment en cas de plainte fondée ou de non-conformité constatée a posteriori.'),
+      h2('6. Tarification et facturation'),
+      p('Les tarifs des espaces publicitaires sont définis dans la grille tarifaire Feeti, disponible sur demande auprès de notre équipe commerciale (ads@feeti.com). La facturation intervient selon les modalités convenues à la signature du bon de commande :'),
+      list(
+        "Paiement à l'avance pour les petits budgets",
+        'Facturation mensuelle pour les comptes annonceurs établis',
+        'Les frais sont exprimés en FCFA ou en la devise locale applicable',
+      ),
+      h2("7. Responsabilité de l'annonceur"),
+      p("L'annonceur est seul responsable du contenu qu'il diffuse sur Feeti. Il garantit :"),
+      list(
+        'Être titulaire des droits sur tous les éléments inclus dans sa publicité (images, musiques, textes, marques)',
+        'Que sa publicité est conforme aux lois et réglementations applicables dans les pays où elle est diffusée',
+        'Indemniser Feeti contre toute réclamation, amende ou préjudice résultant de sa publicité',
+      ),
+      h2('8. Données et ciblage'),
+      p("Feeti propose des options de ciblage basées sur des données anonymisées et agrégées (localisation, centres d'intérêt, comportements de navigation). Ces options respectent notre Politique de confidentialité et les réglementations sur la protection des données."),
+      p('Feeti ne partage jamais les données personnelles nominatives de ses utilisateurs avec les annonceurs.'),
+      h2("9. Suspension et retrait d'annonces"),
+      p('Feeti peut suspendre ou retirer une annonce sans préavis et sans remboursement en cas de :'),
+      list(
+        'Violation du présent règlement',
+        "Plainte fondée d'un utilisateur ou d'un tiers",
+        'Décision judiciaire ou administrative',
+        "Atteinte à l'image ou à la réputation de Feeti",
+      ),
+      h2('10. Modifications du règlement'),
+      p("Feeti peut mettre à jour ce règlement publicitaire à tout moment. Les annonceurs actifs seront informés par e-mail au moins 15 jours avant l'entrée en vigueur de toute modification substantielle."),
+      h2('11. Contact'),
+      p('Pour toute question relative à la publicité sur Feeti :'),
+      list('E-mail commercial : ads@feeti.com', 'E-mail conformité : compliance@feeti.com', 'Téléphone : [+XXX XX XXX XXXX]'),
+    ],
+  },
+};
+
+export const LEGAL_ORDER: LegalSlug[] = ['privacy', 'terms', 'cookies', 'notice', 'refund', 'advertising'];

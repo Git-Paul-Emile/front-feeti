@@ -5,7 +5,7 @@ import { newsletterAPI } from '../services/api/NewsletterAPI';
 
 interface FooterProps {
   onNavigate: (page: string, params?: any) => void;
-  onLegalPageNavigate: (page: 'terms' | 'privacy' | 'cookies' | 'faq' | 'contact' | 'refund') => void;
+  onLegalPageNavigate: (page: 'terms' | 'privacy' | 'cookies' | 'notice' | 'advertising' | 'faq' | 'contact' | 'refund') => void;
   onCookiePreferencesClick?: () => void;
   currentPage?: string;
 }
@@ -14,8 +14,8 @@ interface FooterProps {
 function Intro() {
   return (
     <div className="absolute content-stretch flex flex-col gap-[10px] items-start justify-start left-[99px] not-italic text-gray-50 top-[32px]" data-name="intro">
-      <p className="font-medium leading-[1.2] relative shrink-0 text-[24px] xl:text-[26px] 2xl:text-[28px] text-nowrap tracking-[-0.28px] whitespace-pre">Pour plus de possibilité ?</p>
-      <p className="font-normal leading-[1.4] opacity-90 relative shrink-0 text-[18px] xl:text-[20px] 2xl:text-[22px] w-[491px]">Téléchargez votre application dès maintenant via le store de votre choix.</p>
+      <p className="font-medium leading-[1.2] relative shrink-0 text-[24px] xl:text-[26px] 2xl:text-[28px] text-nowrap tracking-[-0.28px] whitespace-pre">Vivez plus d'expériences avec Feeti Play</p>
+      <p className="font-normal leading-[1.4] opacity-90 relative shrink-0 text-[18px] xl:text-[20px] 2xl:text-[22px] w-[491px]">Téléchargez notre application de streaming dès maintenant via le store de votre choix.</p>
     </div>
   );
 }
@@ -126,7 +126,6 @@ function NeedHelp() {
 // Navigation Section Components
 function BusinessSection({ onNavigate }: { onNavigate: (page: string, params?: any) => void }) {
   const items = [
-    'Partenariats', 
     'Annonceurs', 
     'Promoteurs', 
     'Logiciel de billeterie', 
@@ -140,7 +139,7 @@ function BusinessSection({ onNavigate }: { onNavigate: (page: string, params?: a
         {items.map((item, index) => (
           <button
             key={index}
-            onClick={() => onNavigate('organizer-dashboard')}
+            onClick={() => onNavigate(item === 'Annonceurs' ? 'legal-advertising' : 'organizer-dashboard')}
             className="opacity-60 hover:opacity-100 hover:text-[#16bda0] transition-all duration-200 relative shrink-0 text-left w-full"
           >
             {item}
@@ -234,7 +233,7 @@ function BonPlanSection({ onNavigate }: { onNavigate: (page: string, params?: an
   );
 }
 
-function QuickLinksSection({ onLegalPageNavigate, onNavigate }: { onLegalPageNavigate: (page: 'terms' | 'privacy' | 'cookies' | 'faq' | 'contact' | 'refund') => void; onNavigate: (page: string, params?: any) => void }) {
+function QuickLinksSection({ onLegalPageNavigate, onNavigate }: { onLegalPageNavigate: (page: 'terms' | 'privacy' | 'cookies' | 'notice' | 'advertising' | 'faq' | 'contact' | 'refund') => void; onNavigate: (page: string, params?: any) => void }) {
   return (
     <div className="content-stretch flex flex-col gap-[24px] items-start justify-start relative shrink-0 w-[193px]" data-name="section">
       <p className="font-bold leading-[1.4] min-w-full not-italic opacity-40 relative shrink-0 text-[15px] text-white tracking-[0.6px] uppercase">
@@ -254,10 +253,16 @@ function QuickLinksSection({ onLegalPageNavigate, onNavigate }: { onLegalPageNav
           Nous contacter
         </button>
         <button
-          onClick={() => onLegalPageNavigate('terms')}
+          onClick={() => onLegalPageNavigate('notice')}
           className="opacity-60 hover:opacity-100 hover:text-[#16bda0] transition-all duration-200 relative shrink-0 w-[266px] text-left"
         >
           Mentions légales
+        </button>
+        <button
+          onClick={() => onLegalPageNavigate('terms')}
+          className="opacity-60 hover:opacity-100 hover:text-[#16bda0] transition-all duration-200 relative shrink-0 w-[266px] text-left"
+        >
+          CGU
         </button>
         <button
           onClick={() => onLegalPageNavigate('privacy')}
@@ -302,7 +307,7 @@ function LoisirSection({ onNavigate }: { onNavigate: (page: string, params?: any
   );
 }
 
-function Nav({ onNavigate, onLegalPageNavigate }: { onNavigate: (page: string, params?: any) => void; onLegalPageNavigate: (page: 'terms' | 'privacy' | 'cookies' | 'faq' | 'contact' | 'refund') => void }) {
+function Nav({ onNavigate, onLegalPageNavigate }: { onNavigate: (page: string, params?: any) => void; onLegalPageNavigate: (page: 'terms' | 'privacy' | 'cookies' | 'notice' | 'advertising' | 'faq' | 'contact' | 'refund') => void }) {
   return (
     <div className="absolute content-stretch flex gap-[60px] items-start justify-start left-[9px] top-[218px] w-[1365px]" data-name="nav">
       <BusinessSection onNavigate={onNavigate} />
@@ -533,7 +538,7 @@ function SocialMedia() {
 }
 
 // Main Section
-function Top({ onNavigate, onLegalPageNavigate }: { onNavigate: (page: string, params?: any) => void; onLegalPageNavigate: (page: 'terms' | 'privacy' | 'cookies' | 'faq' | 'contact' | 'refund') => void }) {
+function Top({ onNavigate, onLegalPageNavigate }: { onNavigate: (page: string, params?: any) => void; onLegalPageNavigate: (page: 'terms' | 'privacy' | 'cookies' | 'notice' | 'advertising' | 'faq' | 'contact' | 'refund') => void }) {
   return (
     <div className="absolute h-[424px] left-[72px] top-[305px] w-[1374px]" data-name="top">
       <NeedHelp />
@@ -546,7 +551,7 @@ function Top({ onNavigate, onLegalPageNavigate }: { onNavigate: (page: string, p
 function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: { 
   children: React.ReactNode; 
   onNavigate: (page: string, params?: any) => void;
-  onLegalPageNavigate: (page: 'terms' | 'privacy' | 'cookies' | 'faq' | 'contact' | 'refund') => void;
+  onLegalPageNavigate: (page: 'terms' | 'privacy' | 'cookies' | 'notice' | 'advertising' | 'faq' | 'contact' | 'refund') => void;
 }) {
   return (
     <div className="relative w-full overflow-x-hidden">
@@ -604,10 +609,10 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="flex-1">
                 <h2 className="text-white text-xl sm:text-2xl font-medium mb-4">
-                  Pour plus de possibilité ?
+                  Vivez plus d'expériences avec Feeti Play
                 </h2>
                 <p className="text-white/90 text-base sm:text-lg">
-                  Téléchargez votre application dès maintenant via le store de votre choix.
+                  Téléchargez notre application de streaming dès maintenant via le store de votre choix.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -622,8 +627,7 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
             <div>
               <h3 className="text-[15px] font-bold uppercase tracking-wider text-white/40 mb-6">FOR BUSINESS</h3>
               <nav className="space-y-3">
-                <button onClick={() => onNavigate('organizer-dashboard')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Partenariats</button>
-                <button onClick={() => onNavigate('organizer-dashboard')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Annonceurs</button>
+                <button onClick={() => onNavigate('legal-advertising')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Annonceurs</button>
                 <button onClick={() => onNavigate('organizer-dashboard')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Promoteurs</button>
                 <button onClick={() => onNavigate('organizer-dashboard')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Logiciel de billeterie</button>
                 <button onClick={() => onNavigate('organizer-dashboard')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Brand & Presse</button>
@@ -675,7 +679,8 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
               <nav className="space-y-3">
                 <button onClick={() => onLegalPageNavigate('faq')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">FAQs</button>
                 <button onClick={() => onLegalPageNavigate('contact')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Nous contacter</button>
-                <button onClick={() => onLegalPageNavigate('terms')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Mentions légales</button>
+                <button onClick={() => onLegalPageNavigate('notice')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Mentions légales</button>
+                <button onClick={() => onLegalPageNavigate('terms')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">CGU</button>
                 <button onClick={() => onLegalPageNavigate('privacy')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Politiques de confidentialité</button>
                 <button onClick={() => onLegalPageNavigate('refund')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Politiques de remboursement</button>
               </nav>

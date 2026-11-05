@@ -12,12 +12,9 @@
 .gap-5 { gap: calc(var(--spacing, 0.25rem) * 5); }
 .gap-10 { gap: calc(var(--spacing, 0.25rem) * 10); }
 .scroll-mt-24 { scroll-margin-top: calc(var(--spacing, 0.25rem) * 24); }
-.top-\[70\%\] { top: 70%; }
-.w-\[520px\] { width: 520px; }
 .min-h-\[420px\] { min-height: 420px; }
 .opacity-\[0\.07\] { opacity: 0.07; }
 .bg-\[\#f4f4f0\] { background-color: #f4f4f0; }
-.bg-\[\#16bda0\]\/20 { background-color: rgb(22 189 160 / 0.2); }
 .shadow-black\/5 { --tw-shadow-color: rgb(0 0 0 / 0.05); }
 .\[background-image\:linear-gradient\(white_1px\,transparent_1px\)\,linear-gradient\(90deg\,white_1px\,transparent_1px\)\] {
   background-image: linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px);

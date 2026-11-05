@@ -51,18 +51,24 @@ const SliderOriginalInteractif = memo(function SliderOriginalInteractif({
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
 
-  // Slider principal — Pack OR exclusivement (Hero Banner, PDF spec)
+  // Slider principal — Pack OR en priorité (Hero Banner, PDF spec)
   // ARGENT → ArgentSlider, BRONZE → LiveThisMonthSection, LITE → listing normal
-  const allFeaturedEvents = useMemo(() =>
-    events
-      .filter(e => isEventPromotionActive(e) && e.promotionType === 'OR')
-      .sort((a, b) => {
-        if (a.isLive && !b.isLive) return -1;
-        if (!a.isLive && b.isLive) return 1;
-        return new Date(a.date).getTime() - new Date(b.date).getTime();
-      }),
-    [events]
-  );
+  // Sans aucun pack OR actif, le hero affiche les prochains événements plutôt que de disparaître.
+  const allFeaturedEvents = useMemo(() => {
+    const byLiveThenDate = (a: Event, b: Event) => {
+      if (a.isLive && !b.isLive) return -1;
+      if (!a.isLive && b.isLive) return 1;
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    };
+    const promoted = events.filter(e => isEventPromotionActive(e) && e.promotionType === 'OR');
+    if (promoted.length > 0) return promoted.sort(byLiveThenDate);
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const withImage = events.filter(e => e.image);
+    const upcoming = withImage.filter(e => e.isLive || new Date(e.date).getTime() >= startOfToday.getTime());
+    return (upcoming.length > 0 ? upcoming : withImage).sort(byLiveThenDate).slice(0, MAX_SLIDE_VISIBLE);
+  }, [events]);
 
   const hasMoreThanMax = allFeaturedEvents.length > MAX_SLIDE_VISIBLE;
 

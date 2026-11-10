@@ -377,12 +377,14 @@ function NewsletterForm({ align = 'end' }: { align?: 'end' | 'start' }) {
 
 function Contacts() {
   return (
-    <div className="absolute content-stretch flex flex-col gap-[13px] items-end justify-start left-[1084px] top-[104px] w-[340px]" data-name="CONTACTS">
-      <div className="content-stretch flex flex-col gap-[64px] items-end justify-start relative shrink-0 w-full" data-name="col">
-        <div className="box-border content-stretch flex flex-col gap-[16px] items-end justify-start w-full" data-name="contactUs">
-          <div className="bg-[#00bdd7] h-[3px] shrink-0 w-[77px]" data-name="border" />
+    <div className="absolute flex flex-col gap-[16px] items-end left-[868px] top-[104px] w-[556px]" data-name="CONTACTS">
+      <div className="bg-[#00bdd7] h-[3px] shrink-0 w-[77px]" data-name="border" />
+      {/* Newsletter et réseaux sociaux côte à côte */}
+      <div className="flex items-end gap-5 w-full justify-end">
+        <div className="w-[340px]">
           <NewsletterForm align="end" />
         </div>
+        <SocialLinks />
       </div>
     </div>
   );
@@ -419,22 +421,16 @@ function ModernSocialIcon({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className={`
-        w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 
-        flex items-center justify-center text-white/80 
-        hover:text-white hover:scale-110 hover:border-[#16bda0]/50 ${hoverColor}
-        transition-all duration-300 ease-in-out
-        shadow-lg hover:shadow-xl hover:shadow-[#16bda0]/25
-      `}
+      className={`w-10 h-10 shrink-0 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/80 hover:text-white ${hoverColor} transition-colors duration-200`}
     >
-      <Icon className="w-5 h-5" />
+      <Icon className="w-[18px] h-[18px]" />
     </a>
   );
 }
 
-function SocialMediaModern() {
+function SocialLinks() {
   return (
-    <div className="absolute bottom-8 right-8 flex gap-3 z-10">
+    <div className="flex gap-3">
       <ModernSocialIcon 
         icon={Facebook} 
         href="https://facebook.com/feeti" 
@@ -491,7 +487,7 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
       {/* Tablet/Mobile: Responsive fallback */}
       <div className="2xl:hidden text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Logo, Icon et Social Media sur la même ligne */}
+          {/* Logo */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
             {/* Logo Text + Icon */}
             <button
@@ -501,33 +497,6 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
               <img src="/logo blanc.png" alt="Fééti" className="w-[96px] h-auto object-contain" />
             </button>
 
-            {/* Modern Social Media Icons */}
-            <div className="flex gap-3">
-              <ModernSocialIcon 
-                icon={Facebook} 
-                href="https://facebook.com/feeti" 
-                label="Suivre Feeti sur Facebook"
-                hoverColor="hover:bg-[#1877f2]"
-              />
-              <ModernSocialIcon 
-                icon={Instagram} 
-                href="https://instagram.com/feeti" 
-                label="Suivre Feeti sur Instagram"
-                hoverColor="hover:bg-[#833ab4]"
-              />
-              <ModernSocialIcon 
-                icon={Twitter} 
-                href="https://twitter.com/feeti" 
-                label="Suivre Feeti sur Twitter"
-                hoverColor="hover:bg-[#1da1f2]"
-              />
-              <ModernSocialIcon 
-                icon={Youtube} 
-                href="https://youtube.com/feeti" 
-                label="Chaîne YouTube Feeti"
-                hoverColor="hover:bg-[#ff0000]"
-              />
-            </div>
           </div>
 
           {/* CTA Section */}
@@ -615,10 +584,11 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
 
           <div className="text-center sm:text-left">
             <div className="w-20 h-1 bg-[#00bdd7] mb-4 mx-auto sm:mx-0"></div>
-            <div className="flex justify-center sm:justify-start">
+            <div className="flex flex-col sm:flex-row items-center sm:items-end justify-center sm:justify-start gap-5">
               <div className="w-full max-w-[280px]">
                 <NewsletterForm align="start" />
               </div>
+              <SocialLinks />
             </div>
           </div>
         </div>
@@ -634,7 +604,6 @@ export function Footer({ onNavigate, onLegalPageNavigate }: FooterProps) {
         <Top onNavigate={onNavigate} onLegalPageNavigate={onLegalPageNavigate} />
         <Contacts />
         <Logo onNavigate={onNavigate} />
-        <SocialMediaModern />
       </ResponsiveContainer>
       <div className="border-t border-white/10 py-4 text-center">
         <p className="text-white text-sm">

@@ -1,4 +1,4 @@
-/* Couleurs unies remplaçant les anciens dégradés (Tailwind est précompilé dans index.css) */
+/* Classes absentes du Tailwind précompilé (index.css) : aplats remplaçant les dégradés et utilitaires ajoutés */
 .bg-\[\#03033b\] { background-color: #03033b; }
 .bg-\[\#4338ca\] { background-color: #4338ca; }
 .bg-\[\#833ab4\] { background-color: #833ab4; }
@@ -29,3 +29,15 @@
 .hover\:bg-\[\#de0035\]:hover { background-color: #de0035; }
 .hover\:bg-indigo-700:hover { background-color: #4338ca; }
 .hover\:bg-red-700:hover { background-color: #b91c1c; }
+
+/* Utilitaires absents de index.css (pied de page : newsletter + réseaux sociaux) */
+.w-\[18px\] { width: 18px; }
+.gap-5 { gap: 1.25rem; }
+.left-\[868px\] { left: 868px; }
+.w-\[556px\] { width: 556px; }
+.w-\[340px\] { width: 340px; }
+.max-w-\[280px\] { max-width: 280px; }
+@media (width >= 40rem) {
+  .sm\:items-end { align-items: flex-end; }
+  .sm\:justify-start { justify-content: flex-start; }
+}

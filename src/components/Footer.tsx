@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import svgPaths from "../imports/svg-opchhfjrnf";
-import { Facebook, Twitter, Instagram, Youtube, Linkedin } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Youtube } from 'lucide-react';
 import { newsletterAPI } from '../services/api/NewsletterAPI';
 
 interface FooterProps {
@@ -459,80 +459,6 @@ function SocialMediaModern() {
         label="Chaîne YouTube Feeti"
         hoverColor="hover:bg-[#ff0000]"
       />
-      <ModernSocialIcon 
-        icon={Linkedin} 
-        href="https://linkedin.com/company/feeti" 
-        label="Suivre Feeti sur LinkedIn"
-        hoverColor="hover:bg-[#0077b5]"
-      />
-    </div>
-  );
-}
-
-// Original Social Media Section (for Figma layout compatibility)
-function SocialIcon({ children, href }: { children: React.ReactNode; href: string }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="relative shrink-0 size-[50px] hover:scale-110 transition-transform duration-200"
-      data-name="item"
-    >
-      {children}
-    </a>
-  );
-}
-
-function SocialMedia() {
-  return (
-    <div className="absolute content-stretch flex gap-[50px] items-start justify-start left-[1194px] top-[219px] w-[230px]" data-name="group">
-      <div className="content-stretch flex flex-col gap-[10px] items-start justify-start relative shrink-0" data-name="section">
-        <div className="content-stretch flex gap-[10px] items-center justify-center relative shrink-0" data-name="list">
-          <SocialIcon href="https://facebook.com">
-            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 50 50">
-              <g id="item">
-                <rect height="49" rx="24.5" stroke="white" strokeOpacity="0.25" width="49" x="0.5" y="0.5" />
-                <path clipRule="evenodd" d={svgPaths.p3601f6f0} fill="#16BDA0" fillRule="evenodd" id="Vector" />
-              </g>
-            </svg>
-          </SocialIcon>
-          
-          <SocialIcon href="https://twitter.com">
-            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 50 50">
-              <g id="item">
-                <rect height="49" rx="24.5" stroke="white" strokeOpacity="0.25" width="49" x="0.5" y="0.5" />
-                <g id="Vector">
-                  <path d={svgPaths.pa1d0ce0} fill="#16BDA0" />
-                  <path clipRule="evenodd" d={svgPaths.p3bbda160} fill="#16BDA0" fillRule="evenodd" />
-                </g>
-              </g>
-            </svg>
-          </SocialIcon>
-          
-          <SocialIcon href="https://instagram.com">
-            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 50 50">
-              <g id="item">
-                <rect height="49" rx="24.5" stroke="white" strokeOpacity="0.25" width="49" x="0.5" y="0.5" />
-                <g id="Vector">
-                  <path d={svgPaths.p25d46f80} fill="#16BDA0" />
-                  <path d={svgPaths.p3de23e00} fill="#16BDA0" />
-                  <path d={svgPaths.p9891a00} fill="#16BDA0" />
-                </g>
-              </g>
-            </svg>
-          </SocialIcon>
-          
-          <SocialIcon href="https://youtube.com">
-            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 50 50">
-              <g id="item">
-                <rect height="49" rx="24.5" stroke="white" strokeOpacity="0.25" width="49" x="0.5" y="0.5" />
-                <path d={svgPaths.p36a15c00} fill="#16BDA0" id="youtube" />
-              </g>
-            </svg>
-          </SocialIcon>
-        </div>
-      </div>
     </div>
   );
 }
@@ -687,42 +613,12 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
             </div>
           </div>
 
-          {/* Contact and Social */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-            <div className="text-center sm:text-left">
-              <div className="w-20 h-1 bg-[#00bdd7] mb-4 mx-auto sm:mx-0"></div>
-              <div className="flex justify-center sm:justify-start">
-                <div className="w-full max-w-[280px]">
-                  <NewsletterForm align="start" />
-                </div>
+          <div className="text-center sm:text-left">
+            <div className="w-20 h-1 bg-[#00bdd7] mb-4 mx-auto sm:mx-0"></div>
+            <div className="flex justify-center sm:justify-start">
+              <div className="w-full max-w-[280px]">
+                <NewsletterForm align="start" />
               </div>
-            </div>
-            
-            <div className="flex justify-center space-x-3">
-              <ModernSocialIcon 
-                icon={Facebook} 
-                href="https://facebook.com/feeti" 
-                label="Suivre Feeti sur Facebook"
-                hoverColor="hover:bg-[#1877f2]"
-              />
-              <ModernSocialIcon 
-                icon={Instagram} 
-                href="https://instagram.com/feeti" 
-                label="Suivre Feeti sur Instagram"
-                hoverColor="hover:bg-gradient-to-r hover:from-[#833ab4] hover:via-[#fd1d1d] hover:to-[#fcb045]"
-              />
-              <ModernSocialIcon 
-                icon={Twitter} 
-                href="https://twitter.com/feeti" 
-                label="Suivre Feeti sur Twitter"
-                hoverColor="hover:bg-[#1da1f2]"
-              />
-              <ModernSocialIcon 
-                icon={Youtube} 
-                href="https://youtube.com/feeti" 
-                label="Chaîne YouTube Feeti"
-                hoverColor="hover:bg-[#ff0000]"
-              />
             </div>
           </div>
         </div>
@@ -738,7 +634,6 @@ export function Footer({ onNavigate, onLegalPageNavigate }: FooterProps) {
         <Top onNavigate={onNavigate} onLegalPageNavigate={onLegalPageNavigate} />
         <Contacts />
         <Logo onNavigate={onNavigate} />
-        <SocialMedia />
         <SocialMediaModern />
       </ResponsiveContainer>
       <div className="border-t border-white/10 py-4 text-center">

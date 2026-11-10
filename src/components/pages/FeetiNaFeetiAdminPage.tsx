@@ -3,6 +3,9 @@ import {
   Plus, Edit, Trash2, Search, Download, Star, Crown, Trophy, Zap, Loader2,
   AlertCircle, Check, X, Shield, MessageSquare, Sparkles, Store, Bell,
   ChevronLeft, ChevronRight,
+  Building2 as Building2Icon,
+  MessageCircle as MessageCircleIcon,
+  ThumbsUp as ThumbsUpIcon
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -393,7 +396,7 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 function ModalActions({ onClose, saving, label = 'Enregistrer' }: { onClose: () => void; saving: boolean; label?: string }) {
   return (
     <div className="flex gap-2 pt-2">
-      <Button type="submit" disabled={saving} className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600">
+      <Button type="submit" disabled={saving} className="flex-1 bg-indigo-600">
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
         {label}
       </Button>
@@ -661,7 +664,7 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
       )}
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+      <div className="bg-indigo-600 text-white">
         <div className="container mx-auto px-4 py-6">
           <Button variant="ghost" onClick={onBack} className="mb-4 text-white hover:bg-white/20">
             <ArrowLeft className="w-4 h-4 mr-2" />Retour
@@ -773,7 +776,7 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
                         i === 0 ? 'bg-yellow-100 text-yellow-700' : i === 1 ? 'bg-gray-200 text-gray-700' : i === 2 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
                       }`}>#{i + 1}</div>
-                      <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                      <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
                         {(user.user?.name ?? '?').slice(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -828,7 +831,7 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
                         <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                              <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
                                 {(user.user?.name ?? '?').slice(0, 2).toUpperCase()}
                               </div>
                               <div>
@@ -926,7 +929,7 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">Récompenses</h2>
-              <Button onClick={() => setRewardModal({ open: true })} className="bg-gradient-to-r from-indigo-600 to-purple-600">
+              <Button onClick={() => setRewardModal({ open: true })} className="bg-indigo-600">
                 <Plus className="w-4 h-4 mr-2" />Ajouter
               </Button>
             </div>
@@ -975,7 +978,7 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
                 <Button variant="outline" onClick={handleExportPartners}>
                   <Download className="w-4 h-4 mr-2" />Export
                 </Button>
-                <Button onClick={() => setPartnerModal({ open: true })} className="bg-gradient-to-r from-indigo-600 to-purple-600">
+                <Button onClick={() => setPartnerModal({ open: true })} className="bg-indigo-600">
                   <Plus className="w-4 h-4 mr-2" />Ajouter
                 </Button>
               </div>
@@ -988,8 +991,8 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
                   <Card key={partner.id} className={!partner.isActive ? 'opacity-60' : ''}>
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between mb-3">
-                        <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center text-2xl">
-                          {partner.logo || '🏢'}
+                        <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center text-2xl">
+                          {partner.logo || <Building2Icon className="w-4 h-4 inline-block" aria-hidden="true" />}
                         </div>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${partner.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
                           {partner.isActive ? 'Actif' : 'Inactif'}
@@ -1030,7 +1033,7 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">Missions ({missions.length})</h2>
-              <Button onClick={() => setMissionModal({ open: true })} className="bg-gradient-to-r from-indigo-600 to-purple-600">
+              <Button onClick={() => setMissionModal({ open: true })} className="bg-indigo-600">
                 <Plus className="w-4 h-4 mr-2" />Nouvelle mission
               </Button>
             </div>
@@ -1109,8 +1112,8 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
                           </div>
                           <p className="text-xs text-gray-600 mb-2 line-clamp-2">{post.content}</p>
                           <div className="flex gap-3 text-xs text-gray-400">
-                            <span>👍 {post.likesCount}</span>
-                            <span>💬 {post.commentsCount}</span>
+                            <span><ThumbsUpIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />{post.likesCount}</span>
+                            <span><MessageCircleIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />{post.commentsCount}</span>
                             <span>{new Date(post.createdAt).toLocaleDateString('fr-FR')}</span>
                           </div>
                         </div>
@@ -1144,7 +1147,7 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">Campagnes & Bonus ({bonuses.length})</h2>
-              <Button onClick={() => setBonusModal({ open: true })} className="bg-gradient-to-r from-indigo-600 to-purple-600">
+              <Button onClick={() => setBonusModal({ open: true })} className="bg-indigo-600">
                 <Plus className="w-4 h-4 mr-2" />Nouvelle campagne
               </Button>
             </div>

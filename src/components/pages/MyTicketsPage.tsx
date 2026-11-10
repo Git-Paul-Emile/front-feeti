@@ -172,7 +172,7 @@ export function MyTicketsPage({ onBack }: MyTicketsPageProps) {
                       </div>
                     </div>
                   ) : (
-                    <div className={`h-1.5 w-full ${ticket.status === 'valid' ? 'bg-gradient-to-r from-indigo-500 to-purple-600' : 'bg-gray-300'}`} />
+                    <div className={`h-1.5 w-full ${ticket.status === 'valid' ? 'bg-indigo-500' : 'bg-gray-300'}`} />
                   )}
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-4">

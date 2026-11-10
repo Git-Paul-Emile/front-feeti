@@ -8,7 +8,7 @@ export function CookiePolicyPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-50">
+    <div className="min-h-screen bg-gray-50">
       <SEO
         title="Politique de Cookies"
         description="Informations sur l'utilisation des cookies sur Feeti : cookies essentiels, analytiques et marketing. Gérez vos préférences."
@@ -22,7 +22,7 @@ export function CookiePolicyPage() {
             Retour
           </Button>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center">
               <Cookie className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -196,7 +196,7 @@ export function CookiePolicyPage() {
             </CardContent>
           </Card>
 
-          <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-8 text-center text-white">
+          <div className="bg-purple-600 rounded-xl p-8 text-center text-white">
             <Cookie className="w-12 h-12 mx-auto mb-4" />
             <h3 className="text-2xl font-bold mb-2">Transparence et Contrôle</h3>
             <p className="text-purple-100 mb-6 max-w-2xl mx-auto">Nous croyons en votre droit de contrôler vos données. Gérez vos préférences de cookies à tout moment.</p>

@@ -19,7 +19,8 @@ import {
   Eye,
   EyeOff,
   Save,
-  Shield
+  Shield,
+  AlertTriangle as AlertTriangleIcon
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
@@ -151,7 +152,7 @@ export function UserProfilePage() {
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex items-center gap-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shrink-0">
+              <div className="w-20 h-20 rounded-full bg-indigo-500 flex items-center justify-center text-white text-2xl font-bold shrink-0">
                 {user.name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
@@ -349,7 +350,7 @@ export function UserProfilePage() {
                 </div>
                 {pwForm.confirmPassword && pwForm.newPassword && (
                   <p className={`text-xs ${pwForm.newPassword === pwForm.confirmPassword ? 'text-green-600' : 'text-red-500'}`}>
-                    {pwForm.newPassword === pwForm.confirmPassword ? '✓ Les mots de passe correspondent' : '✗ Les mots de passe ne correspondent pas'}
+                    {pwForm.newPassword === pwForm.confirmPassword ? 'Les mots de passe correspondent' : 'Les mots de passe ne correspondent pas'}
                   </p>
                 )}
               </div>
@@ -386,7 +387,7 @@ export function UserProfilePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-sm text-red-700 font-medium mb-1">⚠ Cette action est irréversible</p>
+                <p className="text-sm text-red-700 font-medium mb-1"><AlertTriangleIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Cette action est irréversible</p>
                 <p className="text-sm text-red-600">
                   La suppression de votre compte effacera définitivement toutes vos données :
                   billets, historique d'achats, points de fidélité, favoris.

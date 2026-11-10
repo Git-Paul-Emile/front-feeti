@@ -376,7 +376,7 @@ export function BonPlanDetailPage({ dealId, onBack, onEstablishmentClick }: BonP
         <div className="flex flex-col sm:flex-row gap-3 pb-8">
           <Button
             size="lg"
-            className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold h-12 text-base"
+            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold h-12 text-base"
             disabled={isExpired}
             onClick={() => toast.success(`Offre "${deal.title}" — rendez-vous chez ${deal.merchantName} !`)}
           >

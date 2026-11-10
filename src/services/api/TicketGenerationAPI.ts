@@ -147,7 +147,7 @@ class TicketGenerationAPIService extends BaseAPIService {
         const result = await response.json();
 
         if (result.success) {
-          this.showToast('success', 'Billet validé avec succès ✓');
+          this.showToast('success', 'Billet validé avec succès');
         } else {
           this.showToast('error', result.error || 'Billet invalide');
         }

@@ -44,7 +44,8 @@ import {
   ArrowLeft,
   Upload,
   Image as ImageIcon,
-  Heart
+  Heart,
+  X as XIcon
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
@@ -267,7 +268,7 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
     <div className="space-y-6">
       {/* Statistiques principales */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-0">
+        <Card className="bg-indigo-500 text-white border-0">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Événements Totaux</CardTitle>
             <Calendar className="h-4 w-4 opacity-80" />
@@ -278,7 +279,7 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0">
+        <Card className="bg-green-500 text-white border-0">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Participants</CardTitle>
             <Users className="h-4 w-4 opacity-80" />
@@ -289,7 +290,7 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white border-0">
+        <Card className="bg-yellow-500 text-white border-0">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Événements Live</CardTitle>
             <Ticket className="h-4 w-4 opacity-80" />
@@ -300,7 +301,7 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0">
+        <Card className="bg-emerald-500 text-white border-0">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Revenus</CardTitle>
             <DollarSign className="h-4 w-4 opacity-80" />
@@ -833,7 +834,7 @@ export function BackOfficeDashboard({ currentUser, onBack }: BackOfficeDashboard
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setImageFile(null); setImagePreview(''); setEventForm({ ...eventForm, image: '' }); }}
                       className="absolute top-2 right-2 bg-white rounded-full p-1 shadow text-gray-600 hover:text-red-600 text-xs"
-                    >✕</button>
+                    ><XIcon className="w-4 h-4" aria-hidden="true" /></button>
                   </div>
                 ) : (
                   <div className="py-4 space-y-1">

@@ -177,7 +177,7 @@ export function BonPlansPage({ onBack, onNavigate, filter }: BonPlansPageProps) 
 
         {/* Bannière programme fidélité quand l'onglet Feeti Na Feeti est actif */}
         {selectedCategory === 'feeti-na-feeti' && (
-          <div className="mb-6 rounded-xl bg-linear-to-r from-violet-600 to-purple-700 text-white p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="mb-6 rounded-xl bg-violet-600 text-white p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
               <div className="bg-white/20 rounded-full p-2 shrink-0">
                 <Star className="w-5 h-5" />

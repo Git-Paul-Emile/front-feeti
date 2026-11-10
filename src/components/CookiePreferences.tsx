@@ -42,7 +42,7 @@ export function CookiePreferences({ open, onOpenChange }: CookiePreferencesProps
 
   const handleSave = () => {
     CookieService.saveConsent(preferences);
-    toast.success('✅ Vos préférences ont été enregistrées');
+    toast.success('Vos préférences ont été enregistrées');
     onOpenChange(false);
   };
 
@@ -54,7 +54,7 @@ export function CookiePreferences({ open, onOpenChange }: CookiePreferencesProps
     };
     setPreferences(newPrefs);
     CookieService.saveConsent(newPrefs);
-    toast.success('✅ Tous les cookies ont été acceptés');
+    toast.success('Tous les cookies ont été acceptés');
     onOpenChange(false);
   };
 
@@ -66,7 +66,7 @@ export function CookiePreferences({ open, onOpenChange }: CookiePreferencesProps
     };
     setPreferences(newPrefs);
     CookieService.saveConsent(newPrefs);
-    toast.info('❌ Seuls les cookies essentiels sont actifs');
+    toast.info('Seuls les cookies essentiels sont actifs');
     onOpenChange(false);
   };
 
@@ -91,7 +91,7 @@ export function CookiePreferences({ open, onOpenChange }: CookiePreferencesProps
         </DialogHeader>
 
         {/* Stats Bar */}
-        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-100">
+        <div className="flex items-center justify-between p-4 bg-indigo-50 rounded-lg border border-indigo-100">
           <div className="flex items-center gap-2">
             <Info className="w-5 h-5 text-indigo-600" />
             <span className="font-medium text-gray-900">
@@ -361,7 +361,7 @@ export function CookiePreferences({ open, onOpenChange }: CookiePreferencesProps
           </Button>
           <Button
             onClick={handleSave}
-            className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700"
           >
             Enregistrer mes Préférences
           </Button>

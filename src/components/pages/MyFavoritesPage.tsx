@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { ArrowLeft, Heart, Calendar, MapPin, Users, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Heart, Calendar, MapPin, Users, RefreshCw, Star as StarIcon } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import EventsBackendAPI, { type BackendEvent } from '../../services/api/EventsBackendAPI';
 import LeisureAPI, { type LeisureItem } from '../../services/api/LeisureAPI';
@@ -257,7 +257,7 @@ export function MyFavoritesPage() {
                               {item.location}
                             </span>
                             {item.priceRange && <span className="font-semibold text-indigo-600">{item.priceRange}</span>}
-                            {item.rating && <span>{item.rating.toFixed(1)} ★</span>}
+                            {item.rating && <span>{item.rating.toFixed(1)}<StarIcon className="w-3.5 h-3.5 inline-block ml-1 -mt-0.5 align-middle fill-current" aria-hidden="true" /></span>}
                           </div>
                           <div className="flex items-center justify-end gap-2 mt-3">
                             <Button

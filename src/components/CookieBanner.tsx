@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardFooter } from './ui/card';
 import { Badge } from './ui/badge';
-import { Cookie, Shield, Settings, X, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Cookie, Shield, Settings, X, ChevronDown, ChevronUp, Info, Cookie as CookieIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import CookieService, { CookieConsent } from '../services/CookieService';
 
@@ -70,12 +70,12 @@ export function CookieBanner({ onPreferencesClick }: CookieBannerProps) {
             {/* Header */}
             <div className="flex items-start justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                <div className="flex-shrink-0 w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center">
                   <Cookie className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <h3 className="font-bold text-xl text-gray-900">
-                    🍪 Gestion des Cookies
+                    <CookieIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Gestion des Cookies
                   </h3>
                   <Badge variant="outline" className="mt-1 text-xs bg-green-50 text-green-700 border-green-200">
                     <Shield className="w-3 h-3 mr-1" />
@@ -179,7 +179,7 @@ export function CookieBanner({ onPreferencesClick }: CookieBannerProps) {
               <div className="hidden sm:flex items-center gap-3 flex-wrap">
                 <Button
                   onClick={handleAcceptAll}
-                  className="flex-1 min-w-[200px] bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium"
+                  className="flex-1 min-w-[200px] bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
                   size="lg"
                 >
                   Tout Accepter
@@ -207,7 +207,7 @@ export function CookieBanner({ onPreferencesClick }: CookieBannerProps) {
               <div className="sm:hidden space-y-2">
                 <Button
                   onClick={handleAcceptAll}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
                   size="lg"
                 >
                   Tout Accepter

@@ -81,11 +81,11 @@ export function BestOffPage({ events, onEventSelect, onPurchase, onBack }: BestO
   }, [promoEvents, selectedCategory, sortBy]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gray-50">
       {/* Header Premium */}
-      <div className="bg-gradient-to-r from-[#4338ca] via-[#de0035] to-[#059669] relative overflow-hidden">
+      <div className="bg-[#4338ca] relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10" />
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
+        <div className="absolute inset-0" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <button
@@ -241,7 +241,7 @@ export function BestOffPage({ events, onEventSelect, onPurchase, onBack }: BestO
 
       {/* CTA */}
       {filteredEvents.length > 0 && (
-        <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white">
+        <div className="bg-gray-900 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
             <Sparkles className="w-12 h-12 text-amber-400 mx-auto mb-6" />
             <h3 className="text-3xl font-bold mb-4">Vous cherchez d'autres événements ?</h3>

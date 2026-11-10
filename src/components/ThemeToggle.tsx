@@ -43,8 +43,8 @@ export function ThemeToggle({ variant = 'ghost', size = 'default', className = '
       <div 
         className={`absolute inset-0 rounded-full transition-all duration-300 ${
           theme === 'light'
-            ? 'bg-gradient-to-r from-yellow-400/20 to-orange-400/20'
-            : 'bg-gradient-to-r from-blue-600/20 to-purple-600/20'
+            ? 'bg-yellow-400/20'
+            : 'bg-blue-600/20'
         }`}
       />
     </Button>

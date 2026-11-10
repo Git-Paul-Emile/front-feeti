@@ -11,19 +11,19 @@ const EVENT_BADGE_CONFIG: Record<PromotionType, {
 }> = {
   OR: {
     label: 'Événement Premium',
-    bg: 'bg-gradient-to-r from-yellow-400 to-amber-500',
+    bg: 'bg-yellow-400',
     text: 'text-white',
     border: 'border-yellow-300',
   },
   ARGENT: {
     label: 'Événement recommandé',
-    bg: 'bg-gradient-to-r from-slate-300 to-slate-400',
+    bg: 'bg-slate-300',
     text: 'text-slate-900',
     border: 'border-slate-200',
   },
   BRONZE: {
     label: 'Événement en vedette',
-    bg: 'bg-gradient-to-r from-orange-400 to-amber-600',
+    bg: 'bg-orange-400',
     text: 'text-white',
     border: 'border-orange-300',
   },
@@ -44,12 +44,12 @@ const LEISURE_OFFER_CONFIG: Record<LeisureOfferType, {
 }> = {
   PREMIUM: {
     label: 'Top établissement',
-    bg: 'bg-gradient-to-r from-yellow-400 to-amber-500',
+    bg: 'bg-yellow-400',
     text: 'text-white',
   },
   PRO: {
     label: 'Établissement recommandé',
-    bg: 'bg-gradient-to-r from-emerald-500 to-teal-500',
+    bg: 'bg-emerald-500',
     text: 'text-white',
   },
   BASIC: {
@@ -68,17 +68,17 @@ const LEISURE_PACK_CONFIG: Record<LeisurePackType, {
 }> = {
   CAMPAGNE_PREMIUM: {
     label: 'Campagne Premium',
-    bg: 'bg-gradient-to-r from-purple-500 to-pink-500',
+    bg: 'bg-purple-500',
     text: 'text-white',
   },
   BOOST: {
     label: 'Boost',
-    bg: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+    bg: 'bg-blue-500',
     text: 'text-white',
   },
   VISIBILITE_ACCUEIL: {
     label: 'Visibilité Accueil',
-    bg: 'bg-gradient-to-r from-teal-400 to-cyan-500',
+    bg: 'bg-teal-400',
     text: 'text-white',
   },
 };
@@ -171,9 +171,9 @@ export function isDealPromotionActive(deal: {
 
 // Badge pour les deals promus (même visuel que les événements, libellé adapté)
 const DEAL_BADGE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  OR:     { label: 'Bon plan Premium', bg: 'bg-gradient-to-r from-yellow-400 to-amber-500', text: 'text-white' },
-  ARGENT: { label: 'Bon plan recommandé', bg: 'bg-gradient-to-r from-slate-300 to-slate-400', text: 'text-slate-900' },
-  BRONZE: { label: 'Bon plan en vedette', bg: 'bg-gradient-to-r from-orange-400 to-amber-600', text: 'text-white' },
+  OR:     { label: 'Bon plan Premium', bg: 'bg-yellow-400', text: 'text-white' },
+  ARGENT: { label: 'Bon plan recommandé', bg: 'bg-slate-300', text: 'text-slate-900' },
+  BRONZE: { label: 'Bon plan en vedette', bg: 'bg-orange-400', text: 'text-white' },
   LITE:   { label: 'Sponsorisé', bg: 'bg-blue-100', text: 'text-blue-700' },
 };
 

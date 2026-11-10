@@ -230,7 +230,7 @@ export function BlogDetailPage({ postId, onBack, onNavigate }: BlogDetailPagePro
       )}
 
       {/* CTA */}
-      <div className="bg-gradient-to-r from-[#4338ca] to-[#059669] text-white">
+      <div className="bg-[#4338ca] text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
           <h2 className="text-2xl font-bold mb-4">Découvrez plus d'articles</h2>
           <p className="text-white/90 mb-6">Explorez notre blog pour découvrir les dernières tendances et actualités</p>

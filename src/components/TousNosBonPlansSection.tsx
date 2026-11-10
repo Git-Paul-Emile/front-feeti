@@ -92,7 +92,7 @@ export function TousNosBonPlansSection({ onNavigate }: TousNosBonPlansSectionPro
             className="absolute inset-0 bg-center bg-cover bg-no-repeat transition-all duration-700 ease-in-out"
             style={{ backgroundImage: currentDeal.image ? `url('${currentDeal.image}')` : undefined, backgroundColor: '#03033b' }}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#03033b]/85 via-[#16bda0]/35 to-transparent" />
+          <div className="absolute inset-0 bg-black/40" />
 
           {/* Badge promotion pack */}
           {isDealPromotionActive(currentDeal) && currentDeal.promotionType && (

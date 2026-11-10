@@ -68,7 +68,7 @@ export function ReplayBonPlansSection({ onNavigate }: ReplayBonPlansSectionProps
                 className="absolute inset-0 bg-center bg-cover bg-no-repeat transition-all duration-700 ease-in-out"
                 style={{ backgroundImage: `url('${currentEvent.image}')` }}
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#03033b]/80 via-[#16bda0]/40 to-transparent" />
+              <div className="absolute inset-0 bg-black/40" />
 
               {/* Navigation arrows */}
               <button
@@ -158,7 +158,7 @@ export function ReplayBonPlansSection({ onNavigate }: ReplayBonPlansSectionProps
 
                 <button
                   onClick={() => onNavigate('deals')}
-                  className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#e43962] to-[#f54975] hover:from-[#d63356] hover:to-[#e73668] text-white font-bold rounded-full transition-all duration-300 hover:scale-105 shadow-lg"
+                  className="inline-flex items-center justify-center px-6 py-3 bg-[#e43962] hover:bg-[#d63356] text-white font-bold rounded-full transition-all duration-300 hover:scale-105 shadow-lg"
                 >
                   Voir +
                 </button>

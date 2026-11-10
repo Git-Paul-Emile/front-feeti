@@ -141,7 +141,7 @@ export function BlogPage({ onBack, onPostSelect, onNavigate, initialCategory = '
         keywords="blog événementiel afrique, actualités culturelles, interviews artistes, promoteurs"
       />
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#4338ca] to-[#059669] text-white">
+      <div className="bg-[#4338ca] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">

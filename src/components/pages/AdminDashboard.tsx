@@ -54,6 +54,9 @@ import {
   AlertTriangle,
   FileText,
   ArrowRight,
+  Check as CheckIcon,
+  Flag as FlagIcon,
+  Gift as GiftIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
@@ -371,7 +374,7 @@ function PackConfigTab() {
             <ul className="space-y-1">
               {cfg.advantages.map((a, i) => (
                 <li key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
-                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span className="text-green-500 mt-0.5"><CheckIcon className="w-4 h-4" aria-hidden="true" /></span>
                   <span>{a}</span>
                 </li>
               ))}
@@ -428,7 +431,7 @@ function PackConfigTab() {
                 <ul className="space-y-1 mb-3">
                   {form.advantages.map((a, i) => (
                     <li key={i} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5">
-                      <span className="text-green-500 text-xs">✓</span>
+                      <span className="text-green-500 text-xs"><CheckIcon className="w-3.5 h-3.5" aria-hidden="true" /></span>
                       <span className="text-sm flex-1">{a}</span>
                       <button
                         onClick={() => removeAdvantage(i)}
@@ -2498,7 +2501,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
               </TabsTrigger>
 
             </TabsList>
-            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-white to-transparent" />
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10" />
           </div>
 
           {/* Vue d'ensemble */}
@@ -2570,7 +2573,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
             <Card className="border-dashed border-2 border-violet-200 bg-violet-50/50">
               <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-5">
                 <div>
-                  <p className="font-semibold text-violet-900">🎁 Feeti Na Feeti — Programme de fidélité</p>
+                  <p className="font-semibold text-violet-900"><GiftIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Feeti Na Feeti — Programme de fidélité</p>
                   <p className="text-sm text-violet-700">Gérez les points, niveaux, récompenses, missions, partenaires et la communauté.</p>
                 </div>
                 <Button onClick={() => navigate('/admin/feeti-na-feeti')} className="bg-violet-600 hover:bg-violet-700 shrink-0">
@@ -5797,7 +5800,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                   {allCountries.map(country => (
                     <div key={country.code} className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${country.isActive ? 'bg-gray-50 hover:bg-gray-100' : 'bg-red-50 opacity-70'}`}>
                       <div className="flex items-center gap-3">
-                        <span className="text-xl">{country.flag || '🏳️'}</span>
+                        <span className="text-xl">{country.flag || <FlagIcon className="w-5 h-5 inline-block" aria-hidden="true" />}</span>
                         <div>
                           <span className="font-medium text-gray-900">{country.name}</span>
                           <span className="ml-2 text-xs font-mono text-gray-400">{country.code}</span>

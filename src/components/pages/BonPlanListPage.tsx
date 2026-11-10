@@ -274,7 +274,7 @@ export function BonPlanListPage({ onBack, initialFilter, onDealSelect }: BonPlan
           <div className="relative mb-8 lg:mb-12">
             <div className="relative h-[300px] sm:h-[350px] lg:h-[400px] rounded-2xl overflow-hidden group">
               <div className="absolute inset-0 bg-center bg-cover bg-no-repeat transition-all duration-700 ease-in-out" style={{ backgroundImage: currentSlide.image ? `url('${currentSlide.image}')` : undefined }} />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#03033b]/80 via-[#16bda0]/40 to-transparent" />
+              <div className="absolute inset-0 bg-black/40" />
 
               <button onClick={prevReplaySlide} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-black/20 hover:bg-black/40 rounded-full flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100 backdrop-blur-sm z-10">
                 <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white" />

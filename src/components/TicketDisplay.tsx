@@ -16,7 +16,8 @@ import {
   XCircle,
   Clock,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle as AlertTriangleIcon
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import TicketGenerationAPI, { GeneratedTicket } from '../services/api/TicketGenerationAPI';
@@ -105,7 +106,7 @@ export function TicketDisplay({ ticket, onShare, onDownload, showActions = true 
 
   return (
     <Card className="overflow-hidden border-2 border-indigo-100 hover:border-indigo-300 transition-all">
-      <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 pb-4">
+      <CardHeader className="bg-indigo-50 pb-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <CardTitle className="text-xl mb-2">{ticket.eventTitle}</CardTitle>
@@ -267,7 +268,7 @@ export function TicketDisplay({ ticket, onShare, onDownload, showActions = true 
         {/* Instructions */}
         <div className="mt-6 pt-6 border-t border-gray-200">
           <p className="text-xs text-gray-500 mb-2">
-            <strong>⚠️ Important :</strong>
+            <strong><AlertTriangleIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Important :</strong>
           </p>
           <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
             <li>Ce billet est strictement personnel et non cessible</li>

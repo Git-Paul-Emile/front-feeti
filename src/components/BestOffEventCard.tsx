@@ -56,7 +56,7 @@ function EventImage({ event }: { event: Event }) {
       
       {/* Badge promotion dynamique */}
       <div className="absolute top-6 left-6">
-        <div className="flex items-center bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1.5 rounded-full text-[10px] best-off-badge-enhanced shadow-lg backdrop-blur-sm bg-opacity-95">
+        <div className="flex items-center bg-amber-500 text-white px-3 py-1.5 rounded-full text-[10px] best-off-badge-enhanced shadow-lg backdrop-blur-sm bg-opacity-95">
           BEST OFF
         </div>
       </div>
@@ -77,7 +77,7 @@ function EventImage({ event }: { event: Event }) {
         
         {/* Live streaming badge - premium style */}
         {(event.eventType === 'STREAMING_LIVE' || event.eventType === 'MIXTE' || (!event.eventType && event.isLive)) && (
-          <div className="flex items-center bg-gradient-to-r from-[#de0035] to-[#ff1744] text-white px-4 py-2 rounded-full best-off-badge-enhanced shadow-lg backdrop-blur-sm bg-opacity-95 text-[11px]">
+          <div className="flex items-center bg-[#de0035] text-white px-4 py-2 rounded-full best-off-badge-enhanced shadow-lg backdrop-blur-sm bg-opacity-95 text-[11px]">
             <div className="w-2.5 h-2.5 bg-white rounded-full mr-2 animate-pulse" />
             EN LIVE
           </div>
@@ -120,7 +120,7 @@ function PremiumActionButtons({ event, onPurchase, onWishlist }: {
           e.stopPropagation();
           onPurchase(event.id);
         }}
-        className="premium-button bg-[#de0035] hover:bg-gradient-to-r hover:from-[#de0035] hover:to-[#ff1744] transition-all duration-300 flex-1 h-[41px] flex items-center justify-center gap-1 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform"
+        className="premium-button bg-[#de0035] hover:bg-[#de0035] transition-all duration-300 flex-1 h-[41px] flex items-center justify-center gap-1 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform"
         style={{ fontFamily: "'Montserrat', sans-serif" }}
       >
         <div className="size-6 transition-transform group-hover:scale-110">
@@ -137,7 +137,7 @@ function PremiumActionButtons({ event, onPurchase, onWishlist }: {
           e.stopPropagation();
           onWishlist?.(event.id);
         }}
-        className="premium-button bg-[#de0035] hover:bg-gradient-to-r hover:from-[#de0035] hover:to-[#ff1744] transition-all duration-300 flex-1 h-[41px] flex items-center justify-center gap-1 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform"
+        className="premium-button bg-[#de0035] hover:bg-[#de0035] transition-all duration-300 flex-1 h-[41px] flex items-center justify-center gap-1 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transform"
         style={{ fontFamily: "'Montserrat', sans-serif" }}
       >
         <div className="size-6 transition-transform group-hover:scale-110">
@@ -165,10 +165,10 @@ export function BestOffEventCard({ event, onPurchase, onWishlist, onEventSelect 
       />
       
       {/* Premium hover effect overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#de0035]/8 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[20px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[#de0035]/8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[20px] pointer-events-none" />
       
       {/* Premium shimmer effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 -translate-x-full group-hover:translate-x-full transition-all duration-1000 ease-out rounded-[20px] pointer-events-none" />
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 -translate-x-full group-hover:translate-x-full transition-all duration-1000 ease-out rounded-[20px] pointer-events-none" />
     </div>
   );
 }

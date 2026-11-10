@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { isEventPromotionActive } from '../PromotionBadge';
 import { SEO } from '../SEO';
 import { Button } from '../ui/button';
-import { ArrowLeft, Play, Pause, Volume2, Settings, Maximize, Share, MapPin, Video, Music, Brush, Star, Users, Clock } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Volume2, Settings, Maximize, Share, MapPin, Video, Music, Brush, Star, Users, Clock, X as XIcon } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import imgImage from "figma:asset/9642a472e265d7dba7788f22c0c3a3264707bf05.png";
 import imgImage1 from "figma:asset/9389257a4ecca2067419f928c95ebd912fdb4108.png";
@@ -123,7 +123,7 @@ function CategoryTab({ icon, label, isSelected, onClick }: {
       onClick={onClick}
       className={`group box-border flex items-center justify-center px-[20px] py-[12px] relative rounded-[100px] shrink-0 transition-all duration-300 hover:scale-105 active:scale-95 min-h-[48px] touch-manipulation ${
         isSelected 
-          ? 'bg-[#cdff71] shadow-lg shadow-[#cdff71]/25 ring-2 ring-[#000441]/20' 
+          ? 'bg-[#cdff71] shadow-lg ring-2 ring-[#000441]/20' 
           : 'bg-white hover:bg-gray-50 hover:shadow-md'
       }`}
       data-name="Selector Tab"
@@ -608,7 +608,7 @@ export function LiveEventsPage({
                 className="hover:bg-[#000441]/10 rounded-full p-1"
                 title="Supprimer le filtre"
               >
-                ✕
+                <XIcon className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
             <span className="text-white/60 text-sm">({filteredEvents.length} résultat{filteredEvents.length > 1 ? 's' : ''})</span>

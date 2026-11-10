@@ -1,4 +1,4 @@
-import { ArrowLeft, Building2, Server, User, Copyright, Link as LinkIcon, AlertTriangle, Scale, Mail } from 'lucide-react';
+import { ArrowLeft, Building2, Server, User, Copyright, Link as LinkIcon, AlertTriangle, Scale, Mail, AlertTriangle as AlertTriangleIcon } from 'lucide-react';
 import { SEO } from '../SEO';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -8,7 +8,7 @@ export function LegalNoticePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-50">
+    <div className="min-h-screen bg-gray-50">
       <SEO
         title="Mentions Légales"
         description="Mentions légales de Feeti : informations sur l'éditeur, l'hébergeur et les droits de propriété intellectuelle de la plateforme."
@@ -22,7 +22,7 @@ export function LegalNoticePage() {
             Retour
           </Button>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-slate-700 to-slate-900 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center">
               <Building2 className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -108,7 +108,7 @@ export function LegalNoticePage() {
             <CardContent className="space-y-4 text-gray-700 leading-relaxed">
               <p>L'ensemble des éléments composant la plateforme Feeti (marque, logo, chartes graphiques, textes, images, vidéos, bases de données, logiciels) sont la propriété exclusive de Feeti SAS ou de ses partenaires, et sont protégés par les droits de la propriété intellectuelle applicables en zone OHADA.</p>
               <div className="bg-red-50 p-6 rounded-lg border border-red-200 mt-4">
-                <p className="font-medium text-red-900 mb-2">⚠️ Avertissement</p>
+                <p className="font-medium text-red-900 mb-2"><AlertTriangleIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Avertissement</p>
                 <p className="text-red-800">Toute reproduction, représentation, modification ou publication de ces éléments sans autorisation écrite préalable est illicite et constitue une contrefaçon susceptible de poursuites judiciaires.</p>
               </div>
             </CardContent>
@@ -188,7 +188,7 @@ export function LegalNoticePage() {
             </CardContent>
           </Card>
 
-          <div className="bg-gradient-to-r from-slate-700 to-slate-900 rounded-xl p-8 text-center text-white">
+          <div className="bg-slate-800 rounded-xl p-8 text-center text-white">
             <Building2 className="w-12 h-12 mx-auto mb-4" />
             <h3 className="text-2xl font-bold mb-2">Informations Légales Complètes</h3>
             <p className="text-slate-200 mb-6 max-w-2xl mx-auto">Ces mentions légales garantissent la transparence et la conformité de la plateforme Feeti avec la législation en vigueur.</p>

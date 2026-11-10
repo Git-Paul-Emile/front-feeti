@@ -258,7 +258,7 @@ export function EventCard({ event, onSelect, onPurchase, onWishlist, onStreamWat
         <EventInfo event={event} onPurchase={onPurchase} onWishlist={onWishlist} onStreamWatch={onStreamWatch} />
         
         {/* Subtle hover effect overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-50/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" />
+        <div className="absolute inset-0 bg-gray-50/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none" />
       </div>
     );
   }

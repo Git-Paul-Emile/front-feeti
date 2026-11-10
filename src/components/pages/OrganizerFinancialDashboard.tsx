@@ -253,7 +253,7 @@ const OrganizerFinancialDashboard: React.FC = () => {
 
       {/* Wallet Summary */}
       {wallet && (
-        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-6 text-white">
+        <div className="bg-purple-600 rounded-2xl p-6 text-white">
           <h2 className="text-lg font-semibold mb-4 opacity-90">Mon Wallet</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
@@ -454,15 +454,15 @@ const KPICard: React.FC<{
   color: "purple" | "green" | "blue" | "red" | "gray";
 }> = ({ title, value, subtitle, trend, color }) => {
   const colors = {
-    purple: "from-purple-50 to-purple-100 border-purple-200 text-purple-700",
-    green:  "from-green-50 to-green-100 border-green-200 text-green-700",
-    blue:   "from-blue-50 to-blue-100 border-blue-200 text-blue-700",
-    red:    "from-red-50 to-red-100 border-red-200 text-red-700",
-    gray:   "from-gray-50 to-gray-100 border-gray-200 text-gray-700",
+    purple: "bg-purple-50 border-purple-200 text-purple-700",
+    green:  "bg-green-50 border-green-200 text-green-700",
+    blue:   "bg-blue-50 border-blue-200 text-blue-700",
+    red:    "bg-red-50 border-red-200 text-red-700",
+    gray:   "bg-gray-50 border-gray-200 text-gray-700",
   };
 
   return (
-    <div className={`bg-gradient-to-br ${colors[color]} border rounded-2xl p-5`}>
+    <div className={` ${colors[color]} border rounded-2xl p-5`}>
       <p className="text-xs font-medium uppercase tracking-wide opacity-70">{title}</p>
       <p className="text-2xl font-bold mt-2">{value}</p>
       <div className="flex items-center gap-1 mt-1">

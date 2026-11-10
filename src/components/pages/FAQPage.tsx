@@ -26,7 +26,7 @@ const faqs: FAQItem[] = [
   { id: '8', category: 'Compte Utilisateur', question: 'Comment créer un compte ?', answer: '1. Cliquez sur "Connexion" dans le menu\n2. Sélectionnez "Créer un compte"\n3. Remplissez vos informations (nom, email, mot de passe)\n4. Validez votre email via le lien reçu\n5. Votre compte est prêt !', icon: Users },
   { id: '9', category: 'Compte Utilisateur', question: 'J\'ai oublié mon mot de passe, que faire ?', answer: '1. Cliquez sur "Mot de passe oublié ?" sur la page de connexion\n2. Entrez votre adresse email\n3. Recevez un lien de réinitialisation par email\n4. Créez un nouveau mot de passe sécurisé\n\nSi vous ne recevez pas l\'email, vérifiez vos spams ou contactez support@feeti.cg', icon: Shield },
   { id: '10', category: 'Compte Utilisateur', question: 'Comment retrouver mes billets achetés ?', answer: 'Connectez-vous à votre compte :\n1. Accédez à "Mon Compte"\n2. Cliquez sur "Mes Billets"\n3. Tous vos billets actifs et passés sont listés\n4. Téléchargez ou affichez le QR code pour chaque billet', icon: Ticket },
-  { id: '11', category: 'QR Code et Accès', question: 'Comment utiliser mon QR code à l\'entrée ?', answer: 'À l\'entrée de l\'événement :\n1. Ouvrez votre billet électronique (email ou app)\n2. Présentez le QR code à l\'agent de sécurité\n3. Le QR code sera scanné une seule fois\n\n⚠️ Ne partagez jamais votre QR code avant l\'événement !', icon: Smartphone },
+  { id: '11', category: 'QR Code et Accès', question: 'Comment utiliser mon QR code à l\'entrée ?', answer: 'À l\'entrée de l\'événement :\n1. Ouvrez votre billet électronique (email ou app)\n2. Présentez le QR code à l\'agent de sécurité\n3. Le QR code sera scanné une seule fois\n\nNe partagez jamais votre QR code avant l\'événement !', icon: Smartphone },
   { id: '12', category: 'QR Code et Accès', question: 'Que faire si mon QR code ne fonctionne pas ?', answer: 'Solutions possibles :\n• Augmentez la luminosité de votre écran\n• Téléchargez à nouveau le billet depuis votre compte\n• Imprimez le billet en PDF\n• Contactez l\'équipe sur place avec votre email de confirmation', icon: HelpCircle },
   { id: '13', category: 'Sécurité', question: 'Mes données de paiement sont-elles sécurisées ?', answer: 'Oui, absolument :\n• Nous utilisons le cryptage SSL/TLS pour toutes les transactions\n• Les paiements sont traités par Stripe et Paystack\n• Nous ne stockons JAMAIS vos coordonnées bancaires complètes\n• Conformité PCI-DSS', icon: Shield },
   { id: '14', category: 'Sécurité', question: 'Comment protégez-vous mes données personnelles ?', answer: 'Protection RGPD et législation congolaise :\n• Cryptage de toutes les données sensibles\n• Accès restreint aux employés autorisés\n• Audits de sécurité réguliers\n• Droit d\'accès, modification et suppression de vos données', icon: Shield },
@@ -54,7 +54,7 @@ export function FAQPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50">
+    <div className="min-h-screen bg-gray-50">
       <SEO
         title="FAQ — Questions Fréquentes"
         description="Trouvez les réponses à vos questions sur Feeti : achat de billets, remboursements, streaming, contrôle d'accès et gestion de compte."
@@ -68,7 +68,7 @@ export function FAQPage() {
             Retour
           </Button>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center">
               <HelpCircle className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -156,7 +156,7 @@ export function FAQPage() {
           )}
         </div>
 
-        <Card className="mt-12 bg-gradient-to-r from-indigo-600 to-purple-600 border-0">
+        <Card className="mt-12 bg-indigo-600 border-0">
           <CardContent className="p-8 text-center text-white">
             <HelpCircle className="w-12 h-12 mx-auto mb-4" />
             <h3 className="text-2xl font-bold mb-2">Vous ne trouvez pas votre réponse ?</h3>

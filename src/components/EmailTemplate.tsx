@@ -71,7 +71,7 @@ export function EmailTemplate({ tickets, customerName, customerEmail, orderId }:
       }}>
         {/* Header avec logo */}
         <div style={{
-          background: 'linear-gradient(135deg, #4338ca, #059669)',
+          background: '#4338ca',
           color: '#ffffff',
           padding: '32px 24px',
           textAlign: 'center'
@@ -244,10 +244,10 @@ export function EmailTemplate({ tickets, customerName, customerEmail, orderId }:
                 {/* Header du billet */}
                 <div style={{
                   background: ticket.category === 'VIP'
-                    ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                    ? '#d97706'
                     : ticket.category === 'Premium'
-                    ? 'linear-gradient(135deg, #4338ca, #6366f1)'
-                    : 'linear-gradient(135deg, #6b7280, #4b5563)',
+                    ? '#4338ca'
+                    : '#4b5563',
                   color: '#ffffff',
                   padding: '16px 20px',
                   textAlign: 'center'

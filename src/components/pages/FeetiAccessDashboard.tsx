@@ -8,6 +8,7 @@ import {
   ArrowLeft, Plus, RefreshCw, Download, Shield, Users, Map,
   TicketCheck, CheckCircle2, XCircle, AlertTriangle, Mail,
   Trash2, Eye, ChevronRight, Layers, Zap, Copy, QrCode, Upload, UserCheck, FileText, X as XIcon,
+  Pencil as PencilIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -1157,8 +1158,8 @@ export function FeetiAccessDashboard({ eventId, eventTitle, onBack }: FeetiAcces
                       <button onClick={() => {
                         setCatForm({ name: cat.name, description: cat.description ?? '', color: cat.color });
                         setCatDialog({ open: true, cat });
-                      }} className="text-gray-400 hover:text-gray-600 text-xs">✎</button>
-                      <button onClick={() => handleDeleteCategory(cat)} className="text-gray-300 hover:text-red-500 text-xs">✕</button>
+                      }} className="text-gray-400 hover:text-gray-600 text-xs"><PencilIcon className="w-3.5 h-3.5" aria-hidden="true" /></button>
+                      <button onClick={() => handleDeleteCategory(cat)} className="text-gray-300 hover:text-red-500 text-xs"><XIcon className="w-3.5 h-3.5" aria-hidden="true" /></button>
                     </div>
                   ))}
                 </div>

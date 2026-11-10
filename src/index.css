@@ -12415,7 +12415,7 @@ html {
 
 @media (width <= 768px) {
   .live-events-category-scroll:before {
-    content: "👆 Glissez horizontalement";
+    content: "Glissez horizontalement";
     font-size: 12px;
     top: -25px;
   }

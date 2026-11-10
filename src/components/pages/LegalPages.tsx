@@ -1,6 +1,6 @@
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, AlertTriangle as AlertTriangleIcon, Building2 as Building2Icon, CheckCircle2 as CheckCircle2Icon, Clock as ClockIcon, Facebook as FacebookIcon, Globe as GlobeIcon, Handshake as HandshakeIcon, Instagram as InstagramIcon, Lightbulb as LightbulbIcon, Linkedin as LinkedinIcon, Mail as MailIcon, Newspaper as NewspaperIcon, Phone as PhoneIcon, Scale as ScaleIcon, Siren as SirenIcon, Smartphone as SmartphoneIcon, Store as StoreIcon, Ticket as TicketIcon, Tv as TvIcon, Twitter as TwitterIcon, Users as UsersIcon, XCircle as XCircleIcon, Zap as ZapIcon } from 'lucide-react';
 
 interface LegalPagesProps {
   page: 'terms' | 'privacy' | 'cookies' | 'faq' | 'contact' | 'refund';
@@ -292,7 +292,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
           content: (
             <div className="space-y-8">
               <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">🎫 Billeterie & Achat</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4"><TicketIcon className="w-5 h-5 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Billeterie & Achat</h2>
                 
                 <div className="space-y-6">
                   <div>
@@ -325,7 +325,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
               </section>
 
               <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">📱 Billets Électroniques</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4"><SmartphoneIcon className="w-5 h-5 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Billets Électroniques</h2>
                 
                 <div className="space-y-6">
                   <div>
@@ -357,7 +357,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
               </section>
 
               <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">📺 Streaming & Événements Live</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4"><TvIcon className="w-5 h-5 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Streaming & Événements Live</h2>
                 
                 <div className="space-y-6">
                   <div>
@@ -390,7 +390,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
               </section>
 
               <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">👥 Compte & Profil</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4"><UsersIcon className="w-5 h-5 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Compte & Profil</h2>
                 
                 <div className="space-y-6">
                   <div>
@@ -421,7 +421,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
               </section>
 
               <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">🏢 Pour les Organisateurs</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4"><Building2Icon className="w-5 h-5 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Pour les Organisateurs</h2>
                 
                 <div className="space-y-6">
                   <div>
@@ -461,12 +461,12 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
           content: (
             <div className="space-y-8">
               <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">📞 Contacts Principaux</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4"><PhoneIcon className="w-5 h-5 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Contacts Principaux</h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="bg-indigo-50 rounded-lg p-6">
                     <h3 className="font-semibold text-indigo-900 mb-3 flex items-center">
-                      <span className="text-2xl mr-2">🎫</span>
+                      <span className="text-2xl mr-2"><TicketIcon className="w-6 h-6" aria-hidden="true" /></span>
                       Support Billetterie
                     </h3>
                     <div className="space-y-2 text-gray-700">
@@ -479,7 +479,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
                   
                   <div className="bg-green-50 rounded-lg p-6">
                     <h3 className="font-semibold text-green-900 mb-3 flex items-center">
-                      <span className="text-2xl mr-2">🏢</span>
+                      <span className="text-2xl mr-2"><Building2Icon className="w-6 h-6" aria-hidden="true" /></span>
                       Support Organisateurs
                     </h3>
                     <div className="space-y-2 text-gray-700">
@@ -493,7 +493,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
               </section>
 
               <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">🏬 Nos Bureaux</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4"><StoreIcon className="w-5 h-5 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Nos Bureaux</h2>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div>
@@ -529,11 +529,11 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
               </section>
 
               <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">⚡ Support d'Urgence</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4"><ZapIcon className="w-5 h-5 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Support d'Urgence</h2>
                 
                 <div className="bg-red-50 border border-red-200 rounded-lg p-6">
                   <div className="flex items-start space-x-3">
-                    <span className="text-2xl">🚨</span>
+                    <span className="text-2xl"><SirenIcon className="w-6 h-6" aria-hidden="true" /></span>
                     <div>
                       <h3 className="font-semibold text-red-900 mb-2">Support Événements en Direct</h3>
                       <p className="text-red-800 mb-3">
@@ -545,7 +545,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
                         <p><strong>Email Express:</strong> <a href="mailto:urgent@feeti.com" className="text-red-600 hover:underline">urgent@feeti.com</a></p>
                       </div>
                       <p className="text-sm text-red-600 italic mt-3">
-                        ⏰ Support 24h/24 pendant les événements en direct
+                        <ClockIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Support 24h/24 pendant les événements en direct
                       </p>
                     </div>
                   </div>
@@ -553,12 +553,12 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
               </section>
 
               <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">📧 Contacts Spécialisés</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4"><MailIcon className="w-5 h-5 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Contacts Spécialisés</h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="text-center">
                     <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
-                      <span className="text-2xl">⚖️</span>
+                      <span className="text-2xl"><ScaleIcon className="w-6 h-6" aria-hidden="true" /></span>
                     </div>
                     <h3 className="font-semibold text-gray-900 mb-2">Questions Légales</h3>
                     <p className="text-gray-700 text-sm mb-2">
@@ -569,7 +569,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
                   
                   <div className="text-center">
                     <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
-                      <span className="text-2xl">📰</span>
+                      <span className="text-2xl"><NewspaperIcon className="w-6 h-6" aria-hidden="true" /></span>
                     </div>
                     <h3 className="font-semibold text-gray-900 mb-2">Presse & Médias</h3>
                     <p className="text-gray-700 text-sm mb-2">
@@ -580,7 +580,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
                   
                   <div className="text-center">
                     <div className="bg-orange-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
-                      <span className="text-2xl">🤝</span>
+                      <span className="text-2xl"><HandshakeIcon className="w-6 h-6" aria-hidden="true" /></span>
                     </div>
                     <h3 className="font-semibold text-gray-900 mb-2">Partenariats</h3>
                     <p className="text-gray-700 text-sm mb-2">
@@ -592,27 +592,27 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
               </section>
 
               <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">🌐 Suivez-nous</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4"><GlobeIcon className="w-5 h-5 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Suivez-nous</h2>
                 
                 <div className="flex flex-wrap justify-center gap-4">
                   <a href="https://facebook.com/feeti" className="bg-[#1877f2] text-white px-6 py-3 rounded-lg hover:bg-[#166fe5] transition-colors flex items-center space-x-2">
-                    <span>📘</span>
+                    <span><FacebookIcon className="w-4 h-4" aria-hidden="true" /></span>
                     <span>Facebook</span>
                   </a>
-                  <a href="https://instagram.com/feeti" className="bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity flex items-center space-x-2">
-                    <span>📷</span>
+                  <a href="https://instagram.com/feeti" className="bg-[#833ab4] text-white px-6 py-3 rounded-lg hover:opacity-90 transition-opacity flex items-center space-x-2">
+                    <span><InstagramIcon className="w-4 h-4" aria-hidden="true" /></span>
                     <span>Instagram</span>
                   </a>
                   <a href="https://twitter.com/feeti" className="bg-[#1da1f2] text-white px-6 py-3 rounded-lg hover:bg-[#1a91da] transition-colors flex items-center space-x-2">
-                    <span>🐦</span>
+                    <span><TwitterIcon className="w-4 h-4" aria-hidden="true" /></span>
                     <span>Twitter</span>
                   </a>
                   <a href="https://youtube.com/feeti" className="bg-[#ff0000] text-white px-6 py-3 rounded-lg hover:bg-[#e60000] transition-colors flex items-center space-x-2">
-                    <span>📺</span>
+                    <span><TvIcon className="w-4 h-4" aria-hidden="true" /></span>
                     <span>YouTube</span>
                   </a>
                   <a href="https://linkedin.com/company/feeti" className="bg-[#0077b5] text-white px-6 py-3 rounded-lg hover:bg-[#006ba1] transition-colors flex items-center space-x-2">
-                    <span>💼</span>
+                    <span><LinkedinIcon className="w-4 h-4" aria-hidden="true" /></span>
                     <span>LinkedIn</span>
                   </a>
                 </div>
@@ -640,7 +640,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
                 
                 <div className="space-y-4">
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <h3 className="font-semibold text-green-900 mb-2">✅ Remboursement Automatique</h3>
+                    <h3 className="font-semibold text-green-900 mb-2"><CheckCircle2Icon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Remboursement Automatique</h3>
                     <p className="text-green-800">
                       <strong>Événement annulé par l'organisateur :</strong> Remboursement intégral 
                       automatique sous 3-5 jours ouvrés sur votre moyen de paiement d'origine.
@@ -648,7 +648,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
                   </div>
                   
                   <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                    <h3 className="font-semibold text-orange-900 mb-2">⚠️ Remboursement Conditionnel</h3>
+                    <h3 className="font-semibold text-orange-900 mb-2"><AlertTriangleIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Remboursement Conditionnel</h3>
                     <p className="text-orange-800">
                       <strong>Annulation volontaire :</strong> Soumise aux conditions spécifiques 
                       de l'organisateur. Possibles frais de traitement et délais variables.
@@ -656,7 +656,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
                   </div>
                   
                   <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                    <h3 className="font-semibold text-red-900 mb-2">❌ Pas de Remboursement</h3>
+                    <h3 className="font-semibold text-red-900 mb-2"><XCircleIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Pas de Remboursement</h3>
                     <p className="text-red-800">
                       <strong>Billets non remboursables :</strong> Clairement indiqués lors de l'achat. 
                       Aucun remboursement possible sauf circonstances exceptionnelles.
@@ -795,7 +795,7 @@ export function LegalPages({ page, onBack }: LegalPagesProps) {
 
               <section>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <h3 className="font-semibold text-blue-900 mb-3">💡 Conseils Pratiques</h3>
+                  <h3 className="font-semibold text-blue-900 mb-3"><LightbulbIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Conseils Pratiques</h3>
                   <ul className="space-y-2 text-blue-800">
                     <li>• Lisez attentivement les conditions avant l'achat</li>
                     <li>• Conservez tous vos justificatifs de paiement</li>

@@ -8,7 +8,7 @@ export function PrivacyPolicyPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50">
+    <div className="min-h-screen bg-gray-50">
       <SEO
         title="Politique de Confidentialité"
         description="Découvrez comment Feeti collecte, utilise et protège vos données personnelles conformément au RGPD et aux lois africaines applicables."
@@ -22,7 +22,7 @@ export function PrivacyPolicyPage() {
             Retour
           </Button>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center">
               <Shield className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -226,7 +226,7 @@ export function PrivacyPolicyPage() {
             </CardContent>
           </Card>
 
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-8 text-center text-white">
+          <div className="bg-indigo-600 rounded-xl p-8 text-center text-white">
             <Shield className="w-12 h-12 mx-auto mb-4" />
             <h3 className="text-2xl font-bold mb-2">Votre Confiance est Notre Priorité</h3>
             <p className="text-indigo-100 mb-6 max-w-2xl mx-auto">Nous nous engageons à protéger vos données personnelles et à respecter votre vie privée.</p>

@@ -851,7 +851,7 @@ export function OrganizerEventDashboard({ event, onBack, initialTab, onAccessDas
                     <Button
                       onClick={() => setShowScanner(true)}
                       size="lg"
-                      className="bg-gradient-to-r from-indigo-600 to-purple-600"
+                      className="bg-indigo-600"
                     >
                       <QrCode className="w-5 h-5 mr-2" />
                       Activer le Scanner

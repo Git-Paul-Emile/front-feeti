@@ -336,18 +336,18 @@ export function UserDashboard({}: UserDashboardProps) {
               ? Math.min(100, Math.round(((loyaltyProfile.points - curMin) / (nextMin - curMin)) * 100))
               : 100;
             const LEVEL_COLORS: Record<string, string> = {
-              Mobembo: 'from-gray-500 to-gray-700',
-              Elengi:  'from-blue-500 to-blue-700',
-              Momi:    'from-purple-500 to-purple-700',
-              Mwana:   'from-orange-500 to-orange-700',
-              Boboto:  'from-yellow-400 to-amber-600',
+              Mobembo: 'bg-gray-500',
+              Elengi:  'bg-blue-500',
+              Momi:    'bg-purple-500',
+              Mwana:   'bg-orange-500',
+              Boboto:  'bg-yellow-400',
             };
             return (
               <Card className="bg-linear-to-r from-gray-900 to-gray-800 text-white overflow-hidden">
                 <CardContent className="p-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-full bg-linear-to-br ${LEVEL_COLORS[loyaltyProfile.level] ?? 'from-gray-500 to-gray-700'} flex items-center justify-center shrink-0`}>
+                      <div className={`w-12 h-12 rounded-full ${LEVEL_COLORS[loyaltyProfile.level] ?? 'bg-gray-500'} flex items-center justify-center shrink-0`}>
                         <Star className="w-6 h-6 text-white" />
                       </div>
                       <div>

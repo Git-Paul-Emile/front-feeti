@@ -55,7 +55,7 @@ export function TicketVerificationAPI({ onClose }: TicketVerificationAPIProps) {
       };
       setCurrentResult(entry);
       setHistory(prev => [entry, ...prev.slice(0, 19)]);
-      toast.success('Billet valide — Accès autorisé ✓');
+      toast.success('Billet valide — Accès autorisé');
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? 'Erreur technique lors de la vérification';
       const entry: VerificationEntry = { result: null, valid: false, reason: msg, scannedAt: Date.now(), qrSnippet: raw.slice(0, 40) };

@@ -69,7 +69,7 @@ function IOSGuide({ isIPad, onClose }: { isIPad: boolean; onClose: () => void })
         <button
           onClick={onClose}
           className="w-full py-3 rounded-2xl font-bold text-white text-sm"
-          style={{ background: 'linear-gradient(135deg, #811AEC, #E43962)' }}
+          style={{ background: '#811AEC' }}
         >
           Compris
         </button>
@@ -132,7 +132,7 @@ export function PWAInstallBanner() {
         <div className="flex items-center gap-3 px-4 py-2.5 max-w-2xl mx-auto">
           <div
             className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #811AEC, #5a12a8)' }}
+            style={{ background: '#811AEC' }}
           >
             <FeetiMark size={24} />
           </div>
@@ -149,7 +149,7 @@ export function PWAInstallBanner() {
             disabled={installing}
             className="shrink-0 px-4 py-1.5 rounded-full text-xs font-bold"
             style={{
-              background: installing ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #811AEC, #E43962)',
+              background: installing ? 'rgba(255,255,255,0.1)' : '#811AEC',
               color: '#fff',
               boxShadow: installing ? 'none' : '0 2px 12px rgba(129,26,236,0.5)',
               opacity: installing ? 0.7 : 1,

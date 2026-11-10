@@ -93,7 +93,7 @@ export function ControllerDashboard({ onLogout }: ControllerDashboardProps) {
     try {
       const result = await ControllerAPI.verifyTicket(qrData);
       setScanCount(prev => prev + 1);
-      toast.success(`✅ Billet validé — ${result.holderName} (${result.category})`);
+      toast.success(`Billet validé — ${result.holderName} (${result.category})`);
       setShowScanner(false);
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Billet invalide ou introuvable';
@@ -312,7 +312,7 @@ export function ControllerDashboard({ onLogout }: ControllerDashboardProps) {
                     <Button
                       onClick={() => setShowScanner(true)}
                       size="lg"
-                      className="bg-linear-to-r from-indigo-600 to-purple-600"
+                      className="bg-indigo-600"
                     >
                       <ScanLine className="w-5 h-5 mr-2" />
                       Activer le scanner

@@ -58,7 +58,7 @@ export function FeeticheSection({ onNavigate }: FeeticheSectionProps) {
                 style={{ backgroundImage: `url('${hero.featuredImage}')` }}
               />
             ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-[#4338ca] to-[#16bda0]" />
+              <div className="absolute inset-0 bg-[#4338ca]" />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 

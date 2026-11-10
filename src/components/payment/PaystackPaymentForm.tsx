@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Loader, CheckCircle, XCircle, Wallet } from 'lucide-react';
+import { Loader, CheckCircle, XCircle, Wallet, Lock as LockIcon } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import api from '../../routes/axiosConfig';
 
@@ -123,7 +123,7 @@ export function PaystackPaymentForm({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
           <div className="flex items-center justify-between">
             <span className="text-gray-700">Montant à payer</span>
             <span className="text-2xl font-bold text-green-600">
@@ -170,7 +170,7 @@ export function PaystackPaymentForm({
         </Button>
 
         <p className="text-xs text-center text-gray-500">
-          🔒 Paiement sécurisé • Cartes Visa/Mastercard • Mobile Money
+          <LockIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Paiement sécurisé • Cartes Visa/Mastercard • Mobile Money
         </p>
       </CardContent>
     </Card>

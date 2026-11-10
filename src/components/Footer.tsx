@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import svgPaths from "../imports/svg-opchhfjrnf";
-import { Facebook, Twitter, Instagram, Youtube } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Youtube, Gift as GiftIcon } from 'lucide-react';
 import { newsletterAPI } from '../services/api/NewsletterAPI';
 
 interface FooterProps {
@@ -212,7 +212,7 @@ function BonPlanSection({ onNavigate }: { onNavigate: (page: string, params?: an
   const items = [
     { label: 'Bon plans par semaine', action: () => onNavigate('deals', { filter: 'weekly' }) },
     { label: 'Tous nos bons plans', action: () => onNavigate('deals') },
-    { label: '🎁 Feeti Na Feeti', action: () => onNavigate('feeti-na-feeti') }
+    { label: 'Feeti Na Feeti', action: () => onNavigate('feeti-na-feeti') }
   ];
 
   return (
@@ -445,7 +445,7 @@ function SocialMediaModern() {
         icon={Instagram} 
         href="https://instagram.com/feeti" 
         label="Suivre Feeti sur Instagram"
-        hoverColor="hover:bg-gradient-to-r hover:from-[#833ab4] hover:via-[#fd1d1d] hover:to-[#fcb045]"
+        hoverColor="hover:bg-[#833ab4]"
       />
       <ModernSocialIcon 
         icon={Twitter} 
@@ -513,7 +513,7 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
                 icon={Instagram} 
                 href="https://instagram.com/feeti" 
                 label="Suivre Feeti sur Instagram"
-                hoverColor="hover:bg-gradient-to-r hover:from-[#833ab4] hover:via-[#fd1d1d] hover:to-[#fcb045]"
+                hoverColor="hover:bg-[#833ab4]"
               />
               <ModernSocialIcon 
                 icon={Twitter} 
@@ -586,7 +586,7 @@ function ResponsiveContainer({ children, onNavigate, onLegalPageNavigate }: {
               <nav className="space-y-3">
                 <button onClick={() => onNavigate('deals', { filter: 'weekly' })} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Bon plans par semaine</button>
                 <button onClick={() => onNavigate('deals')} className="block text-white/60 hover:text-[#16bda0] transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">Tous nos bons plans</button>
-                <button onClick={() => onNavigate('feeti-na-feeti')} className="block text-[#16bda0] hover:text-[#16bda0] hover:scale-105 transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]">🎁 Feeti Na Feeti</button>
+                <button onClick={() => onNavigate('feeti-na-feeti')} className="block text-[#16bda0] hover:text-[#16bda0] hover:scale-105 transition-colors text-left text-[16px] xl:text-[18px] 2xl:text-[20px]"><GiftIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Feeti Na Feeti</button>
               </nav>
             </div>
             

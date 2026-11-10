@@ -92,7 +92,7 @@ export function LoisirsADecouvrirSection({ onNavigate }: LoisirsADecouvrirSectio
                     style={{ backgroundImage: `url('${item.image}')` }}
                   />
                 ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-teal-400 to-emerald-600" />
+                  <div className="absolute inset-0 bg-teal-400" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
 

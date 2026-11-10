@@ -110,11 +110,12 @@ export function LiveEventCard({ event, onSelect, onPurchase, onStreamWatch, onWi
         </div>
         
         {/* Date Badge */}
-        <div className="absolute bottom-0 left-0 right-[89.44%] top-0">
-          <p className="absolute bottom-[68.63%] left-[0.35%] right-[90.14%] text-[#de0035] text-[11.372px] text-center top-0 font-bold best-off-badge-enhanced">
+        {/* Largeur fixe : l'ancien export imbriquait des pourcentages et réduisait la date à ~3px */}
+        <div className="absolute left-0 top-0 bottom-0 w-[40px] flex flex-col items-center justify-center">
+          <p className="text-[#de0035] text-[11.372px] leading-none font-bold whitespace-nowrap best-off-badge-enhanced">
             {dateInfo.month}
           </p>
-          <p className="absolute bottom-0 left-0 right-[89.44%] text-[28.429px] text-white top-[23.53%] font-bold best-off-date-enhanced">
+          <p className="text-[28.429px] leading-none text-white font-bold whitespace-nowrap mt-1 best-off-date-enhanced">
             {dateInfo.day}
           </p>
         </div>
@@ -170,7 +171,7 @@ export function LiveEventCard({ event, onSelect, onPurchase, onStreamWatch, onWi
       )}
 
       {/* Hover Effect Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#de0035]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[22px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[#de0035]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-[22px] pointer-events-none" />
     </div>
   );
 }

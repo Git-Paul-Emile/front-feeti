@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { CreditCard, Wallet, Smartphone } from 'lucide-react';
+import { CreditCard, Wallet, Smartphone, Check as CheckIcon, CreditCard as CreditCardIcon, Lock as LockIcon } from 'lucide-react';
 import { StripePaymentForm } from './StripePaymentForm';
 import { PaystackPaymentForm } from './PaystackPaymentForm';
 import { MobileMoneyPaymentForm } from './MobileMoneyPaymentForm';
@@ -109,19 +109,19 @@ export function PaymentSelector({
       <div className="mt-6 flex items-center justify-center gap-6 text-xs text-gray-500">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
-            🔒
+            <LockIcon className="w-4 h-4" aria-hidden="true" />
           </div>
           <span>Paiement sécurisé</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
-            ✓
+            <CheckIcon className="w-4 h-4" aria-hidden="true" />
           </div>
           <span>Cryptage SSL</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
-            💳
+            <CreditCardIcon className="w-4 h-4" aria-hidden="true" />
           </div>
           <span>PCI Compliant</span>
         </div>

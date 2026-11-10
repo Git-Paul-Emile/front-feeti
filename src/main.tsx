@@ -7,6 +7,7 @@ import { AppProvider } from './context/AppContext.tsx';
 import { CountryProvider } from './context/CountryContext.tsx';
 import './index.css';
 import './styles/globals.css';
+import './styles/solid-colors.css';
 
 createRoot(document.getElementById('root')!).render(
   <HelmetProvider>

@@ -75,7 +75,7 @@ export function ReplaySlider({ onNavigate }: ReplaySliderProps) {
               className="absolute inset-0 bg-center bg-cover bg-no-repeat transition-all duration-700 ease-in-out"
               style={{ backgroundImage: `url('${currentSlide.image}')` }}
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#03033b]/80 via-[#16bda0]/40 to-transparent" />
+            <div className="absolute inset-0 bg-black/40" />
 
             {/* Navigation arrows */}
             {slides.length > 1 && (

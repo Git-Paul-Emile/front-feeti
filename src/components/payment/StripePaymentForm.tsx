@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Loader, CreditCard, Shield, XCircle } from 'lucide-react';
+import { Loader, CreditCard, Shield, XCircle, Lock as LockIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StripePaymentFormProps {
@@ -73,7 +73,7 @@ export function StripePaymentForm({ amount, currency = 'FCFA', onSuccess, onErro
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="bg-linear-to-r from-indigo-50 to-blue-50 p-4 rounded-lg border border-indigo-200">
+          <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
             <div className="flex items-center justify-between">
               <span className="text-gray-700">Montant à payer</span>
               <span className="text-2xl font-bold text-indigo-600">
@@ -154,7 +154,7 @@ export function StripePaymentForm({ amount, currency = 'FCFA', onSuccess, onErro
           </Button>
 
           <p className="text-xs text-center text-gray-500">
-            🔒 Paiement sécurisé — Mode démonstration
+            <LockIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Paiement sécurisé — Mode démonstration
           </p>
         </form>
       </CardContent>

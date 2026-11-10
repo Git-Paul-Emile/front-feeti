@@ -321,7 +321,7 @@ class NotificationsAPIService extends BaseAPIService {
       if (data.pushToken) {
         const pushResponse = await this.sendPushNotification({
           token: data.pushToken,
-          title: '🎫 Votre billet Feeti',
+          title: 'Votre billet Feeti',
           body: `Votre billet pour "${data.eventTitle}" est prêt!`,
           data: {
             eventTitle: data.eventTitle,

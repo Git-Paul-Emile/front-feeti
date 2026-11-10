@@ -1,0 +1,31 @@
+/* Couleurs unies remplaçant les anciens dégradés (Tailwind est précompilé dans index.css) */
+.bg-\[\#03033b\] { background-color: #03033b; }
+.bg-\[\#4338ca\] { background-color: #4338ca; }
+.bg-\[\#833ab4\] { background-color: #833ab4; }
+.bg-\[\#cdff71\] { background-color: #cdff71; }
+.bg-\[\#dc2626\] { background-color: #dc2626; }
+.bg-\[\#de0035\] { background-color: #de0035; }
+.bg-\[\#de0035\]\/10 { background-color: rgba(222, 0, 53, 0.1); }
+.bg-\[\#de0035\]\/8 { background-color: rgba(222, 0, 53, 0.08); }
+.bg-\[\#e43962\] { background-color: #e43962; }
+.bg-black\/40 { background-color: rgba(0, 0, 0, 0.4); }
+.bg-blue-400 { background-color: #60a5fa; }
+.bg-blue-600\/20 { background-color: rgba(37, 99, 235, 0.2); }
+.bg-emerald-500 { background-color: #10b981; }
+.bg-gray-400 { background-color: #9ca3af; }
+.bg-gray-50\/20 { background-color: rgba(249, 250, 251, 0.2); }
+.bg-gray-500 { background-color: #6b7280; }
+.bg-indigo-500 { background-color: #6366f1; }
+.bg-orange-400 { background-color: #fb923c; }
+.bg-purple-400 { background-color: #c084fc; }
+.bg-slate-300 { background-color: #cbd5e1; }
+.bg-slate-800 { background-color: #1e293b; }
+.bg-teal-400 { background-color: #2dd4bf; }
+.bg-violet-600 { background-color: #7c3aed; }
+.bg-yellow-400 { background-color: #facc15; }
+.bg-yellow-400\/20 { background-color: rgba(250, 204, 21, 0.2); }
+.hover\:bg-\[\#833ab4\]:hover { background-color: #833ab4; }
+.hover\:bg-\[\#d63356\]:hover { background-color: #d63356; }
+.hover\:bg-\[\#de0035\]:hover { background-color: #de0035; }
+.hover\:bg-indigo-700:hover { background-color: #4338ca; }
+.hover\:bg-red-700:hover { background-color: #b91c1c; }

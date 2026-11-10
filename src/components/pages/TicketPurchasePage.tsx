@@ -33,7 +33,8 @@ import {
   Truck,
   Smartphone,
   Wallet,
-  Loader2
+  Loader2,
+  Check as CheckIcon
 } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { QRCodeGenerator } from '../QRCodeGenerator';
@@ -155,7 +156,7 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
       ],
       maxQuantity: 2,
       remainingStock: Math.floor((event.maxAttendees - event.attendees) * 0.1),
-      color: 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-yellow-400',
+      color: 'bg-yellow-400 text-white border-yellow-400',
       icon: <Crown className="w-5 h-5" />,
       popular: true
     }] : []),
@@ -463,7 +464,7 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
                   (selectedTickets[category.id] || 0) > 0 ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'
                 }`}>
                   {category.popular && (
-                    <div className="absolute top-0 right-0 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1 text-xs font-bold">
+                    <div className="absolute top-0 right-0 bg-red-500 text-white px-3 py-1 text-xs font-bold">
                       POPULAIRE
                     </div>
                   )}
@@ -545,7 +546,7 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
             </div>
 
             {getTotalQuantity() > 0 && (
-              <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+              <Card className="bg-indigo-50 border-indigo-200">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -758,7 +759,7 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
 
             {/* ─── Feeti Na Feeti — Paiement partiel avec points ─── */}
             {currentUser && (pointsSimulation || loadingSimulation) && (
-              <Card className="border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-orange-50">
+              <Card className="border-2 border-yellow-300 bg-yellow-50">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2 text-yellow-800">
                     <Star className="w-5 h-5 text-yellow-500" />
@@ -1094,13 +1095,13 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
               <CardContent className="space-y-6">
                 {generatedTickets.map((ticket, index) => (
                   <div key={ticket.id} className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
                       <div>
                         <h4 className="font-medium text-gray-900">Billet {ticket.category} #{index + 1}</h4>
                         <p className="text-sm text-gray-600">{ticket.holderName}</p>
                       </div>
                       <Badge variant="secondary" className="bg-green-100 text-green-800">
-                        ✓ Valide
+                        <CheckIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Valide
                       </Badge>
                     </div>
                     

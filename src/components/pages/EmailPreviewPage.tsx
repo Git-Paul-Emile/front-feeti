@@ -1,5 +1,6 @@
 import { EmailTemplate } from '../EmailTemplate';
 import { Button } from '../ui/button';
+import { Mail as MailIcon } from 'lucide-react';
 
 interface Ticket {
   id: string;
@@ -97,7 +98,7 @@ export function EmailPreviewPage({
       <div className="max-w-2xl mx-auto px-4 pb-8">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="text-sm font-medium text-blue-900 mb-2">
-            📧 Email automatique
+            <MailIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Email automatique
           </h3>
           <p className="text-sm text-blue-800">
             Cet email sera automatiquement envoyé à l'adresse {customerEmail} avec les billets en pièces jointes PDF. 

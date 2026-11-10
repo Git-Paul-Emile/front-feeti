@@ -2323,7 +2323,7 @@ html {
 /* Mobile touch indicator */
 @media (max-width: 768px) {
   .live-events-category-scroll::before {
-    content: '👆 Glissez horizontalement';
+    content: 'Glissez horizontalement';
     font-size: 12px;
     top: -25px;
   }
@@ -2966,3 +2966,49 @@ figcaption, blockquote, small, strong, em {
 table {
   max-width: 100%;
 }
+
+/* ==========================================================================
+   Sans dégradés ni halos lumineux
+   Neutralise les effets décoratifs (dégradés colorés, reflets, lueurs) aussi
+   présents dans index.css précompilé. Conservés : squelettes de chargement,
+   fondus sombres de défilement, contours de focus et pulsation des badges LIVE.
+   ========================================================================== */
+html::-webkit-scrollbar-thumb { background: #16bda0; }
+html::-webkit-scrollbar-thumb:hover { background: #10a68d; }
+
+.bg-gradient-radial,
+.bg-gradient-conic { background: none !important; }
+
+.best-off-premium-card::before,
+.premium-button::before,
+.hero-nav-button::before,
+.blog-category-badge::before,
+.blog-featured-glow::before,
+.replay-nav-button::before,
+.replay-action-button::after,
+.replay-play-button::before,
+.replay-play-inner::before,
+.replay-play-inner::after,
+.live-events-join-btn::before { display: none !important; }
+
+.hero-indicator-active { background: #16bda0 !important; box-shadow: none !important; }
+.blog-stats-card::after { background: #4338ca !important; }
+.blog-status-published { background: #059669 !important; }
+.blog-status-draft { background: #d97706 !important; }
+
+.replay-watchlist-button.active { background: rgba(205, 255, 113, 0.15) !important; }
+.replay-watchlist-button.active:hover { background: rgba(205, 255, 113, 0.25) !important; box-shadow: none !important; }
+.replay-slide-indicator.active { background: #cdff71 !important; box-shadow: none !important; }
+.live-events-category-active { background: #cdff71 !important; box-shadow: none !important; }
+.live-events-row-indicator.active { box-shadow: none !important; }
+.live-events-row-title {
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: #ffffff;
+}
+
+.slider-indicator-active { animation: none !important; box-shadow: none !important; }
+.nav-button-pulse:hover { animation: none !important; }
+.replay-play-btn:hover,
+.replay-play-button:hover { animation: none !important; box-shadow: none !important; }
+.replay-play-button:focus-visible { animation: none !important; box-shadow: none !important; }

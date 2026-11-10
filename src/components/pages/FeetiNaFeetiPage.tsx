@@ -2,6 +2,12 @@ import {
   ArrowLeft, Gift, Share2, Users, Trophy, Zap, Crown, Star, TrendingUp,
   Award, Copy, Check, Target, Calendar, Loader2, AlertCircle, Store,
   MessageSquare, Medal, Sparkles, Plus, ThumbsUp, Send,
+  Building2 as Building2Icon,
+  Check as CheckIcon,
+  MapPin as MapPinIcon,
+  MessageCircle as MessageCircleIcon,
+  Phone as PhoneIcon,
+  Target as TargetIcon
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -20,11 +26,11 @@ interface FeetiNaFeetiPageProps {
 }
 
 const LEVELS = [
-  { name: 'Mobembo', min: 0,    max: 999,    color: 'from-gray-400 to-gray-600',     icon: Star,   benefits: ['Réductions de base', 'Points sur achats'] },
-  { name: 'Elengi',  min: 1000, max: 1999,   color: 'from-blue-400 to-blue-600',     icon: Award,  benefits: ['Accès prioritaire', '10% bonus points', 'Réductions partenaires'] },
-  { name: 'Momi',    min: 2000, max: 2999,   color: 'from-purple-400 to-purple-600', icon: Crown,  benefits: ['Files VIP', '15% bonus points', 'Invitations exclusives'] },
-  { name: 'Mwana',   min: 3000, max: 3999,   color: 'from-orange-400 to-orange-600', icon: Zap,    benefits: ['Accès backstage', '20% bonus points', 'Événements privés'] },
-  { name: 'Boboto',  min: 4000, max: 999999, color: 'from-yellow-400 to-amber-600',  icon: Trophy, benefits: ['Concierge VIP', '30% bonus points', 'Expériences sur-mesure'] },
+  { name: 'Mobembo', min: 0,    max: 999,    color: 'bg-gray-400',     icon: Star,   benefits: ['Réductions de base', 'Points sur achats'] },
+  { name: 'Elengi',  min: 1000, max: 1999,   color: 'bg-blue-400',     icon: Award,  benefits: ['Accès prioritaire', '10% bonus points', 'Réductions partenaires'] },
+  { name: 'Momi',    min: 2000, max: 2999,   color: 'bg-purple-400', icon: Crown,  benefits: ['Files VIP', '15% bonus points', 'Invitations exclusives'] },
+  { name: 'Mwana',   min: 3000, max: 3999,   color: 'bg-orange-400', icon: Zap,    benefits: ['Accès backstage', '20% bonus points', 'Événements privés'] },
+  { name: 'Boboto',  min: 4000, max: 999999, color: 'bg-yellow-400',  icon: Trophy, benefits: ['Concierge VIP', '30% bonus points', 'Expériences sur-mesure'] },
 ];
 
 export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps) {
@@ -175,7 +181,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+      <div className="bg-indigo-600 text-white">
         <div className="container mx-auto px-4 py-6">
           <Button variant="ghost" onClick={onBack} className="mb-4 text-white hover:text-white hover:bg-white/20">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -224,7 +230,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
         {activeTab === 'home' && profile && (
           <div className="space-y-6">
             {/* Carte FEETI */}
-            <Card className={`bg-gradient-to-br ${currentLevel.color} text-white border-0 shadow-2xl overflow-hidden relative`}>
+            <Card className={` ${currentLevel.color} text-white border-0 shadow-2xl overflow-hidden relative`}>
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full -ml-24 -mb-24" />
               <CardContent className="p-8 relative z-10">
@@ -290,7 +296,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
 
             {/* Campagnes en cours */}
             {activeBonuses.length > 0 && (
-              <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
+              <Card className="border-amber-200 bg-amber-50">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="w-5 h-5 text-amber-600" />
@@ -299,7 +305,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                   <div className="space-y-1">
                     {activeBonuses.map(b => (
                       <p key={b.id} className="text-sm text-amber-700">
-                        🎯 <strong>{b.title}</strong> — {b.bonusType === 'multiplier' ? `Points ×${b.value}` : `+${b.value} pts`}
+                        <TargetIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" /><strong>{b.title}</strong> — {b.bonusType === 'multiplier' ? `Points ×${b.value}` : `+${b.value} pts`}
                         {b.actionType ? ` (${b.actionType})` : ''} · jusqu'au {new Date(b.endDate).toLocaleDateString('fr-FR')}
                       </p>
                     ))}
@@ -403,7 +409,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                           </div>
                           <Button
                             disabled={!canAfford || reward.stock === 0}
-                            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                            className="bg-indigo-600 hover:bg-indigo-700"
                             onClick={() => handleRedeem(reward)}
                           >
                             Échanger
@@ -455,7 +461,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                               </div>
                               <div className="text-right ml-4">
                                 <p className="text-lg font-bold text-indigo-600">+{mission.points} pts</p>
-                                {mission.completed && <span className="text-xs text-green-600 font-medium">✓ Terminé</span>}
+                                {mission.completed && <span className="text-xs text-green-600 font-medium"><CheckIcon className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Terminé</span>}
                               </div>
                             </div>
                             <div className="mt-3">
@@ -505,7 +511,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                       }`}>
                         {user.rank <= 3 ? <Trophy className="w-5 h-5" /> : `#${user.rank}`}
                       </div>
-                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                      <div className="w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
                         {user.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="flex-1">
@@ -545,7 +551,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                   <div className="space-y-1">
                     {activeBonuses.map(b => (
                       <p key={b.id} className="text-sm text-amber-700">
-                        🎯 <strong>{b.title}</strong> — {b.bonusType === 'multiplier' ? `×${b.value} pts` : `+${b.value} pts`}
+                        <TargetIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" /><strong>{b.title}</strong> — {b.bonusType === 'multiplier' ? `×${b.value} pts` : `+${b.value} pts`}
                         {b.actionType ? ` sur ${b.actionType}` : ''} · jusqu'au {new Date(b.endDate).toLocaleDateString('fr-FR')}
                       </p>
                     ))}
@@ -564,8 +570,8 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                     <Card key={partner.id} className="overflow-hidden hover:shadow-md transition-shadow">
                       <CardContent className="p-5">
                         <div className="flex items-start gap-3 mb-3">
-                          <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
-                            {partner.logo || '🏢'}
+                          <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
+                            {partner.logo || <Building2Icon className="w-4 h-4 inline-block" aria-hidden="true" />}
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-bold text-gray-900">{partner.name}</h3>
@@ -575,7 +581,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                         </div>
 
                         {/* Ma réduction */}
-                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-3 mb-3 text-center">
+                        <div className="bg-indigo-50 rounded-lg p-3 mb-3 text-center">
                           <p className="text-xs text-gray-500 mb-0.5">Votre réduction ({profile?.level})</p>
                           <p className="text-2xl font-bold text-indigo-600">{myDiscount}</p>
                           {partner.bonusPoints > 0 && (
@@ -597,8 +603,8 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
 
                         {(partner.address || partner.phone) && (
                           <div className="text-xs text-gray-500 space-y-0.5">
-                            {partner.address && <p>📍 {partner.address}</p>}
-                            {partner.phone && <p>📞 {partner.phone}</p>}
+                            {partner.address && <p><MapPinIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />{partner.address}</p>}
+                            {partner.phone && <p><PhoneIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />{partner.phone}</p>}
                           </div>
                         )}
                       </CardContent>
@@ -620,7 +626,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
               </div>
               <Button
                 onClick={() => setShowPostForm(!showPostForm)}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600"
+                className="bg-indigo-600"
               >
                 <Plus className="w-4 h-4 mr-2" />Publier (+50 pts)
               </Button>
@@ -647,7 +653,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                       required
                     />
                     <div className="flex gap-2">
-                      <Button type="submit" disabled={postSaving} className="bg-gradient-to-r from-indigo-600 to-purple-600">
+                      <Button type="submit" disabled={postSaving} className="bg-indigo-600">
                         {postSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                         Publier
                       </Button>
@@ -681,7 +687,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                       <div className="flex items-center justify-between text-xs text-gray-400">
                         <span>{new Date(post.createdAt).toLocaleDateString('fr-FR')}</span>
                         <div className="flex items-center gap-3">
-                          <span>💬 {post.commentsCount}</span>
+                          <span><MessageCircleIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />{post.commentsCount}</span>
                           <button
                             onClick={() => handleLikePost(post.id)}
                             className="flex items-center gap-1 hover:text-indigo-600 transition-colors"
@@ -718,9 +724,9 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {badges.map(badge => (
-                  <Card key={badge.id} className="bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200">
+                  <Card key={badge.id} className="bg-indigo-50 border-indigo-200">
                     <CardContent className="p-5 text-center">
-                      <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <div className="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center mx-auto mb-3">
                         <Medal className="w-8 h-8 text-white" />
                       </div>
                       <h3 className="font-bold text-gray-900 mb-1">{badge.title}</h3>
@@ -753,7 +759,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                         <p className={`font-medium text-sm ${unlocked ? 'text-green-800' : 'text-gray-700'}`}>{title}</p>
                         <p className="text-xs text-gray-500">{desc}</p>
                       </div>
-                      {unlocked && <span className="text-xs text-green-600 font-medium">✓ Obtenu</span>}
+                      {unlocked && <span className="text-xs text-green-600 font-medium"><CheckIcon className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Obtenu</span>}
                     </div>
                   ))}
                 </div>
@@ -770,7 +776,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
               <p className="text-gray-600 mt-1">Invitez vos amis et gagnez des points</p>
             </div>
 
-            <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200">
+            <Card className="bg-purple-50 border-purple-200">
               <CardContent className="p-8 text-center">
                 <Users className="w-16 h-16 text-purple-600 mx-auto mb-4" />
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Gagnez jusqu'à 450 points</h3>
@@ -788,7 +794,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                     />
                     <Button
                       onClick={copyReferralLink}
-                      className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                      className="bg-indigo-600 hover:bg-indigo-700"
                     >
                       {copiedReferral ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     </Button>
@@ -825,7 +831,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                   <Button
                     type="submit"
                     disabled={applyingReferral || !referralCodeInput.trim()}
-                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                    className="bg-indigo-600 hover:bg-indigo-700"
                   >
                     {applyingReferral ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Appliquer'}
                   </Button>

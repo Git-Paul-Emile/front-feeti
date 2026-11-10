@@ -62,7 +62,7 @@ export function ChatbotWidget() {
           }}
         >
           {/* Header */}
-          <div className="bg-linear-to-r from-indigo-600 to-purple-600 px-4 py-3 flex items-center justify-between">
+          <div className="bg-indigo-600 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2 text-white">
               <Bot className="w-5 h-5" />
               <span className="font-semibold text-sm">Assistant Feeti</span>

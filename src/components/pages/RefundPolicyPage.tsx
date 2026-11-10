@@ -8,7 +8,7 @@ export function RefundPolicyPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-green-50">
+    <div className="min-h-screen bg-gray-50">
       <SEO
         title="Politique de Remboursement"
         description="Conditions de remboursement des billets achetés sur Feeti. Délais, procédures et cas éligibles au remboursement."
@@ -22,7 +22,7 @@ export function RefundPolicyPage() {
             Retour
           </Button>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-600 to-emerald-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
               <DollarSign className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -160,7 +160,7 @@ export function RefundPolicyPage() {
             </CardContent>
           </Card>
 
-          <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-8 text-center text-white">
+          <div className="bg-green-600 rounded-xl p-8 text-center text-white">
             <CheckCircle className="w-12 h-12 mx-auto mb-4" />
             <h3 className="text-2xl font-bold mb-2">Politique Équitable et Transparente</h3>
             <p className="text-green-100 mb-6 max-w-2xl mx-auto">Notre objectif est de traiter chaque demande de remboursement de manière juste et rapide.</p>

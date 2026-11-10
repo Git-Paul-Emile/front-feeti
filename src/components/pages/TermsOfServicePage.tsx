@@ -8,7 +8,7 @@ export function TermsOfServicePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50">
+    <div className="min-h-screen bg-gray-50">
       <SEO
         title="Conditions Générales d'Utilisation"
         description="Consultez les conditions générales d'utilisation de Feeti. Règles d'accès à la plateforme de billetterie, streaming et loisirs en Afrique."
@@ -23,7 +23,7 @@ export function TermsOfServicePage() {
             Retour
           </Button>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-blue-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center">
               <FileText className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -230,7 +230,7 @@ export function TermsOfServicePage() {
             </CardContent>
           </Card>
 
-          <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl p-8 text-center text-white">
+          <div className="bg-indigo-600 rounded-xl p-8 text-center text-white">
             <FileText className="w-12 h-12 mx-auto mb-4" />
             <h3 className="text-2xl font-bold mb-2">Conditions Claires et Équitables</h3>
             <p className="text-indigo-100 mb-6 max-w-2xl mx-auto">

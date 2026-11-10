@@ -874,9 +874,9 @@ function OrganizerRoute() {
       const notifications: { eventId: string; eventTitle: string; action: string; timestamp: number }[] = JSON.parse(raw);
       notifications.forEach(n => {
         if (n.action === 'approved') {
-          toast.success(`✅ Votre événement "${n.eventTitle}" a été approuvé et publié !`);
+          toast.success(`Votre événement "${n.eventTitle}" a été approuvé et publié !`);
         } else {
-          toast.error(`❌ Votre événement "${n.eventTitle}" a été rejeté par l'administration.`);
+          toast.error(`Votre événement "${n.eventTitle}" a été rejeté par l'administration.`);
         }
       });
       localStorage.removeItem(key);

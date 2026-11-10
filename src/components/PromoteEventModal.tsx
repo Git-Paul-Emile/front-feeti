@@ -8,7 +8,7 @@ import { Button } from './ui/button';
 import PromotionAPI, { type PackConfig } from '../services/api/PromotionAPI';
 import { PaymentSelector, type PaymentMethod } from './payment/PaymentSelector';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Check as CheckIcon, CreditCard as CreditCardIcon, Ticket as TicketIcon } from 'lucide-react';
 
 // Récupération de l'email utilisateur via contexte auth
 import { useAuth } from '../context/AuthContext';
@@ -175,7 +175,7 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
                       <ul className="space-y-1">
                         {cfg.advantages.map((adv, i) => (
                           <li key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
-                            <span className="text-green-500 mt-0.5 shrink-0">✓</span>
+                            <span className="text-green-500 mt-0.5 shrink-0"><CheckIcon className="w-4 h-4" aria-hidden="true" /></span>
                             <span>{adv}</span>
                           </li>
                         ))}
@@ -234,7 +234,7 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
                 className="text-left rounded-xl border-2 border-gray-200 hover:border-indigo-400 hover:shadow-md transition-all duration-150 p-5 bg-white"
               >
                 <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center mb-3">
-                  <span className="text-xl">💳</span>
+                  <span className="text-xl"><CreditCardIcon className="w-5 h-5" aria-hidden="true" /></span>
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-1">Payer maintenant</h3>
                 <p className="text-xs text-gray-500 leading-relaxed">
@@ -249,7 +249,7 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
                 className="text-left rounded-xl border-2 border-gray-200 hover:border-green-400 hover:shadow-md transition-all duration-150 p-5 bg-white disabled:opacity-60"
               >
                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mb-3">
-                  <span className="text-xl">🎟️</span>
+                  <span className="text-xl"><TicketIcon className="w-5 h-5" aria-hidden="true" /></span>
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-1">
                   {loading ? 'Activation...' : 'Payer sur les ventes'}
@@ -302,7 +302,7 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
         {step === 'confirmed' && confirmed && (
           <div className="text-center space-y-5 py-4">
             <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-              <span className="text-2xl">✓</span>
+              <span className="text-2xl"><CheckIcon className="w-6 h-6" aria-hidden="true" /></span>
             </div>
 
             <div>

@@ -321,10 +321,10 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                 window.location.href = `${FEETIPLAY_URL}/live${ssoParam}`;
               }
             }}
-            className="group relative bg-gradient-to-r from-[#dc2626] to-[#b91c1c] h-[30px] sm:h-[32px] md:h-[35px] w-[120px] sm:w-[140px] md:w-[160px] rounded-[20px] sm:rounded-[22px] md:rounded-[25px] flex items-center justify-center px-2 sm:px-3 md:px-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
+            className="group relative bg-[#dc2626] h-[30px] sm:h-[32px] md:h-[35px] w-[120px] sm:w-[140px] md:w-[160px] rounded-[20px] sm:rounded-[22px] md:rounded-[25px] flex items-center justify-center px-2 sm:px-3 md:px-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
           >
             {/* Shine effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             
             {/* Content */}
             <div className="relative flex items-center z-10">
@@ -335,17 +335,15 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
               </span>
             </div>
             
-            {/* Glow effect */}
-            <div className="absolute inset-0 rounded-[20px] sm:rounded-[22px] md:rounded-[25px] bg-gradient-to-r from-[#dc2626]/20 to-[#b91c1c]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
           </button>
 
           {/* Post Ad Button - Responsive */}
           <button
             onClick={() => onNavigate('organizer-dashboard')}
-            className="group relative bg-gradient-to-r from-[#03033b] to-[#1a0957] h-[30px] sm:h-[32px] md:h-[35px] w-[120px] sm:w-[140px] md:w-[160px] rounded-[20px] sm:rounded-[22px] md:rounded-[25px] flex items-center justify-center px-2 sm:px-3 md:px-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
+            className="group relative bg-[#03033b] h-[30px] sm:h-[32px] md:h-[35px] w-[120px] sm:w-[140px] md:w-[160px] rounded-[20px] sm:rounded-[22px] md:rounded-[25px] flex items-center justify-center px-2 sm:px-3 md:px-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
           >
             {/* Shine effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             
             {/* Content */}
             <div className="relative flex items-center z-10">
@@ -356,8 +354,6 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
               </span>
             </div>
             
-            {/* Glow effect */}
-            <div className="absolute inset-0 rounded-[20px] sm:rounded-[22px] md:rounded-[25px] bg-gradient-to-r from-[#00BDD7]/20 to-[#16BDA0]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
           </button>
 
 
@@ -414,7 +410,7 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                       }
                       setIsMobileMenuOpen(false);
                     }}
-                    className="w-full bg-gradient-to-r from-[#dc2626] to-[#b91c1c] text-white py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                    className="w-full bg-[#dc2626] text-white py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   >
                     <Zap className="w-4 h-4 shrink-0" />
                     <span>Event en direct</span>
@@ -425,7 +421,7 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                       onNavigate('organizer-dashboard');
                       setIsMobileMenuOpen(false);
                     }}
-                    className="w-full bg-gradient-to-r from-[#03033b] to-[#1a0957] text-white py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                    className="w-full bg-[#03033b] text-white py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   >
                     <Megaphone className="w-4 h-4 text-[#00BDD7] shrink-0" />
                     <span>Poster l'annonce</span>
@@ -654,7 +650,7 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                         onNavigate('login');
                         setIsMobileMenuOpen(false);
                       }}
-                      className="w-full bg-gradient-to-r from-[#03033b] to-[#1a0957] text-white py-3 rounded-lg font-medium hover:opacity-90 transition-opacity"
+                      className="w-full bg-[#03033b] text-white py-3 rounded-lg font-medium hover:opacity-90 transition-opacity"
                     >
                       Se connecter
                     </button>

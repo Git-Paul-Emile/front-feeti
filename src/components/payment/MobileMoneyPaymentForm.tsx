@@ -7,7 +7,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Loader, Smartphone, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Loader, Smartphone, CheckCircle, AlertTriangle, Lock as LockIcon } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import api from '../../routes/axiosConfig';
 
@@ -150,7 +150,7 @@ export function MobileMoneyPaymentForm({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200">
+            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
               <div className="flex items-center justify-between">
                 <span className="text-gray-700">Montant à payer</span>
                 <span className="text-2xl font-bold text-amber-600">
@@ -252,7 +252,7 @@ export function MobileMoneyPaymentForm({
             </Button>
 
             <p className="text-xs text-center text-gray-500">
-              🔒 Paiement sécurisé • Confirmez sur votre téléphone
+              <LockIcon className="w-4 h-4 inline-block mr-1.5 -mt-0.5 align-middle" aria-hidden="true" />Paiement sécurisé • Confirmez sur votre téléphone
             </p>
           </form>
         )}

@@ -37,7 +37,7 @@ export function PWAUpdateNotification() {
         {/* Logo Fééti */}
         <div
           className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg, #811AEC, #5a12a8)' }}
+          style={{ background: '#811AEC' }}
         >
           <FeetiMark size={24} />
         </div>

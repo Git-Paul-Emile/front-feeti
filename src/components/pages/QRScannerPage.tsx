@@ -146,16 +146,18 @@ export function QRScannerPage({ onBack }: QRScannerPageProps) {
               variant={mode === 'camera' ? 'default' : 'outline'}
               className={mode === 'camera' ? 'bg-indigo-600 hover:bg-indigo-700' : 'border-gray-600 text-gray-300'}
               onClick={() => { setMode('camera'); resetScan(); }}
+              aria-label="Scanner avec la caméra"
             >
-              <Camera className="w-4 h-4" />
+              <Camera className="w-4 h-4 mr-1.5" /> Caméra
             </Button>
             <Button
               size="sm"
               variant={mode === 'manual' ? 'default' : 'outline'}
               className={mode === 'manual' ? 'bg-indigo-600 hover:bg-indigo-700' : 'border-gray-600 text-gray-300'}
               onClick={() => { setMode('manual'); stopCamera(); resetScan(); }}
+              aria-label="Saisir le code du billet"
             >
-              <Keyboard className="w-4 h-4" />
+              <Keyboard className="w-4 h-4 mr-1.5" /> Saisie manuelle
             </Button>
           </div>
         </div>
@@ -300,7 +302,7 @@ export function QRScannerPage({ onBack }: QRScannerPageProps) {
                   <Input
                     value={manualInput}
                     onChange={e => setManualInput(e.target.value)}
-                    placeholder="Collez les données du QR code ici…"
+                    placeholder="Code du billet (8 caractères) ou contenu du QR code"
                     className="bg-gray-700 border-gray-600 text-white placeholder-gray-500"
                   />
                   <p className="text-xs text-gray-500">

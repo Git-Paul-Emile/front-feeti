@@ -157,6 +157,7 @@ import { LoginPage } from '../components/pages/LoginPage';
 // Lazy load des pages lourdes
 const AccountPage            = lazy(() => import('../components/pages/AccountPage').then(m => ({ default: m.AccountPage })));
 const UserDashboard          = lazy(() => import('../components/pages/UserDashboard').then(m => ({ default: m.UserDashboard })));
+const MyTicketsPage          = lazy(() => import('../components/pages/MyTicketsPage').then(m => ({ default: m.MyTicketsPage })));
 const ControllerDashboard    = lazy(() => import('../components/pages/ControllerDashboard').then(m => ({ default: m.ControllerDashboard })));
 const EventsListPage         = lazy(() => import('../components/pages/EventsListPage').then(m => ({ default: m.EventsListPage })));
 const EventDetailPage        = lazy(() => import('../components/pages/EventDetailPage').then(m => ({ default: m.EventDetailPage })));
@@ -1100,6 +1101,12 @@ function AdminRoute() {
   return <AdminDashboard currentUser={currentUser} onBack={() => navigate('/')} />;
 }
 
+// Mes billets détaillés : PDF, QR, demande de remboursement
+function MyTicketsRoute() {
+  const navigate = useNavigate();
+  return <MyTicketsPage onBack={() => navigate('/dashboard')} />;
+}
+
 function MyFavoritesRoute() {
   return <MyFavoritesPage />;
 }
@@ -1225,6 +1232,7 @@ export function AppRoutes() {
         {/* Routes protégées — utilisateur connecté */}
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard"        element={<UserDashboard />} />
+          <Route path="/dashboard/tickets" element={<MyTicketsRoute />} />
           <Route path="/profile"          element={<UserProfilePage />} />
           <Route path="/events/:id/buy"   element={<PaymentRoute />} />
           <Route path="/favorites"        element={<MyFavoritesRoute />} />

@@ -1167,6 +1167,88 @@ const STATUS_COLOR: Record<string, string> = {
   failed: 'bg-red-100 text-red-800', reversed: 'bg-gray-100 text-gray-700',
 };
 
+// ── Demandes de remboursement (paiements simulés) ───────────────────────────
+type RefundRequest = {
+  id: string;
+  price: number;
+  currency: string;
+  holderName: string;
+  refundReason?: string | null;
+  refundRequestedAt?: string | null;
+  event?: { title: string } | null;
+  user?: { name: string; email: string } | null;
+};
+
+function RefundRequestsCard() {
+  const [items, setItems] = useState<RefundRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await axiosInstance.get('/admin/tickets/refund-requests');
+      setItems(res.data.data ?? []);
+    } catch {
+      toast.error('Impossible de charger les demandes de remboursement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const decide = async (id: string, decision: 'approve' | 'reject') => {
+    setBusyId(id);
+    try {
+      await axiosInstance.post(`/admin/tickets/${id}/refund`, { decision });
+      setItems(prev => prev.filter(t => t.id !== id));
+      toast.success(decision === 'approve' ? 'Remboursement accepté (simulation)' : 'Demande refusée, billet de nouveau valide');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Erreur lors du traitement');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Demandes de remboursement</CardTitle>
+        <CardDescription>
+          {loading ? 'Chargement...' : `${items.length} demande(s) en attente`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {loading ? (
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Loader2 className="w-4 h-4 animate-spin" /> Chargement des demandes...
+          </div>
+        ) : items.length === 0 ? (
+          <p className="text-sm text-gray-500">Aucune demande en attente.</p>
+        ) : items.map(t => (
+          <div key={t.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 p-3">
+            <div className="min-w-0">
+              <p className="font-medium text-gray-900">{t.event?.title ?? 'Événement'} · {new Intl.NumberFormat('fr-FR').format(t.price)} {t.currency}</p>
+              <p className="text-xs text-gray-500">
+                {t.user?.name ?? t.holderName} ({t.user?.email ?? '-'}) · N° {t.id.slice(-8).toUpperCase()}
+                {t.refundRequestedAt ? ` · demandé le ${new Date(t.refundRequestedAt).toLocaleDateString('fr-FR')}` : ''}
+              </p>
+              {t.refundReason && <p className="text-xs text-gray-700 mt-1">Motif : {t.refundReason}</p>}
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" disabled={busyId === t.id} onClick={() => decide(t.id, 'reject')}>Refuser</Button>
+              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" disabled={busyId === t.id} onClick={() => decide(t.id, 'approve')}>
+                {busyId === t.id && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}Rembourser
+              </Button>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('events');
@@ -3095,6 +3177,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                 Actualiser
               </Button>
             </div>
+            <RefundRequestsCard />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card>
                 <CardHeader>

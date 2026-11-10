@@ -392,6 +392,16 @@ export function UserDashboard({}: UserDashboardProps) {
           </TabsList>
 
           <TabsContent value="tickets" className="space-y-6">
+            {/* Accès à la gestion détaillée : PDF, QR, remboursement */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4">
+              <p className="text-sm text-gray-600">
+                Téléchargez vos billets en PDF ou demandez un remboursement.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/tickets')}>
+                Gérer mes billets
+              </Button>
+            </div>
+
             {/* Upcoming Events */}
             {upcomingTickets.length > 0 && (
               <div>

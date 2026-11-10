@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import TicketAPI from '../../services/api/TicketAPI';
 import api from '../../routes/axiosConfig';
-import DeliveryAPI, { type DeliveryZone } from '../../services/api/DeliveryAPI';
+import DeliveryAPI, { type DeliveryZone, type DeliveryCity } from '../../services/api/DeliveryAPI';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
@@ -32,7 +32,8 @@ import {
   Crown,
   Truck,
   Smartphone,
-  Wallet
+  Wallet,
+  Loader2
 } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { QRCodeGenerator } from '../QRCodeGenerator';
@@ -118,8 +119,9 @@ interface TicketPurchasePageProps {
 }
 
 export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentUser, headerCountryCode }: TicketPurchasePageProps) {
-  // Pays effectif pour la livraison : header country si défini, sinon pays de l'événement
-  const deliveryCountryCode = headerCountryCode ?? event.countryCode ?? '';
+  // Pays de livraison : celui de l'événement (les villes proposées sont celles de ce pays) ;
+  // le pays de l'en-tête ne sert que si l'événement n'en a pas.
+  const deliveryCountryCode = event.countryCode ?? headerCountryCode ?? '';
   // États principaux
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -197,18 +199,35 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
   const [deliveryMethod, setDeliveryMethod] = useState<'email' | 'physical'>('email');
   const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState('');
+  const [deliveryCities, setDeliveryCities] = useState<DeliveryCity[]>([]);
+  const [selectedCityId, setSelectedCityId] = useState('');
+  const [loadingDelivery, setLoadingDelivery] = useState(false);
   const [deliveryRecipientName, setDeliveryRecipientName] = useState(defaultFullName);
   const [deliveryRecipientPhone, setDeliveryRecipientPhone] = useState(currentUser?.phone || '');
   const [deliveryInfo, setDeliveryInfo] = useState('');
 
   const selectedZone = deliveryZones.find(z => z.id === selectedZoneId);
+  const selectedCity = deliveryCities.find(c => c.id === selectedCityId);
   const deliveryFee = deliveryMethod === 'physical' && selectedZone ? selectedZone.fee : 0;
 
   // Chargement des zones quand on passe en livraison physique ou que le pays change
   useEffect(() => {
     if (deliveryMethod === 'physical' && deliveryCountryCode) {
       setSelectedZoneId('');
-      DeliveryAPI.getZonesByCountry(deliveryCountryCode).then(setDeliveryZones).catch(() => {});
+      setSelectedCityId('');
+      setLoadingDelivery(true);
+      Promise.all([
+        DeliveryAPI.getZonesByCountry(deliveryCountryCode),
+        DeliveryAPI.getCitiesByCountry(deliveryCountryCode),
+      ])
+        .then(([zones, cities]) => {
+          setDeliveryZones(zones);
+          // Seules les villes rattachées à une zone active du pays sont livrables
+          const zoneIds = new Set(zones.map(z => z.id));
+          setDeliveryCities(cities.filter(c => zoneIds.has(c.zoneId)).sort((a, b) => a.name.localeCompare(b.name, 'fr')));
+        })
+        .catch(() => toast.error('Impossible de charger les villes de livraison'))
+        .finally(() => setLoadingDelivery(false));
     }
   }, [deliveryMethod, deliveryCountryCode]);
 
@@ -285,7 +304,7 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
         return;
       }
       if (deliveryMethod === 'physical') {
-        if (!selectedZoneId) { toast.error('Veuillez sélectionner votre quartier / zone'); return; }
+        if (!selectedCityId || !selectedZoneId) { toast.error('Veuillez sélectionner votre ville de livraison'); return; }
         if (!deliveryRecipientName || !deliveryRecipientPhone) { toast.error('Nom et téléphone du destinataire obligatoires'); return; }
       }
       setCurrentStep(3);
@@ -357,7 +376,7 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
             zoneId: selectedZoneId,
             recipientName: deliveryRecipientName,
             recipientPhone: deliveryRecipientPhone,
-            additionalInfo: deliveryInfo || undefined,
+            additionalInfo: [selectedCity ? `Ville : ${selectedCity.name}` : '', deliveryInfo].filter(Boolean).join(' | ') || undefined,
           }),
         },
         paymentProvider: provider,
@@ -652,8 +671,13 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
                     {!deliveryCountryCode && (
                       <p className="text-sm text-amber-600">Impossible de déterminer le pays de livraison.</p>
                     )}
-                    {deliveryCountryCode && deliveryZones.length === 0 && (
-                      <p className="text-sm text-amber-600">Aucune zone de livraison disponible pour ce pays.</p>
+                    {deliveryCountryCode && loadingDelivery && (
+                      <p className="text-sm text-gray-500 flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Chargement des villes de livraison...
+                      </p>
+                    )}
+                    {deliveryCountryCode && !loadingDelivery && deliveryCities.length === 0 && (
+                      <p className="text-sm text-amber-600">Aucune ville de livraison disponible pour ce pays.</p>
                     )}
 
                     {/* Destinataire */}
@@ -668,26 +692,34 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
                       </div>
                     </div>
 
-                    {/* Rue / Quartier = zones admin */}
-                    {deliveryZones.length > 0 && (
+                    {/* Ville de livraison : villes du pays de l'événement, la zone (frais) en découle */}
+                    {deliveryCities.length > 0 && (
                       <div className="space-y-2">
-                        <Label>Rue / Quartier *</Label>
-                        <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
+                        <Label>Ville / quartier de livraison *</Label>
+                        <Select
+                          value={selectedCityId}
+                          onValueChange={(cityId: string) => {
+                            setSelectedCityId(cityId);
+                            setSelectedZoneId(deliveryCities.find(c => c.id === cityId)?.zoneId ?? '');
+                          }}
+                        >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez votre quartier / zone" />
+                            <SelectValue placeholder="Sélectionnez votre ville ou quartier" />
                           </SelectTrigger>
                           <SelectContent className="bg-white">
-                            {deliveryZones.map(z => (
-                              <SelectItem key={z.id} value={z.id}>
-                                {z.name}
-                                {z.description ? ` — ${z.description}` : ''}
-                              </SelectItem>
-                            ))}
+                            {deliveryCities.map(c => {
+                              const zone = deliveryZones.find(z => z.id === c.zoneId);
+                              return (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.name}{zone ? ` (${zone.name})` : ''}
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                         {selectedZone && (
                           <p className="text-xs text-indigo-600 font-medium">
-                            Frais de livraison : {formatPrice(selectedZone.fee, selectedZone.currency)}
+                            Zone {selectedZone.name}, frais de livraison : {formatPrice(selectedZone.fee, selectedZone.currency)}
                           </p>
                         )}
                       </div>
@@ -1033,7 +1065,7 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
                     <div className="bg-white p-4 rounded-lg">
                       <p className="text-sm text-gray-600 mb-2">Votre commande inclut :</p>
                       <ul className="text-sm text-gray-700 space-y-1">
-                        <li>• Livraison dans la zone : {selectedZone?.name}</li>
+                        <li>• Livraison à : {selectedCity?.name ?? selectedZone?.name}</li>
                         <li>• Frais de livraison : {deliveryFee > 0 ? formatPrice(deliveryFee, selectedZone?.currency || 'FCFA') : 'Offerts'}</li>
                         <li>• Téléphone de contact : {deliveryRecipientPhone}</li>
                         {deliveryInfo && <li>• Note : {deliveryInfo}</li>}
@@ -1250,7 +1282,7 @@ export function TicketPurchasePage({ event, onBack, onPurchaseComplete, currentU
                           })}
                         {deliveryFee > 0 && (
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Livraison ({selectedZone?.name})</span>
+                            <span className="text-gray-600">Livraison ({selectedCity?.name ?? selectedZone?.name})</span>
                             <span className="font-medium">{formatPrice(deliveryFee, selectedZone?.currency || event.currency)}</span>
                           </div>
                         )}

@@ -169,14 +169,45 @@ export function EventDetailPage({ event, onBack, onPurchase, onStreamWatch, curr
           text: event.description,
           url: window.location.href,
         });
-      } catch (err) {
-        console.log('Erreur lors du partage:', err);
+      } catch {
+        return; // partage annulé : aucun point crédité
       }
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      const url = window.location.href;
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(url);
+        copied = true;
+      } catch {
+        // Secours pour les navigateurs qui refusent l'API presse-papiers
+        const area = document.createElement('textarea');
+        area.value = url;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        try { copied = document.execCommand('copy'); } catch { copied = false; }
+        area.remove();
+      }
+      if (copied) {
+        toast.success('Lien de l\'événement copié');
+      } else {
+        toast.info(`Copiez ce lien pour partager : ${url}`);
+        return;
+      }
     }
-    // Créditer les points de partage Feeti Na Feeti (fire-and-forget)
-    if (currentUser) loyaltyApi.shareEvent(event.id).catch(() => {});
+    // Créditer les points de partage Feeti Na Feeti
+    if (currentUser) {
+      loyaltyApi.shareEvent(event.id)
+        .then((res: any) => {
+          const pts = res?.data?.points;
+          if (pts) toast.success(`+${pts} points Feeti Na Feeti pour ce partage`);
+        })
+        .catch((err: any) => {
+          const msg = err?.response?.data?.message;
+          if (msg) toast.info(msg);
+        });
+    }
   };
 
   return (

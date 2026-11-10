@@ -5,7 +5,6 @@ import { registerRoute, NavigationRoute } from 'workbox-routing';
 import {
   NetworkFirst,
   CacheFirst,
-  StaleWhileRevalidate,
   NetworkOnly,
 } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
@@ -25,6 +24,13 @@ precacheAndRoute(self.__WB_MANIFEST);
 // Supprime les anciens caches à chaque activation
 cleanupOutdatedCaches();
 
+// Anciens caches runtime remplacés (réponses opaques ou données périmées)
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    Promise.all(['cloudinary-images', 'events-api-cache'].map((name) => caches.delete(name)))
+  );
+});
+
 // ── Navigation : app shell (SPA) ─────────────────────────────────────────────
 // Toutes les navigations qui ne sont pas /api/ ou /admin/ passent par l'index
 registerRoute(
@@ -40,15 +46,23 @@ registerRoute(
   )
 );
 
-// ── API événements (lecture seule) ───────────────────────────────────────────
+// ── API événements publics (lecture seule) ───────────────────────────────────
+// Réseau d'abord : places restantes et statuts doivent toujours être à jour.
+// Le cache ne sert qu'en secours hors-ligne. Les routes personnelles
+// (favoris, billets, espace organisateur) et les requêtes authentifiées
+// ne passent jamais par le cache.
+const PRIVATE_EVENT_ROUTES = /\/api\/events\/(favorites|my|organizer|admin)/;
 registerRoute(
-  ({ url }) =>
-    url.pathname.startsWith('/api/events') ||
-    (url.hostname === 'localhost' && url.port === '8000' && url.pathname.startsWith('/api/events')),
-  new StaleWhileRevalidate({
-    cacheName: 'events-api-cache',
+  ({ url, request }) =>
+    request.method === 'GET' &&
+    url.pathname.startsWith('/api/events') &&
+    !PRIVATE_EVENT_ROUTES.test(url.pathname) &&
+    !request.headers.has('Authorization'),
+  new NetworkFirst({
+    cacheName: 'events-api-v2',
+    networkTimeoutSeconds: 4,
     plugins: [
-      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new CacheableResponsePlugin({ statuses: [200] }),
       new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 60 * 60 }),
     ],
   })
@@ -61,12 +75,15 @@ registerRoute(
 );
 
 // ── Images Cloudinary ────────────────────────────────────────────────────────
+// Seules les requêtes CORS sont mises en cache : une réponse opaque (balise
+// <img> sans crossOrigin) resservie à un canvas ferait disparaître l'affiche
+// du billet généré.
 registerRoute(
-  ({ url }) => url.hostname === 'res.cloudinary.com',
+  ({ url, request }) => url.hostname === 'res.cloudinary.com' && request.mode === 'cors',
   new CacheFirst({
-    cacheName: 'cloudinary-images',
+    cacheName: 'cloudinary-images-v2',
     plugins: [
-      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new CacheableResponsePlugin({ statuses: [200] }),
       new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 }),
     ],
   })

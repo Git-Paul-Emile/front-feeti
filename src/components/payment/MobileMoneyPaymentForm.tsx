@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Loader, Smartphone, CheckCircle, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import api from '../../routes/axiosConfig';
 
 type MobileOperator = 'mtn' | 'orange' | 'airtel';
 
@@ -51,55 +52,47 @@ export function MobileMoneyPaymentForm({
 
     try {
       // Initialiser le paiement
-      const response = await fetch('/api/payments/mobile-money/initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount,
-          currency,
-          phone: phoneNumber,
-          provider,
-          metadata
-        })
+      const res = await api.post('/api/payments/mobile-money/initialize', {
+        amount,
+        currency,
+        phone: phoneNumber,
+        provider,
+        metadata,
       });
+      const txId: string | undefined = res.data?.data?.transaction_id;
+      if (!txId) throw new Error(res.data?.message || "Erreur lors de l'initialisation");
 
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Erreur lors de l\'initialisation');
-      }
-
-      setTransactionId(data.transaction_id);
+      setTransactionId(txId);
       setPendingPayment(true);
-      toast.success('Vérifiez votre téléphone pour confirmer le paiement');
+      toast.success(res.data?.message || 'Vérifiez votre téléphone pour confirmer le paiement');
 
       // Démarrer la vérification du statut
-      checkPaymentStatus(data.transaction_id);
+      checkPaymentStatus(txId);
     } catch (err: any) {
-      console.error('Mobile Money Error:', err);
-      onError(err.message);
-      toast.error('Erreur lors du paiement');
+      const message = err?.response?.data?.message || err.message;
+      onError(message);
+      toast.error(message || 'Erreur lors du paiement');
       setLoading(false);
     }
   };
 
   const checkPaymentStatus = async (txId: string, attempts = 0) => {
-    const maxAttempts = 60; // 5 minutes (5s * 60)
+    const maxAttempts = 150; // 5 minutes (2 s * 150)
     
     try {
-      const response = await fetch(`/api/payments/mobile-money/status/${txId}`);
-      const data = await response.json();
+      const res = await api.get(`/api/payments/mobile-money/status/${txId}`);
+      const data = res.data?.data ?? {};
 
       if (data.status === 'completed') {
         toast.success('Paiement confirmé !');
         onSuccess(txId);
         setPendingPayment(false);
         setLoading(false);
-      } else if (data.status === 'failed') {
+      } else if (data.status === 'failed' || data.status === 'cancelled') {
         throw new Error('Paiement échoué');
       } else if (attempts < maxAttempts) {
         // Réessayer dans 5 secondes
-        setTimeout(() => checkPaymentStatus(txId, attempts + 1), 5000);
+        setTimeout(() => checkPaymentStatus(txId, attempts + 1), 2000);
       } else {
         throw new Error('Délai d\'attente dépassé');
       }

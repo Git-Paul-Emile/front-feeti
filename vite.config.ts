@@ -111,7 +111,8 @@
         },
 
         devOptions: {
-          enabled: true,
+          // SW désactivé en dev : évite de servir des données ou modules périmés
+          enabled: false,
           type: 'module',
         },
       }),

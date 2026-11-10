@@ -419,6 +419,12 @@ function Pagination({ page, totalPages, onChange }: { page: number; totalPages: 
 
 // ─── Page principale ──────────────────────────────────────────────────────────
 
+// 950 → « 950 », 12 400 → « 12,4K » : évite d'afficher « 0K » pour les petits volumes
+function compactNumber(n: number): string {
+  if (Math.abs(n) < 1000) return new Intl.NumberFormat('fr-FR').format(n);
+  return new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+}
+
 export function FeetiNaFeetiAdminPage({ onBack }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
@@ -698,9 +704,9 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { label: 'Membres fidélité', value: stats.totalUsers.toLocaleString(), sub: `${stats.activeUsers.toLocaleString()} actifs`, Icon: Users, bg: 'bg-indigo-100', ic: 'text-indigo-600' },
-                { label: 'Points distribués', value: `${(stats.pointsDistributed / 1000).toFixed(0)}K`, sub: `≈ ${((stats.pointsDistributed * 20) / 1000).toFixed(0)}K FCFA`, Icon: TrendingUp, bg: 'bg-green-100', ic: 'text-green-600' },
+                { label: 'Points distribués', value: compactNumber(stats.pointsDistributed), sub: `≈ ${compactNumber(stats.pointsDistributed * 20)} FCFA`, Icon: TrendingUp, bg: 'bg-green-100', ic: 'text-green-600' },
                 { label: 'En circulation', value: pointsAvailable.toLocaleString(), sub: `≈ ${(pointsAvailable * 20).toLocaleString()} FCFA`, Icon: Gift, bg: 'bg-purple-100', ic: 'text-purple-600' },
-                { label: 'Dépenses partenaires', value: `${((stats.partnerSpendingTotal ?? 0) / 1000).toFixed(0)}K FCFA`, sub: `${stats.partnerTransactions ?? 0} transactions`, Icon: Store, bg: 'bg-amber-100', ic: 'text-amber-600' },
+                { label: 'Dépenses partenaires', value: `${compactNumber(stats.partnerSpendingTotal ?? 0)} FCFA`, sub: `${stats.partnerTransactions ?? 0} transactions`, Icon: Store, bg: 'bg-amber-100', ic: 'text-amber-600' },
               ].map(({ label, value, sub, Icon, bg, ic }) => (
                 <Card key={label}>
                   <CardContent className="p-5">

@@ -884,18 +884,27 @@ function OrganizerRoute() {
     }
   }, [currentUser?.id]);
 
-  const handleEventCreate = useCallback(async (eventData: { title: string; description: string; date: string; time: string; location: string; imageFile?: File; price?: number; ticketTypes?: { type: string; price?: number }[]; category?: string; maxAttendees?: number; duration?: string; isLive?: boolean }) => {
+  // Création : chaque étape est signalée à l'interface (onStep) et une erreur est
+  // renvoyée à l'appelant pour garder le formulaire ouvert.
+  const handleEventCreate = useCallback(async (
+    eventData: { title: string; description: string; date: string; time: string; location: string; countryCode?: string; eventType?: 'PRESENTIEL' | 'STREAMING_LIVE' | 'MIXTE'; imageFile?: File; price?: number; ticketTypes?: { type: string; price?: number }[]; category?: string; maxAttendees?: number; duration?: string; isLive?: boolean },
+    onStep?: (label: string) => void,
+  ) => {
     try {
       let imageUrl = '';
       if (eventData.imageFile instanceof File) {
+        onStep?.("Envoi de l'affiche...");
         imageUrl = await EventsBackendAPI.uploadImage(eventData.imageFile);
       }
+      onStep?.("Enregistrement de l'événement...");
       const created = await EventsBackendAPI.createEvent({
         title: eventData.title,
         description: eventData.description,
         date: eventData.date,
         time: eventData.time,
         location: eventData.location,
+        countryCode: eventData.countryCode,
+        eventType: eventData.eventType,
         image: imageUrl,
         price: eventData.price ?? 0,
         vipPrice: eventData.ticketTypes?.find((t: any) => t.type === 'VIP')?.price,
@@ -907,6 +916,9 @@ function OrganizerRoute() {
         isLive: eventData.isLive,
         status: 'draft',
       });
+      // Événement visible tout de suite dans la liste, sans attendre le rechargement
+      setOrganizerEvents(prev => [created as any, ...prev.filter(e => e.id !== created.id)]);
+      onStep?.("Configuration des accès...");
       try {
         await Promise.all([
           AccessAPI.applyDefaultZones(created.id),
@@ -918,8 +930,10 @@ function OrganizerRoute() {
       }
       toast.success('Événement soumis ! Il sera visible après validation par un administrateur.');
       refreshEvents();
-    } catch {
-      toast.error('Erreur lors de la création de l\'événement');
+      return created;
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Erreur lors de la création de l'événement");
+      throw err;
     }
   }, []);
 
@@ -933,18 +947,25 @@ function OrganizerRoute() {
     }
   }, []);
 
-  const handleEventEdit = useCallback(async (eventId: string, eventData: { title?: string; description?: string; date?: string; time?: string; location?: string; imageFile?: File; price?: number; ticketTypes?: { type: string; price?: number }[]; category?: string; maxAttendees?: number; duration?: string; isLive?: boolean; eventType?: string }) => {
+  const handleEventEdit = useCallback(async (
+    eventId: string,
+    eventData: { title?: string; description?: string; date?: string; time?: string; location?: string; countryCode?: string; imageFile?: File; price?: number; ticketTypes?: { type: string; price?: number }[]; category?: string; maxAttendees?: number; duration?: string; isLive?: boolean; eventType?: string },
+    onStep?: (label: string) => void,
+  ) => {
     try {
       let imageUrl: string | undefined;
       if (eventData.imageFile instanceof File) {
+        onStep?.("Envoi de l'affiche...");
         imageUrl = await EventsBackendAPI.uploadImage(eventData.imageFile);
       }
+      onStep?.('Enregistrement des modifications...');
       const updated = await EventsBackendAPI.updateEvent(eventId, {
         title: eventData.title,
         description: eventData.description,
         date: eventData.date,
         time: eventData.time,
         location: eventData.location,
+        ...(eventData.countryCode ? { countryCode: eventData.countryCode } : {}),
         ...(imageUrl ? { image: imageUrl } : {}),
         price: eventData.price ?? 0,
         vipPrice: eventData.ticketTypes?.find((t: any) => t.type === 'VIP')?.price,
@@ -954,7 +975,7 @@ function OrganizerRoute() {
         maxAttendees: eventData.maxAttendees ?? 100,
         duration: eventData.duration,
         isLive: eventData.isLive,
-        eventType: eventData.eventType,
+        eventType: eventData.eventType as any,
       });
       // Mise à jour immédiate du state local avec la réponse du backend
       if (updated) {
@@ -962,8 +983,9 @@ function OrganizerRoute() {
       }
       toast.success('Événement modifié avec succès !');
       refreshEvents();
-    } catch {
-      toast.error('Erreur lors de la modification de l\'événement');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Erreur lors de la modification de l'événement");
+      throw err;
     }
   }, []);
 
@@ -976,6 +998,9 @@ function OrganizerRoute() {
       onEventDelete={handleEventDelete}
       onEventToggleSales={(id, salesBlocked) =>
         setOrganizerEvents(prev => prev.map(e => e.id === id ? { ...e, salesBlocked } : e))
+      }
+      onEventPromoted={(id, patch) =>
+        setOrganizerEvents(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e))
       }
       onEventSelect={(id: string) => navigate(`/organizer/event/${id}`)}
       onManageControllers={(id: string) => navigate(`/organizer/event/${id}/access`, { state: { initialTab: 'controleurs' } })}
@@ -1029,7 +1054,9 @@ function LoginRoute() {
   const handleRegister = async (data: RegisterData) => {
     const user = await registerUser(data);
     toast.success(`Bienvenue ${user.name} ! Votre compte a été créé.`);
-    navigate(user.role === 'organizer' ? '/organizer' : '/', { replace: true });
+    // Chaque rôle arrive directement dans son espace
+    const homeByRole: Record<string, string> = { organizer: '/organizer', establishment_owner: '/establishment' };
+    navigate(homeByRole[user.role] ?? '/dashboard', { replace: true });
   };
 
   const handleGoogleLogin = async () => {
@@ -1096,7 +1123,7 @@ function ReferralCaptureRoute() {
     if (code) localStorage.setItem('feeti_pending_referral', code);
   }, [code]);
 
-  return <Navigate to={user ? '/' : '/login'} replace />;
+  return <Navigate to={user ? '/' : '/login?mode=signup'} replace />;
 }
 
 function FeetiNaFeetiAdminRoute() {

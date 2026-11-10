@@ -874,7 +874,10 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
 
 // ── Page principale ──────────────────────────────────────────────────────────
 export function LoginPage({ onLogin, onRegister, onGoogleLogin, onGoogleRegister, onForgotPassword, onBack }: LoginPageProps) {
-  const [isLogin, setIsLogin] = useState(true);
+  // ?mode=signup (ex. lien de parrainage /ref/:code) ouvre directement l'inscription
+  const [isLogin, setIsLogin] = useState(
+    () => new URLSearchParams(window.location.search).get('mode') !== 'signup'
+  );
 
   return (
     <div className="bg-[#0e0434] relative size-full min-h-screen" data-name="Login">

@@ -58,6 +58,20 @@ async function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+// L'affiche a souvent déjà été chargée par une balise <img> sans CORS : le
+// navigateur (ou le service worker) peut alors resservir une copie inutilisable
+// dans un canvas. En cas d'échec, on recharge une URL distincte pour forcer
+// une requête CORS fraîche.
+async function loadRemoteImage(src: string): Promise<HTMLImageElement> {
+  try {
+    return await loadImage(src);
+  } catch {
+    if (src.startsWith('data:') || src.startsWith('blob:')) throw new Error('image illisible');
+    const sep = src.includes('?') ? '&' : '?';
+    return loadImage(`${src}${sep}feeti_ticket=1`);
+  }
+}
+
 export async function buildTicketCanvas(ticket: Ticket): Promise<HTMLCanvasElement> {
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -84,7 +98,7 @@ export async function buildTicketCanvas(ticket: Ticket): Promise<HTMLCanvasEleme
   // Image réduite de 65px et centrée dans le cadre
   if (ticket.eventImage) {
     try {
-      const evImg = await loadImage(ticket.eventImage);
+      const evImg = await loadRemoteImage(ticket.eventImage);
       const fw = 393 - 65, fh = 489 - 65;            // 328 × 424
       const imgX = 83  + Math.round((393 - fw) / 2); // 83 + 32 = 115
       const imgY = 103 + Math.round((489 - fh) / 2); // 103 + 32 = 135

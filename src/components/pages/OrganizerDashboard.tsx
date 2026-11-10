@@ -9,6 +9,7 @@ import { EventPromotionBadge, isEventPromotionActive } from '../PromotionBadge';
 import { PromoteEventModal } from '../PromoteEventModal';
 import { EventPageModal } from '../EventPageModal';
 import CategoriesAPI from '../../services/api/CategoriesAPI';
+import { useCountry } from '../../context/CountryContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -42,6 +43,7 @@ import {
   Shield,
   Globe,
   CreditCard,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { firebaseClientErrorToUserMessage } from '../../utils/firebaseUserFacingError';
@@ -77,12 +79,14 @@ interface Event {
 interface OrganizerDashboardProps {
   currentUser: any;
   organizerEvents: Event[];
-  onEventCreate: (eventData: any) => void;
-  onEventEdit: (eventId: string, eventData: any) => void;
+  // onStep : libellé de l'étape en cours, affiché pendant l'opération
+  onEventCreate: (eventData: any, onStep?: (label: string) => void) => Promise<unknown> | void;
+  onEventEdit: (eventId: string, eventData: any, onStep?: (label: string) => void) => Promise<unknown> | void;
   onEventDelete: (eventId: string) => void;
   onEventSelect: (eventId: string) => void;
   onManageControllers?: (eventId: string) => void;
   onEventToggleSales?: (eventId: string, salesBlocked: boolean) => void;
+  onEventPromoted?: (eventId: string, patch: { promotionType: string; promotionStatus: string; promotionStartDate: string; promotionEndDate: string }) => void;
   onNavigate?: (page: string) => void;
   onFeetiAccess?: (eventId: string) => void;
 }
@@ -96,11 +100,16 @@ export function OrganizerDashboard({
   onEventSelect,
   onManageControllers,
   onEventToggleSales,
+  onEventPromoted,
   onNavigate,
   onFeetiAccess
 }: OrganizerDashboardProps) {
   type TicketTypeEntry = { type: string; price: number };
   const DEFAULT_TICKET_TYPES: TicketTypeEntry[] = [{ type: 'Standard', price: 0 }];
+  const { countries } = useCountry();
+  // Suivi des opérations longues (envoi de l'affiche, enregistrement)
+  const [createStep, setCreateStep] = useState<string | null>(null);
+  const [editStep, setEditStep] = useState<string | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   // Wizard : 'wizard' = choix du type, 'public' = form public, 'badges' = form privé badges
@@ -119,6 +128,7 @@ export function OrganizerDashboard({
     date: '',
     time: '',
     location: '',
+    countryCode: '',
     category: '',
     maxAttendees: 100,
     duration: '',
@@ -149,6 +159,7 @@ export function OrganizerDashboard({
     date: '',
     time: '',
     location: '',
+    countryCode: '',
     category: '',
     maxAttendees: 100,
     duration: '',
@@ -238,13 +249,15 @@ export function OrganizerDashboard({
     }
   }, [onEventToggleSales]);
 
-  const handleCreateEvent = (e: React.FormEvent) => {
+  const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (createStep) return; // création déjà en cours
     if (!newEvent.title.trim()) { toast.error('Le titre est obligatoire'); return; }
     if (!newEvent.description.trim()) { toast.error('La description est obligatoire'); return; }
     if (!newEvent.date) { toast.error('La date est obligatoire'); return; }
     if (!newEvent.time) { toast.error("L'heure est obligatoire"); return; }
-    if (!newEvent.location.trim()) { toast.error('Le lieu est obligatoire'); return; }
+    if (!newEvent.countryCode) { toast.error('Le pays est obligatoire'); return; }
+    if (!newEvent.location.trim()) { toast.error('Le lieu précis est obligatoire'); return; }
     if (!newEvent.duration.trim()) { toast.error('La durée estimée est obligatoire'); return; }
     if (!newEvent.category) { toast.error('La catégorie est obligatoire'); return; }
     if (!imageFile) { toast.error("L'affiche de l'événement est obligatoire"); return; }
@@ -254,17 +267,24 @@ export function OrganizerDashboard({
       toast.error('Le consentement pour la diffusion live est obligatoire');
       return;
     }
-    onEventCreate({
-      ...newEvent,
-      isLive: isLiveEvent,
-      ticketTypes: createTicketTypes,
-      price: createTicketTypes[0]?.price ?? 0,
-      imageFile,
-      organizer: currentUser.name,
-      attendees: 0,
-    });
+    setCreateStep('Préparation...');
+    try {
+      await onEventCreate({
+        ...newEvent,
+        isLive: isLiveEvent,
+        ticketTypes: createTicketTypes,
+        price: createTicketTypes[0]?.price ?? 0,
+        imageFile,
+        organizer: currentUser.name,
+        attendees: 0,
+      }, setCreateStep);
+    } catch {
+      return; // erreur déjà affichée : le formulaire reste ouvert avec la saisie
+    } finally {
+      setCreateStep(null);
+    }
     setIsCreateModalOpen(false);
-    setNewEvent({ title: '', description: '', date: '', time: '', location: '', category: '', maxAttendees: 100, duration: '', eventType: 'PRESENTIEL' });
+    setNewEvent({ title: '', description: '', date: '', time: '', location: '', countryCode: '', category: '', maxAttendees: 100, duration: '', eventType: 'PRESENTIEL' });
     setCreateLiveConsentAccepted(false);
     setCreateTicketTypes(DEFAULT_TICKET_TYPES);
     setImageFile(null);
@@ -279,6 +299,7 @@ export function OrganizerDashboard({
       date: event.date,
       time: event.time,
       location: event.location,
+      countryCode: (event as any).countryCode || '',
       category: event.category,
       maxAttendees: event.maxAttendees,
       duration: (event as any).duration || '',
@@ -300,9 +321,9 @@ export function OrganizerDashboard({
     setIsEditModalOpen(true);
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingEvent) return;
+    if (!editingEvent || editStep) return;
     if (!editForm.title.trim()) { toast.error('Le titre est obligatoire'); return; }
     if (!editForm.description.trim()) { toast.error('La description est obligatoire'); return; }
     if (!editForm.date) { toast.error('La date est obligatoire'); return; }
@@ -317,13 +338,20 @@ export function OrganizerDashboard({
       toast.error('Le consentement pour la diffusion live est obligatoire');
       return;
     }
-    onEventEdit(editingEvent.id, {
-      ...editForm,
-      isLive: isLiveEvent,
-      ticketTypes: editTicketTypes,
-      price: editTicketTypes[0]?.price ?? 0,
-      imageFile: editImageFile,
-    });
+    setEditStep('Préparation...');
+    try {
+      await onEventEdit(editingEvent.id, {
+        ...editForm,
+        isLive: isLiveEvent,
+        ticketTypes: editTicketTypes,
+        price: editTicketTypes[0]?.price ?? 0,
+        imageFile: editImageFile,
+      }, setEditStep);
+    } catch {
+      return; // erreur déjà affichée : la fenêtre reste ouverte
+    } finally {
+      setEditStep(null);
+    }
     setIsEditModalOpen(false);
     setEditingEvent(null);
     setEditImageFile(null);
@@ -599,15 +627,33 @@ export function OrganizerDashboard({
                     />
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="country">Pays *</Label>
+                    <Select
+                      value={newEvent.countryCode}
+                      onValueChange={(value: string) => setNewEvent({...newEvent, countryCode: value})}
+                    >
+                      <SelectTrigger id="country">
+                        <SelectValue placeholder="Choisir le pays" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.map(c => (
+                          <SelectItem key={c.code} value={c.code}>{c.flag} {c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="location">Lieu *</Label>
+                    <Label htmlFor="location">Lieu précis *</Label>
                     <Input
                       id="location"
                       value={newEvent.location}
                       onChange={(e) => setNewEvent({...newEvent, location: e.target.value})}
-                      placeholder="Adresse ou nom du lieu"
+                      placeholder="Ex : Palais des Congrès, avenue Amilcar Cabral, Brazzaville"
                       required
                     />
+                    <p className="text-xs text-gray-500">Nom de la salle, adresse et ville : ces informations servent à l'itinéraire et à la livraison des billets.</p>
                   </div>
 
                   <div className="space-y-2">
@@ -931,8 +977,13 @@ export function OrganizerDashboard({
                   <Button type="button" variant="outline" onClick={() => setCreateMode('wizard')}>
                     Retour
                   </Button>
-                  <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
-                    Créer l'événement
+                  <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={!!createStep}>
+                    {createStep ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {createStep}
+                      </span>
+                    ) : "Créer l'événement"}
                   </Button>
                 </div>
               </form>
@@ -982,9 +1033,9 @@ export function OrganizerDashboard({
                     style={{ flex: 1, height: '36px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
                     Annuler
                   </button>
-                  <button type="submit"
-                    style={{ flex: 1, height: '36px', borderRadius: '6px', border: 'none', background: '#059669', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
-                    Enregistrer
+                  <button type="submit" disabled={!!editStep}
+                    style={{ flex: 1, height: '36px', borderRadius: '6px', border: 'none', background: '#059669', color: 'white', cursor: editStep ? 'wait' : 'pointer', fontSize: '14px', fontWeight: '500', opacity: editStep ? 0.7 : 1 }}>
+                    {editStep ?? 'Enregistrer'}
                   </button>
                 </div>
               </form>
@@ -1034,12 +1085,30 @@ export function OrganizerDashboard({
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="edit-country">Pays *</Label>
+                  <Select
+                      value={editForm.countryCode}
+                      onValueChange={(value: string) => setEditForm({...editForm, countryCode: value})}
+                    >
+                      <SelectTrigger id="edit-country">
+                        <SelectValue placeholder="Choisir le pays" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.map(c => (
+                          <SelectItem key={c.code} value={c.code}>{c.flag} {c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                </div>
+
                 <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="edit-location">Lieu *</Label>
+                  <Label htmlFor="edit-location">Lieu précis *</Label>
                   <Input
                     id="edit-location"
                     value={editForm.location}
                     onChange={(e) => setEditForm({...editForm, location: e.target.value})}
+                    placeholder="Nom de la salle, adresse et ville"
                     required
                   />
                 </div>
@@ -1255,8 +1324,13 @@ export function OrganizerDashboard({
                 <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
                   Annuler
                 </Button>
-                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
-                  Enregistrer les modifications
+                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={!!editStep}>
+                  {editStep ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {editStep}
+                    </span>
+                  ) : 'Enregistrer les modifications'}
                 </Button>
               </div>
             </form>
@@ -1980,10 +2054,14 @@ export function OrganizerDashboard({
           open={!!promoteEvent}
           onClose={() => setPromoteEvent(null)}
           event={{ id: promoteEvent.id, title: promoteEvent.title }}
-          onSuccess={() => {
-            setPromoteEvent(null);
-            // Rafraîchir la liste pour afficher le badge
-            window.location.reload();
+          onSuccess={(result) => {
+            // Badge affiché tout de suite dans la liste ; la modale reste sur la confirmation
+            onEventPromoted?.(promoteEvent.id, {
+              promotionType: result.packType,
+              promotionStatus: 'active',
+              promotionStartDate: result.promotionStartDate,
+              promotionEndDate: result.promotionEndDate,
+            });
           }}
         />
       )}

@@ -8,6 +8,10 @@ import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Loader, CheckCircle, XCircle, Wallet } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import api from '../../routes/axiosConfig';
+
+// Sans clé publique Paystack, le paiement fonctionne en simulation (comme le backend)
+const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string | undefined;
 
 declare global {
   interface Window {
@@ -34,7 +38,7 @@ export function PaystackPaymentForm({
 }: PaystackPaymentFormProps) {
   const [loading, setLoading] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
-  const [reference, setReference] = useState<string>('');
+  const [, setReference] = useState<string>('');
 
   useEffect(() => {
     // Charger le SDK Paystack
@@ -61,29 +65,22 @@ export function PaystackPaymentForm({
 
     try {
       // Initialiser le paiement sur le backend
-      const response = await fetch('/api/payments/paystack/initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount,
-          currency,
-          email,
-          metadata
-        })
-      });
+      const res = await api.post('/api/payments/paystack/initialize', { amount, currency, email, metadata });
+      const data = res.data?.data;
+      if (!data?.reference) throw new Error(res.data?.message || "Erreur lors de l'initialisation");
 
-      const data = await response.json();
-
-      if (!data.success || !data.data) {
-        throw new Error(data.error || 'Erreur lors de l\'initialisation');
+      setReference(data.reference);
+      if (!PAYSTACK_PUBLIC_KEY) {
+        // Mode simulation : paiement validé directement
+        toast.success('Paiement Paystack confirmé (simulation)');
+        onSuccess(data.reference);
+        return;
       }
-
-      setReference(data.data.reference);
-      openPaystack(data.data.reference, data.data.authorization_url);
+      openPaystack(data.reference, data.authorization_url);
     } catch (err: any) {
-      console.error('Paystack Error:', err);
-      onError(err.message);
-      toast.error('Erreur lors de l\'initialisation du paiement');
+      const message = err?.response?.data?.message || err.message;
+      onError(message);
+      toast.error(message || "Erreur lors de l'initialisation du paiement");
     } finally {
       setLoading(false);
     }
@@ -97,7 +94,7 @@ export function PaystackPaymentForm({
     }
 
     const handler = window.PaystackPop.setup({
-      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+      key: PAYSTACK_PUBLIC_KEY,
       email,
       amount: amount * 100, // Paystack utilise les kobo
       currency,
@@ -108,21 +105,9 @@ export function PaystackPaymentForm({
         setLoading(false);
       },
       callback: async (response: any) => {
-        // Vérifier le paiement
-        try {
-          const verifyResponse = await fetch(`/api/payments/paystack/status/${response.reference}`);
-          const verifyData = await verifyResponse.json();
-
-          if (verifyData.success && verifyData.status === 'completed') {
-            toast.success('Paiement réussi !');
-            onSuccess(response.reference);
-          } else {
-            throw new Error('Paiement non confirmé');
-          }
-        } catch (err: any) {
-          onError(err.message);
-          toast.error('Erreur de vérification du paiement');
-        }
+        // La référence est revalidée côté serveur lors de la confirmation de l'achat
+        toast.success('Paiement réussi !');
+        onSuccess(response.reference);
       }
     });
 

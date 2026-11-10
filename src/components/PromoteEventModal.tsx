@@ -8,6 +8,7 @@ import { Button } from './ui/button';
 import PromotionAPI, { type PackConfig } from '../services/api/PromotionAPI';
 import { PaymentSelector, type PaymentMethod } from './payment/PaymentSelector';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 // Récupération de l'email utilisateur via contexte auth
 import { useAuth } from '../context/AuthContext';
@@ -16,7 +17,8 @@ interface PromoteEventModalProps {
   open: boolean;
   onClose: () => void;
   event: { id: string; title: string };
-  onSuccess?: () => void;
+  // Appelé avec le résultat de l'achat pour mettre à jour la liste sans recharger la page
+  onSuccess?: (result: { packType: string; promotionStartDate: string; promotionEndDate: string }) => void;
 }
 
 type Step = 'select' | 'payment_mode' | 'payment' | 'confirmed';
@@ -42,6 +44,7 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
   const [configs, setConfigs] = useState<PackConfig[]>([]);
   const [selected, setSelected] = useState<PackConfig | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingConfigs, setLoadingConfigs] = useState(false);
   const [confirmed, setConfirmed] = useState<{
     packType: string; pricePaid: number; currency: string;
     paymentMode: string;
@@ -53,9 +56,11 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
       setStep('select');
       setSelected(null);
       setConfirmed(null);
+      setLoadingConfigs(true);
       PromotionAPI.getPackConfigs()
         .then(setConfigs)
-        .catch(() => toast.error('Impossible de charger les packs'));
+        .catch(() => toast.error('Impossible de charger les packs'))
+        .finally(() => setLoadingConfigs(false));
     }
   }, [open]);
 
@@ -77,7 +82,7 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
       setConfirmed({ ...result, paymentMode: 'immediate' });
       setStep('confirmed');
       toast.success('Votre événement est maintenant mis en avant sur Feeti !');
-      onSuccess?.();
+      onSuccess?.(result);
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Erreur lors de l'activation");
     } finally {
@@ -96,7 +101,7 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
       setConfirmed({ ...result, paymentMode: 'on_sales' });
       setStep('confirmed');
       toast.success('Pack activé ! Le coût sera déduit de vos ventes de billets.');
-      onSuccess?.();
+      onSuccess?.(result);
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Erreur lors de l'activation");
     } finally {
@@ -126,6 +131,12 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
             <p className="text-sm text-gray-500">
               Choisissez un pack pour mettre en avant votre événement sur la plateforme Feeti.
             </p>
+
+            {loadingConfigs && configs.length === 0 && (
+              <div className="flex items-center justify-center gap-2 py-10 text-sm text-gray-500" role="status">
+                <Loader2 className="w-5 h-5 animate-spin" /> Chargement des packs et des places disponibles...
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {configs.map(cfg => {
@@ -264,6 +275,13 @@ export function PromoteEventModal({ open, onClose, event, onSuccess }: PromoteEv
               </span>
               <span className="font-bold text-gray-900">{formatPrice(selected.price, selected.currency)}</span>
             </div>
+
+            {loading && (
+              <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-sm text-purple-800" role="status">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Paiement reçu, activation du pack en cours...
+              </div>
+            )}
 
             <PaymentSelector
               amount={selected.price}

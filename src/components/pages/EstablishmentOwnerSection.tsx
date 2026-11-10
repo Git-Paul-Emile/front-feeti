@@ -116,6 +116,7 @@ export function EstablishmentOwnerSection() {
   const [selectedEstabForDeal, setSelectedEstabForDeal] = useState('');
   const [isDealFormOpen, setIsDealFormOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<BackendDeal | null>(null);
+  const [isCreatingDeal, setIsCreatingDeal] = useState(false);
   const [dealSaving, setDealSaving] = useState(false);
 
   // Formulaire création établissement
@@ -125,8 +126,10 @@ export function EstablishmentOwnerSection() {
   const [tagsInput, setTagsInput] = useState('');
   const [featuresInput, setFeaturesInput] = useState('');
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  // silent : rafraîchit les données sans remplacer la page par le spinner
+  // (sinon les fenêtres ouvertes, dont la confirmation de paiement, sont démontées)
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [estabs, myDeals, pricingData, hist] = await Promise.all([
         EstablishmentOwnerAPI.getMyEstablishments(),
@@ -142,7 +145,7 @@ export function EstablishmentOwnerSection() {
     } catch {
       toast.error('Erreur lors du chargement');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -199,9 +202,43 @@ export function EstablishmentOwnerSection() {
       return;
     }
 
-    const form = { ...emptyDealForm(), location: estab.location, merchantName: estab.name };
+    // Le propriétaire remplit d'abord son offre, le paiement vient ensuite
+    const form = {
+      ...emptyDealForm(),
+      location: estab.location,
+      merchantName: estab.name,
+      image: estab.image || '',
+      contactPhone: estab.phone || '',
+    };
     setDealForm(form);
-    setPaymentModal({ open: true, type: 'bonplan', leisureItemId: estab.id, establishmentName: estab.name, dealData: form });
+    setEditingDeal(null);
+    setIsCreatingDeal(true);
+    setIsDealFormOpen(true);
+  };
+
+  const handleSubmitNewDeal = () => {
+    const estab = establishments.find(e => e.id === selectedEstabForDeal);
+    if (!estab) { toast.error('Sélectionnez un établissement'); return; }
+    const { title, originalPrice, discountedPrice, validUntil } = dealForm;
+    if (title.trim().length < 3) { toast.error('Donnez un titre à votre bon plan (3 caractères minimum)'); return; }
+    if (!(originalPrice > 0)) { toast.error("Indiquez le prix d'origine"); return; }
+    if (!(discountedPrice >= 0) || discountedPrice >= originalPrice) {
+      toast.error("Le prix remisé doit être inférieur au prix d'origine");
+      return;
+    }
+    if (!validUntil) { toast.error('Indiquez la date de fin de validité'); return; }
+    const discount = dealForm.discount > 0
+      ? dealForm.discount
+      : Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
+    const data = { ...dealForm, title: title.trim(), discount };
+    setDealForm(data);
+    setPaymentModal({ open: true, type: 'bonplan', leisureItemId: estab.id, establishmentName: estab.name, dealData: data });
+  };
+
+  const closeDealForm = () => {
+    setIsDealFormOpen(false);
+    setEditingDeal(null);
+    setIsCreatingDeal(false);
   };
 
   const handleEditDeal = (deal: BackendDeal) => {
@@ -253,7 +290,8 @@ export function EstablishmentOwnerSection() {
 
   const handlePaymentSuccess = (result: any) => {
     toast.success(paymentModal.type === 'subscription' ? 'Abonnement activé !' : 'Bon plan publié !');
-    loadData();
+    if (paymentModal.type === 'bonplan') closeDealForm();
+    void loadData(true);
   };
 
   if (loading) {
@@ -275,7 +313,7 @@ export function EstablishmentOwnerSection() {
           <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleOpenCreateForm}>
             <Plus className="w-4 h-4 mr-1.5" />Ajouter un établissement
           </Button>
-          <Button size="sm" variant="outline" onClick={loadData}>
+          <Button size="sm" variant="outline" onClick={() => loadData()}>
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
@@ -383,10 +421,12 @@ export function EstablishmentOwnerSection() {
           )}
 
           {/* Formulaire d'édition inline */}
-          {isDealFormOpen && editingDeal && (
+          {isDealFormOpen && (editingDeal || isCreatingDeal) && (
             <Card className="border-indigo-200">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Modifier : {editingDeal.title}</CardTitle>
+                <CardTitle className="text-base">
+                  {editingDeal ? `Modifier : ${editingDeal.title}` : 'Nouveau bon plan'}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
@@ -412,14 +452,38 @@ export function EstablishmentOwnerSection() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-700">Valide jusqu'au</label>
-                    <Input type="date" value={dealForm.validUntil} onChange={e => setDealForm(f => ({ ...f, validUntil: e.target.value }))} />
+                    <Input type="date" value={dealForm.validUntil} min={new Date().toISOString().slice(0, 10)} onChange={e => setDealForm(f => ({ ...f, validUntil: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-700">Catégorie</label>
+                    <Select value={dealForm.category} onValueChange={(v: string) => setDealForm(f => ({ ...f, category: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {DEAL_CATEGORIES.map(c => <SelectItem key={c.slug} value={c.slug}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-700">Téléphone de contact</label>
+                    <Input value={dealForm.contactPhone} onChange={e => setDealForm(f => ({ ...f, contactPhone: e.target.value }))} placeholder="+242 06 xxx xx xx" />
+                  </div>
+                  <div className="col-span-2 space-y-1">
+                    <label className="text-xs font-medium text-gray-700">Image (URL)</label>
+                    <Input value={dealForm.image} onChange={e => setDealForm(f => ({ ...f, image: e.target.value }))} placeholder="https://... (par défaut : photo de l'établissement)" />
                   </div>
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" onClick={() => { setIsDealFormOpen(false); setEditingDeal(null); }}>Annuler</Button>
-                  <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSaveEditDeal} disabled={dealSaving}>
-                    {dealSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}Enregistrer
-                  </Button>
+                  <Button variant="outline" size="sm" onClick={closeDealForm}>Annuler</Button>
+                  {editingDeal ? (
+                    <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSaveEditDeal} disabled={dealSaving}>
+                      {dealSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}Enregistrer
+                    </Button>
+                  ) : (
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={handleSubmitNewDeal}>
+                      Continuer vers le paiement
+                      {pricing && ` (${new Intl.NumberFormat('fr-FR').format(pricing.bonplanCreationFee)} ${pricing.currency})`}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

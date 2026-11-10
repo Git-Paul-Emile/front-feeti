@@ -465,7 +465,10 @@ function PackConfigTab() {
 }
 
 // ── Composant gestion des promotions Bon Plans ───────────────────────────────
-function DealPromotionsTab({ deals }: { deals: BackendDeal[] }) {
+function DealPromotionsTab({ deals, onDealUpdated }: {
+  deals: BackendDeal[];
+  onDealUpdated?: (id: string, patch: Partial<BackendDeal>) => void;
+}) {
   const [slots, setSlots] = useState<Array<{ type: string; limit: number; used: number; available: number }>>([]);
   const [selectedDeal, setSelectedDeal] = useState<BackendDeal | null>(null);
   const [promoForm, setPromoForm] = useState({
@@ -482,11 +485,15 @@ function DealPromotionsTab({ deals }: { deals: BackendDeal[] }) {
 
   const openPromo = (deal: BackendDeal) => {
     setSelectedDeal(deal);
+    const isActive = deal.promotionStatus === 'active';
+    // Nouvelle attribution : active dès aujourd'hui pour 7 jours (modifiable)
+    const today = new Date();
+    const inSevenDays = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     setPromoForm({
       promotionType: (deal.promotionType as EventPromotionType) || '',
-      promotionStatus: deal.promotionStatus === 'active' ? 'active' : 'inactive',
-      promotionStartDate: deal.promotionStartDate ? deal.promotionStartDate.slice(0, 10) : '',
-      promotionEndDate: deal.promotionEndDate ? deal.promotionEndDate.slice(0, 10) : '',
+      promotionStatus: isActive || !deal.promotionType ? 'active' : 'inactive',
+      promotionStartDate: deal.promotionStartDate ? deal.promotionStartDate.slice(0, 10) : today.toISOString().slice(0, 10),
+      promotionEndDate: deal.promotionEndDate ? deal.promotionEndDate.slice(0, 10) : inSevenDays.toISOString().slice(0, 10),
     });
   };
 
@@ -494,12 +501,20 @@ function DealPromotionsTab({ deals }: { deals: BackendDeal[] }) {
     if (!selectedDeal) return;
     setSaving(true);
     try {
-      await AdminAPI.updateDealPromotion(selectedDeal.id, {
+      const payload = {
         promotionType: promoForm.promotionType || null,
-        promotionStatus: promoForm.promotionStatus,
-        promotionStartDate: promoForm.promotionStartDate || null,
-        promotionEndDate: promoForm.promotionEndDate || null,
-      });
+        promotionStatus: promoForm.promotionType ? promoForm.promotionStatus : 'inactive',
+        promotionStartDate: promoForm.promotionType ? promoForm.promotionStartDate || null : null,
+        promotionEndDate: promoForm.promotionType ? promoForm.promotionEndDate || null : null,
+      };
+      await AdminAPI.updateDealPromotion(selectedDeal.id, payload);
+      // Mise à jour immédiate de la liste, sans rechargement
+      onDealUpdated?.(selectedDeal.id, {
+        promotionType: payload.promotionType ?? undefined,
+        promotionStatus: payload.promotionStatus,
+        promotionStartDate: payload.promotionStartDate ?? undefined,
+        promotionEndDate: payload.promotionEndDate ?? undefined,
+      } as Partial<BackendDeal>);
       toast.success('Promotion bon plan mise à jour');
       setSelectedDeal(null);
       AdminAPI.getDealPromotionSlots().then(setSlots).catch(() => {});
@@ -1945,7 +1960,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
 
   const loadBadgePricing = async () => {
     try {
-      const res = await axiosInstance.get('/api/access/badge-pricing');
+      const res = await axiosInstance.get('/access/badge-pricing');
       setBadgePricingUnitCost(res.data.data?.unitCost ?? 500);
       setBadgePricingLoaded(true);
     } catch { /* silently use defaults */ }
@@ -1954,7 +1969,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   const handleSaveBadgePricing = async () => {
     setBadgePricingSaving(true);
     try {
-      await axiosInstance.put('/api/admin/badge-pricing', { unitCost: badgePricingUnitCost });
+      await axiosInstance.put('/admin/badge-pricing', { unitCost: badgePricingUnitCost });
       toast.success('Tarification badges mise à jour');
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Erreur lors de la sauvegarde');
@@ -1964,9 +1979,9 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   const loadAdminBadgeOrders = async () => {
     setBadgeOrdersLoading(true);
     try {
-      const res = await axiosInstance.get('/api/admin/badge-orders');
+      const res = await axiosInstance.get('/admin/badge-orders');
       setAdminBadgeOrders(res.data.data ?? []);
-    } catch { /* silently fail */ }
+    } catch { toast.error('Impossible de charger ces données, réessayez.'); }
     finally { setBadgeOrdersLoading(false); }
   };
 
@@ -1977,7 +1992,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
 
   const loadEstPricing = async () => {
     try {
-      const res = await axiosInstance.get('/api/admin/platform-pricing');
+      const res = await axiosInstance.get('/admin/platform-pricing');
       setEstPricing(res.data.data);
       setEstPricingLoaded(true);
     } catch { /* silently use defaults */ }
@@ -1986,7 +2001,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   const handleSaveEstPricing = async () => {
     setEstPricingSaving(true);
     try {
-      await axiosInstance.put('/api/admin/platform-pricing', estPricing);
+      await axiosInstance.put('/admin/platform-pricing', estPricing);
       toast.success('Tarification mise à jour');
     } catch (err: any) {
       toast.error(firebaseClientErrorToUserMessage(err, 'Erreur lors de la sauvegarde'));
@@ -2000,9 +2015,9 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   const loadAdminSubs = async () => {
     setAdminSubsLoading(true);
     try {
-      const res = await axiosInstance.get('/api/admin/subscriptions');
+      const res = await axiosInstance.get('/admin/subscriptions');
       setAdminSubs(res.data.data ?? []);
-    } catch { /* silently fail */ }
+    } catch { toast.error('Impossible de charger ces données, réessayez.'); }
     finally { setAdminSubsLoading(false); }
   };
 
@@ -2013,9 +2028,9 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
   const loadAdminDealPayments = async () => {
     setAdminDealPaymentsLoading(true);
     try {
-      const res = await axiosInstance.get('/api/admin/deal-payments');
+      const res = await axiosInstance.get('/admin/deal-payments');
       setAdminDealPayments(res.data.data ?? []);
-    } catch { /* silently fail */ }
+    } catch { toast.error('Impossible de charger ces données, réessayez.'); }
     finally { setAdminDealPaymentsLoading(false); }
   };
 
@@ -5214,7 +5229,10 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
               <h2 className="text-xl font-bold text-gray-900 mb-1">Promotions Bon Plans</h2>
               <p className="text-sm text-gray-500">Attribuez un pack promotionnel à un bon plan pour le positionner dans le slider homepage.</p>
             </div>
-            <DealPromotionsTab deals={deals} />
+            <DealPromotionsTab
+              deals={deals}
+              onDealUpdated={(id, patch) => setDeals(prev => prev.map(d => (d.id === id ? { ...d, ...patch } : d)))}
+            />
           </TabsContent>
 
           {/* ── Gestion des promotions loisirs ──────────────────────────────── */}

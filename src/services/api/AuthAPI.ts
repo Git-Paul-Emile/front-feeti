@@ -8,7 +8,7 @@ export interface AuthUser {
   name: string;
   email: string;
   phone?: string | null;
-  role: "user" | "organizer" | "controller" | "moderator" | "admin" | "super_admin";
+  role: "user" | "organizer" | "controller" | "establishment_owner" | "moderator" | "admin" | "super_admin";
   interests: string[]; // slugs des catégories d'événements
   createdAt: string;
   updatedAt: string;

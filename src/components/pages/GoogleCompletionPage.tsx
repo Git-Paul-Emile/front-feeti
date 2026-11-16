@@ -68,7 +68,7 @@ export function GoogleCompletionPage() {
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
-  const [role, setRole] = useState<"user" | "organizer">("user");
+  const [role, setRole] = useState<"user" | "organizer" | "establishment_owner">("user");
   const [interests, setInterests] = useState<string[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
@@ -128,9 +128,14 @@ export function GoogleCompletionPage() {
         role,
         country: country.trim(),
         city: city.trim(),
-        interests: role === "organizer" ? [] : interests,
+        interests: role === "user" ? interests : [],
       });
-      navigate(role === "organizer" ? "/organizer" : "/dashboard", { replace: true });
+      const destination = role === "organizer"
+        ? "/organizer"
+        : role === "establishment_owner"
+          ? "/establishment"
+          : "/dashboard";
+      navigate(destination, { replace: true });
     } catch (err: unknown) {
       setError(
         firebaseClientErrorToUserMessage(
@@ -220,9 +225,10 @@ export function GoogleCompletionPage() {
           />
         )}
 
-        <select value={role} onChange={(e) => setRole(e.target.value as "user" | "organizer")} className="w-full h-12 rounded-xl bg-transparent border border-[rgba(192,169,237,0.6)] px-4">
+        <select value={role} onChange={(e) => setRole(e.target.value as "user" | "organizer" | "establishment_owner")} className="w-full h-12 rounded-xl bg-transparent border border-[rgba(192,169,237,0.6)] px-4">
           <option value="user" className="text-black">Participant</option>
           <option value="organizer" className="text-black">Organisateur</option>
+          <option value="establishment_owner" className="text-black">Propriétaire d'établissement</option>
         </select>
 
         {role === "user" ? (
@@ -272,7 +278,13 @@ export function GoogleCompletionPage() {
 
         {error ? <p className="text-red-300 text-sm">{error}</p> : null}
         <button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl bg-[#f4f6f4] text-black font-semibold disabled:opacity-50">
-          {isSubmitting ? "Validation..." : role === "organizer" ? "Terminer et aller à l'espace organisateur" : "Terminer et aller au dashboard"}
+          {isSubmitting
+            ? "Validation..."
+            : role === "organizer"
+              ? "Terminer et aller à l'espace organisateur"
+              : role === "establishment_owner"
+                ? "Terminer et aller à l'espace établissement"
+                : "Terminer et aller au dashboard"}
         </button>
       </form>
     </div>

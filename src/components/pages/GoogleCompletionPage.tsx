@@ -69,8 +69,6 @@ export function GoogleCompletionPage() {
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
   const [role, setRole] = useState<"user" | "organizer" | "establishment_owner" | "admin">("user");
-  const canChooseAdminRole = import.meta.env.VITE_ENABLE_ADMIN_SIGNUP === "true"
-    && import.meta.env.VITE_BACKEND_PROVIDER === "express";
   const [interests, setInterests] = useState<string[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
@@ -233,7 +231,7 @@ export function GoogleCompletionPage() {
           <option value="user" className="text-black">Participant</option>
           <option value="organizer" className="text-black">Organisateur</option>
           <option value="establishment_owner" className="text-black">Propriétaire d'établissement</option>
-          {canChooseAdminRole ? <option value="admin" className="text-black">Administrateur (test)</option> : null}
+          <option value="admin" className="text-black">Administrateur (test)</option>
         </select>
 
         {role === "user" ? (

@@ -529,14 +529,12 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
   const roleValue = watch('role');
   const passwordValue = watch('password');
   const countryValue = watch('country');
-  const canChooseAdminRole = import.meta.env.VITE_ENABLE_ADMIN_SIGNUP === 'true'
-    && import.meta.env.VITE_BACKEND_PROVIDER === 'express';
   const roleOptions: Array<{ value: RegisterFields['role']; label: string }> = [
     { value: 'user', label: 'Participant' },
     { value: 'organizer', label: 'Organisateur' },
     { value: 'establishment_owner', label: 'Propriétaire établ.' },
+    { value: 'admin', label: 'Administrateur (test)' },
   ];
-  if (canChooseAdminRole) roleOptions.push({ value: 'admin', label: 'Administrateur (test)' });
   const availableCities = CITIES_BY_COUNTRY[countryValue] ?? [];
   const selectedCountry = countries.find(c => c.name === countryValue);
   const dialCode = DIAL_CODES_BY_COUNTRY[countryValue] ?? '';

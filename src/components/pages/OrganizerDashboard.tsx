@@ -643,7 +643,7 @@ export function OrganizerDashboard({
                       <SelectTrigger id="country">
                         <SelectValue placeholder="Choisir le pays" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[10000]">
                         {countries.map(c => (
                           <SelectItem key={c.code} value={c.code}>{c.flag} {c.name}</SelectItem>
                         ))}
@@ -731,7 +731,7 @@ export function OrganizerDashboard({
                       <SelectTrigger>
                         <SelectValue placeholder="Choisir une catégorie" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[10000]">
                         {categories.length === 0
                           ? <SelectItem value="_" disabled>Catégories indisponibles</SelectItem>
                           : categories.map(cat => (
@@ -1101,7 +1101,7 @@ export function OrganizerDashboard({
                       <SelectTrigger id="edit-country">
                         <SelectValue placeholder="Choisir le pays" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[10000]">
                         {countries.map(c => (
                           <SelectItem key={c.code} value={c.code}>{c.flag} {c.name}</SelectItem>
                         ))}
@@ -1179,7 +1179,7 @@ export function OrganizerDashboard({
                   <Label>Catégorie *</Label>
                   <Select value={editForm.category} onValueChange={(value: string) => setEditForm({...editForm, category: value})}>
                     <SelectTrigger><SelectValue placeholder="Choisir une catégorie" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[10000]">
                       {categories.length === 0
                         ? <SelectItem value="_" disabled>Catégories indisponibles</SelectItem>
                         : categories.map(cat => (

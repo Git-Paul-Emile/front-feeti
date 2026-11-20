@@ -3,7 +3,7 @@ import type { Country } from '../services/api/CountryAPI';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
-import { Menu, User, Settings, LogOut, ChevronDown, ChevronRight, MapPin, Star, Megaphone, Zap, Heart, Shield } from 'lucide-react';
+import { Menu, User, Settings, LogOut, ChevronDown, ChevronRight, MapPin, Star, Megaphone, Zap, Heart, Shield, Building2 } from 'lucide-react';
 import svgPaths from "../imports/svg-pgf9xqt80w";
 
 
@@ -95,6 +95,8 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                     onNavigate('admin-dashboard');
                   } else if (currentUser?.role === 'organizer') {
                     onNavigate('organizer-dashboard');
+                  } else if (currentUser?.role === 'establishment_owner') {
+                    onNavigate('establishment-dashboard');
                   } else if (currentUser?.role === 'controller') {
                     onNavigate('controller-dashboard');
                   } else {
@@ -138,7 +140,13 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                 {currentUser.role === 'organizer' && (
                   <DropdownMenuItem onClick={() => onNavigate('organizer-dashboard')} className="hover:bg-gray-50">
                     <Settings className="mr-2 h-4 w-4" />
-                    <span>Dashboard organisateur</span>
+                    <span>Espace organisateur</span>
+                  </DropdownMenuItem>
+                )}
+                {currentUser.role === 'establishment_owner' && (
+                  <DropdownMenuItem onClick={() => onNavigate('establishment-dashboard')} className="hover:bg-gray-50">
+                    <Building2 className="mr-2 h-4 w-4" />
+                    <span>Espace établissement</span>
                   </DropdownMenuItem>
                 )}
                 {currentUser.role === 'controller' && (
@@ -150,7 +158,7 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                 {currentUser.adminRole && ['super_admin', 'admin', 'moderator', 'support'].includes(currentUser.adminRole) && (
                   <DropdownMenuItem onClick={() => onNavigate('admin-dashboard')} className="hover:bg-gray-50">
                     <Shield className="mr-2 h-4 w-4" />
-                    <span>Administration</span>
+                    <span>Espace administrateur</span>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
@@ -601,7 +609,19 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                           className="flex items-center w-full text-left text-gray-600 hover:text-[#16BDA0] transition-colors"
                         >
                           <Settings className="mr-3 h-4 w-4" />
-                          Dashboard organisateur
+                          Espace organisateur
+                        </button>
+                      )}
+                      {currentUser.role === 'establishment_owner' && (
+                        <button
+                          onClick={() => {
+                            onNavigate('establishment-dashboard');
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="flex items-center w-full text-left text-gray-600 hover:text-[#16BDA0] transition-colors"
+                        >
+                          <Building2 className="mr-3 h-4 w-4" />
+                          Espace établissement
                         </button>
                       )}
                       {currentUser.role === 'controller' && (
@@ -625,7 +645,7 @@ export function Navbar({ currentUser, onLogout, onNavigate, currentPage, selecte
                           className="flex items-center w-full text-left text-gray-600 hover:text-[#16BDA0] transition-colors"
                         >
                           <Shield className="mr-3 h-4 w-4" />
-                          Administration
+                          Espace administrateur
                         </button>
                       )}
                       <button

@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { calculateDiscountPercentage } from '../../utils/dealPricing';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Switch } from '../ui/switch';
@@ -1620,7 +1621,7 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
     setDealForm({
       title: deal.title, description: deal.description, category: deal.category,
       originalPrice: deal.originalPrice, discountedPrice: deal.discountedPrice,
-      discount: deal.discount, validUntil: deal.validUntil, location: deal.location,
+      discount: calculateDiscountPercentage(deal.originalPrice, deal.discountedPrice), validUntil: deal.validUntil, location: deal.location,
       image: deal.image, isPopular: deal.isPopular, merchantName: deal.merchantName,
       tags: deal.tags, availableQuantity: deal.availableQuantity ?? undefined,
       maxQuantity: deal.maxQuantity ?? undefined, rating: deal.rating ?? undefined,
@@ -1644,7 +1645,12 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
       if (dealImageFile) {
         imageUrl = await EventsBackendAPI.uploadImage(dealImageFile);
       }
-      const payload = { ...dealForm, image: imageUrl, countryCode: dealForm.countryCode === 'all' ? undefined : dealForm.countryCode };
+      const payload = {
+        ...dealForm,
+        discount: calculateDiscountPercentage(dealForm.originalPrice, dealForm.discountedPrice),
+        image: imageUrl,
+        countryCode: dealForm.countryCode === 'all' ? undefined : dealForm.countryCode,
+      };
       if (editingDeal) {
         const updated = await DealsBackendAPI.updateDeal(editingDeal.id, payload);
         setDeals(prev => prev.map(d => d.id === editingDeal.id ? updated : d));
@@ -4407,15 +4413,31 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
                   </div>
                   <div className="space-y-2">
                     <Label>Prix original (FCFA) *</Label>
-                    <Input type="number" value={dealForm.originalPrice} onChange={e => setDealForm(f => ({ ...f, originalPrice: Number(e.target.value) }))} />
+                    <Input
+                      type="number"
+                      min={0}
+                      value={dealForm.originalPrice}
+                      onChange={e => {
+                        const originalPrice = Number(e.target.value);
+                        setDealForm(f => ({ ...f, originalPrice, discount: calculateDiscountPercentage(originalPrice, f.discountedPrice) }));
+                      }}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Prix réduit (FCFA) *</Label>
-                    <Input type="number" value={dealForm.discountedPrice} onChange={e => setDealForm(f => ({ ...f, discountedPrice: Number(e.target.value) }))} />
+                    <Input
+                      type="number"
+                      min={0}
+                      value={dealForm.discountedPrice}
+                      onChange={e => {
+                        const discountedPrice = Number(e.target.value);
+                        setDealForm(f => ({ ...f, discountedPrice, discount: calculateDiscountPercentage(f.originalPrice, discountedPrice) }));
+                      }}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Réduction (%) *</Label>
-                    <Input type="number" min={1} max={99} value={dealForm.discount} onChange={e => setDealForm(f => ({ ...f, discount: Number(e.target.value) }))} />
+                    <Input type="number" min={0} max={100} value={dealForm.discount} readOnly aria-readonly="true" />
                   </div>
                   <div className="space-y-2">
                     <Label>Valide jusqu'au *</Label>

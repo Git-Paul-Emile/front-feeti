@@ -28,6 +28,7 @@ import LeisureAPI from '../../services/api/LeisureAPI';
 import CountryAPI from '../../services/api/CountryAPI';
 import EventsBackendAPI from '../../services/api/EventsBackendAPI';
 import { getCitiesForCountry } from '../../utils/citiesByCountry';
+import { calculateDiscountPercentage } from '../../utils/dealPricing';
 
 // Liste de secours : la liste réelle vient de l'API (mêmes catégories que les filtres publics)
 const FALLBACK_LEISURE_CATEGORIES = [
@@ -408,9 +409,7 @@ export function EstablishmentOwnerSection() {
       return;
     }
     if (!validUntil) { toast.error('Indiquez la date de fin de validité'); return; }
-    const discount = dealForm.discount > 0
-      ? dealForm.discount
-      : Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
+    const discount = calculateDiscountPercentage(originalPrice, discountedPrice);
     let image = dealForm.image;
     if (dealImageFile) {
       // L'image est envoyée avant le paiement : le bon plan est publié avec sa photo
@@ -445,7 +444,7 @@ export function EstablishmentOwnerSection() {
       category: deal.category,
       originalPrice: deal.originalPrice,
       discountedPrice: deal.discountedPrice,
-      discount: deal.discount,
+      discount: calculateDiscountPercentage(deal.originalPrice, deal.discountedPrice),
       validUntil: deal.validUntil,
       location: deal.location,
       image: deal.image || '',
@@ -639,15 +638,31 @@ export function EstablishmentOwnerSection() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-700">Prix original (FCFA)</label>
-                    <Input type="number" value={dealForm.originalPrice} onChange={e => setDealForm(f => ({ ...f, originalPrice: Number(e.target.value) }))} />
+                    <Input
+                      type="number"
+                      min={0}
+                      value={dealForm.originalPrice}
+                      onChange={e => {
+                        const originalPrice = Number(e.target.value);
+                        setDealForm(f => ({ ...f, originalPrice, discount: calculateDiscountPercentage(originalPrice, f.discountedPrice) }));
+                      }}
+                    />
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-700">Prix réduit (FCFA)</label>
-                    <Input type="number" value={dealForm.discountedPrice} onChange={e => setDealForm(f => ({ ...f, discountedPrice: Number(e.target.value) }))} />
+                    <Input
+                      type="number"
+                      min={0}
+                      value={dealForm.discountedPrice}
+                      onChange={e => {
+                        const discountedPrice = Number(e.target.value);
+                        setDealForm(f => ({ ...f, discountedPrice, discount: calculateDiscountPercentage(f.originalPrice, discountedPrice) }));
+                      }}
+                    />
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-700">Réduction (%)</label>
-                    <Input type="number" value={dealForm.discount} onChange={e => setDealForm(f => ({ ...f, discount: Number(e.target.value) }))} />
+                    <Input type="number" min={0} max={100} value={dealForm.discount} readOnly aria-readonly="true" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-700">Valide jusqu'au</label>

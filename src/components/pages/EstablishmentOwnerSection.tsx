@@ -11,7 +11,7 @@ import { Label } from '../ui/label';
 import {
   Building2, Gift, History, Plus, Edit2, Trash2,
   Loader2, CalendarDays, CreditCard, RefreshCw, MapPin,
-  Phone, Globe, Clock, DollarSign, Image as ImageIcon,
+  Phone, Globe, Clock, DollarSign, Image as ImageIcon, Upload, Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
@@ -24,28 +24,51 @@ import EstablishmentOwnerAPI, {
   type CreateEstablishmentInput,
 } from '../../services/api/EstablishmentOwnerAPI';
 import type { BackendDeal } from '../../services/api/DealsBackendAPI';
+import LeisureAPI from '../../services/api/LeisureAPI';
+import CountryAPI from '../../services/api/CountryAPI';
+import EventsBackendAPI from '../../services/api/EventsBackendAPI';
+import { getCitiesForCountry } from '../../utils/citiesByCountry';
 
-const LEISURE_CATEGORIES = [
-  { slug: 'hotels', name: 'Hôtels & Hébergements' },
-  { slug: 'restaurants', name: 'Restaurants & Cafés' },
+// Liste de secours : la liste réelle vient de l'API (mêmes catégories que les filtres publics)
+const FALLBACK_LEISURE_CATEGORIES = [
+  { slug: 'hotels', name: 'Hôtels' },
+  { slug: 'restaurants', name: 'Restaurants' },
   { slug: 'sports', name: 'Sport & Bien-être' },
-  { slug: 'loisirs', name: 'Loisirs & Divertissement' },
-  { slug: 'envolee', name: 'Évasion & Tourisme' },
-  { slug: 'bar-night', name: 'Bars & Nuit' },
-  { slug: 'shopping', name: 'Shopping & Boutiques' },
+  { slug: 'loisirs', name: 'Loisirs' },
+  { slug: 'envolee', name: 'Évasion' },
+  { slug: 'bar-night', name: 'Bar & Nuit' },
 ];
 
-const COUNTRY_OPTIONS = [
-  { code: 'CG', label: '🇨🇬 Congo-Brazzaville' },
-  { code: 'CD', label: '🇨🇩 RD Congo' },
-  { code: 'GA', label: '🇬🇦 Gabon' },
-  { code: 'CI', label: '🇨🇮 Côte d\'Ivoire' },
+const FALLBACK_COUNTRIES = [
+  { code: 'CG', name: 'République du Congo', flag: '🇨🇬' },
+  { code: 'CD', name: 'RDC', flag: '🇨🇩' },
+  { code: 'GA', name: 'Gabon', flag: '🇬🇦' },
+  { code: 'CI', name: "Côte d'Ivoire", flag: '🇨🇮' },
 ];
+
+// Équipements / services proposés, alignés sur ceux des établissements déjà publiés
+const COMMON_FEATURES = ['WiFi', 'Parking', 'Climatisation', 'Accès PMR', 'Paiement Mobile Money', 'Paiement par carte'];
+const FEATURES_BY_CATEGORY: Record<string, string[]> = {
+  hotels: ['Piscine', 'Spa', 'Restaurant', 'Bar lounge', 'Petit déjeuner inclus', 'Centre de conférences', 'Navette aéroport', 'Vue fleuve', 'Vue océan'],
+  restaurants: ['Terrasse', 'Cuisine locale', 'Cuisine fusion', 'Buffet', 'Brunch weekend', 'Plats végétariens', 'Cave à vins', 'Livraison', 'À emporter', 'Réservation recommandée'],
+  sports: ['Cardio', 'Musculation', 'Yoga', 'Zumba', 'Coaching personnalisé', 'Vestiaires', 'Massage relaxant', 'Hammam', 'Sauna', 'Soins beauté', 'Piscine'],
+  loisirs: ['Salle de jeux', 'Billard', 'Bowling', 'Réalité virtuelle', 'Consoles de jeux', 'Tournois', 'Snack-bar', 'Anniversaires', 'Espace enfants'],
+  envolee: ['Guide', 'Transport inclus', 'Repas inclus', 'Hébergement inclus', 'Observation faune', 'Plongée', 'Location équipement', 'Cours débutants'],
+  'bar-night': ['Cocktails', 'DJ sets', 'Tables VIP', 'Service bouteille', 'Happy hour', 'Musique live', 'Terrasse', 'Vue panoramique', 'Dress code'],
+};
+
+const TAG_OPTIONS = [
+  'Luxe', 'Famille', 'Romantique', 'Business', 'Gastronomie', 'Traditionnel', 'Nature',
+  'Aventure', 'Bien-être', 'Jeunes', 'VIP', 'Vue fleuve', 'Vue mer', 'Terrasse', 'Piscine',
+];
+
+const PRICE_CURRENCIES = ['FCFA', 'USD', 'EUR'];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // même limite que l'upload backend
 
 const emptyCreateForm = (): CreateEstablishmentInput => ({
   name: '',
   description: '',
-  categorySlug: 'restaurants',
+  categorySlug: '',
   location: '',
   address: '',
   phone: '',
@@ -53,10 +76,75 @@ const emptyCreateForm = (): CreateEstablishmentInput => ({
   priceRange: '',
   openingHours: '',
   image: '',
-  countryCode: 'CG',
+  countryCode: '',
   tags: [],
   features: [],
 });
+
+const formatAmount = (n: number) => new Intl.NumberFormat('fr-FR').format(n).replace(/ | /g, ' ');
+
+/** Sélecteur à choix multiples : options prédéfinies + ajout libre. */
+function MultiChoice({ label, options, selected, onChange, addPlaceholder }: {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  addPlaceholder: string;
+}) {
+  const [custom, setCustom] = useState('');
+  // Les valeurs choisies hors liste (ajout libre, autre catégorie) restent visibles
+  const all = [...options, ...selected.filter(s => !options.includes(s))];
+  const toggle = (value: string) =>
+    onChange(selected.includes(value) ? selected.filter(s => s !== value) : [...selected, value]);
+  const addCustom = () => {
+    const value = custom.trim();
+    if (!value) return;
+    const existing = all.find(o => o.toLowerCase() === value.toLowerCase());
+    if (!selected.includes(existing ?? value)) onChange([...selected, existing ?? value]);
+    setCustom('');
+  };
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-medium text-gray-900">
+        {label}
+        {selected.length > 0 && <span className="ml-2 text-xs font-normal text-gray-500">{selected.length} sélectionné{selected.length > 1 ? 's' : ''}</span>}
+      </legend>
+      <div className="flex flex-wrap gap-2">
+        {all.map(option => {
+          const active = selected.includes(option);
+          return (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={active}
+              onClick={() => toggle(option)}
+              className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs transition-colors ${
+                active
+                  ? 'border-indigo-600 bg-indigo-600 text-white'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-indigo-400'
+              }`}
+            >
+              {active && <Check className="w-3 h-3" aria-hidden="true" />}
+              {option}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex gap-2">
+        <Input
+          value={custom}
+          onChange={e => setCustom(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } }}
+          placeholder={addPlaceholder}
+          className="h-8 text-sm"
+        />
+        <Button type="button" size="sm" variant="outline" onClick={addCustom} disabled={!custom.trim()}>
+          Ajouter
+        </Button>
+      </div>
+    </fieldset>
+  );
+}
 
 const DEAL_CATEGORIES = [
   { slug: 'restaurants', name: 'Restaurants' },
@@ -118,13 +206,67 @@ export function EstablishmentOwnerSection() {
   const [editingDeal, setEditingDeal] = useState<BackendDeal | null>(null);
   const [isCreatingDeal, setIsCreatingDeal] = useState(false);
   const [dealSaving, setDealSaving] = useState(false);
+  const [dealImageFile, setDealImageFile] = useState<File | null>(null);
+  const [dealImagePreview, setDealImagePreview] = useState('');
+  const [dealUploading, setDealUploading] = useState(false);
 
   // Formulaire création établissement
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [createForm, setCreateForm] = useState<CreateEstablishmentInput>(emptyCreateForm());
-  const [isCreating, setIsCreating] = useState(false);
-  const [tagsInput, setTagsInput] = useState('');
-  const [featuresInput, setFeaturesInput] = useState('');
+  const [createStep, setCreateStep] = useState<string | null>(null);
+  const isCreating = createStep !== null;
+  const [leisureCategories, setLeisureCategories] = useState(FALLBACK_LEISURE_CATEGORIES);
+  const [countries, setCountries] = useState(FALLBACK_COUNTRIES);
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
+  const [priceCurrency, setPriceCurrency] = useState('FCFA');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
+
+  const cityOptions = getCitiesForCountry(createForm.countryCode);
+  const featureOptions = [
+    ...(FEATURES_BY_CATEGORY[createForm.categorySlug] ?? []),
+    ...COMMON_FEATURES,
+  ];
+
+  // Catégories et pays : mêmes référentiels que les établissements publiés et leurs filtres
+  useEffect(() => {
+    LeisureAPI.getCategories()
+      .then(cats => { if (cats.length > 0) setLeisureCategories(cats.map(c => ({ slug: c.slug, name: c.name }))); })
+      .catch(() => {});
+    CountryAPI.getAll()
+      .then(list => {
+        const active = list.filter(c => c.isActive !== false);
+        if (active.length > 0) setCountries(active.map(c => ({ code: c.code, name: c.name, flag: c.flag })));
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!dealImagePreview) return;
+    return () => URL.revokeObjectURL(dealImagePreview);
+  }, [dealImagePreview]);
+
+  const resetDealImage = () => {
+    setDealImageFile(null);
+    setDealImagePreview('');
+  };
+
+  const handleDealImageSelected = (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Le fichier doit être une image (JPG, PNG, WebP)'); return; }
+    if (file.size > MAX_IMAGE_SIZE) { toast.error("L'image ne doit pas dépasser 5 Mo"); return; }
+    setDealImageFile(file);
+    setDealImagePreview(URL.createObjectURL(file));
+  };
+
+  // Libère l'aperçu local de l'image
+  useEffect(() => {
+    if (!imagePreview) return;
+    return () => URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
 
   // silent : rafraîchit les données sans remplacer la page par le spinner
   // (sinon les fenêtres ouvertes, dont la confirmation de paiement, sont démontées)
@@ -153,22 +295,59 @@ export function EstablishmentOwnerSection() {
 
   const handleOpenCreateForm = () => {
     setCreateForm(emptyCreateForm());
-    setTagsInput('');
-    setFeaturesInput('');
+    setCity('');
+    setDistrict('');
+    setPriceMin('');
+    setPriceMax('');
+    setPriceCurrency('FCFA');
+    setImageFile(null);
+    setImagePreview('');
     setIsCreateFormOpen(true);
   };
 
+  const handleImageSelected = (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Le fichier doit être une image (JPG, PNG, WebP)'); return; }
+    if (file.size > MAX_IMAGE_SIZE) { toast.error("L'image ne doit pas dépasser 5 Mo"); return; }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
   const handleCreateEstablishment = async () => {
-    if (!createForm.name.trim() || !createForm.description.trim() || !createForm.location.trim()) {
-      toast.error('Nom, description et localisation sont requis');
+    if (isCreating) return;
+    if (!createForm.name.trim()) { toast.error("Le nom de l'établissement est obligatoire"); return; }
+    if (!createForm.description.trim()) { toast.error('La description est obligatoire'); return; }
+    if (!createForm.categorySlug) { toast.error('Choisissez une catégorie'); return; }
+    if (!createForm.countryCode) { toast.error('Choisissez un pays'); return; }
+    if (!city.trim()) { toast.error('Choisissez une ville'); return; }
+    if (!imageFile) { toast.error("Ajoutez une photo de l'établissement"); return; }
+    const min = priceMin === '' ? null : Number(priceMin);
+    const max = priceMax === '' ? null : Number(priceMax);
+    if ((min !== null && (!Number.isFinite(min) || min < 0)) || (max !== null && (!Number.isFinite(max) || max < 0))) {
+      toast.error('La fourchette de prix est invalide');
       return;
     }
-    setIsCreating(true);
+    if (min !== null && max !== null && min > max) {
+      toast.error('Le prix minimum doit être inférieur au prix maximum');
+      return;
+    }
+    let priceRange = '';
+    if (min !== null && max !== null) priceRange = `${formatAmount(min)} - ${formatAmount(max)} ${priceCurrency}`;
+    else if (min !== null) priceRange = `À partir de ${formatAmount(min)} ${priceCurrency}`;
+    else if (max !== null) priceRange = `Jusqu'à ${formatAmount(max)} ${priceCurrency}`;
+
+    setCreateStep("Envoi de l'image...");
     try {
+      const image = await EventsBackendAPI.uploadImage(imageFile);
+      setCreateStep("Création de l'établissement...");
       const data: CreateEstablishmentInput = {
         ...createForm,
-        tags: tagsInput.split(',').map(t => t.trim()).filter(Boolean),
-        features: featuresInput.split(',').map(f => f.trim()).filter(Boolean),
+        name: createForm.name.trim(),
+        description: createForm.description.trim(),
+        // Même format que les établissements existants : « Quartier, Ville »
+        location: district.trim() ? `${district.trim()}, ${city.trim()}` : city.trim(),
+        priceRange,
+        image,
       };
       const newEstab = await EstablishmentOwnerAPI.createEstablishment(data);
       setIsCreateFormOpen(false);
@@ -180,7 +359,7 @@ export function EstablishmentOwnerSection() {
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? 'Erreur lors de la création');
     } finally {
-      setIsCreating(false);
+      setCreateStep(null);
     }
   };
 
@@ -211,12 +390,14 @@ export function EstablishmentOwnerSection() {
       contactPhone: estab.phone || '',
     };
     setDealForm(form);
+    resetDealImage();
     setEditingDeal(null);
     setIsCreatingDeal(true);
     setIsDealFormOpen(true);
   };
 
-  const handleSubmitNewDeal = () => {
+  const handleSubmitNewDeal = async () => {
+    if (dealUploading) return;
     const estab = establishments.find(e => e.id === selectedEstabForDeal);
     if (!estab) { toast.error('Sélectionnez un établissement'); return; }
     const { title, originalPrice, discountedPrice, validUntil } = dealForm;
@@ -230,12 +411,27 @@ export function EstablishmentOwnerSection() {
     const discount = dealForm.discount > 0
       ? dealForm.discount
       : Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
-    const data = { ...dealForm, title: title.trim(), discount };
+    let image = dealForm.image;
+    if (dealImageFile) {
+      // L'image est envoyée avant le paiement : le bon plan est publié avec sa photo
+      setDealUploading(true);
+      try {
+        image = await EventsBackendAPI.uploadImage(dealImageFile);
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message ?? "Échec de l'envoi de l'image");
+        return;
+      } finally {
+        setDealUploading(false);
+      }
+      resetDealImage();
+    }
+    const data = { ...dealForm, title: title.trim(), discount, image };
     setDealForm(data);
     setPaymentModal({ open: true, type: 'bonplan', leisureItemId: estab.id, establishmentName: estab.name, dealData: data });
   };
 
   const closeDealForm = () => {
+    resetDealImage();
     setIsDealFormOpen(false);
     setEditingDeal(null);
     setIsCreatingDeal(false);
@@ -258,6 +454,7 @@ export function EstablishmentOwnerSection() {
       contactPhone: deal.contactPhone || '',
       contactEmail: deal.contactEmail || '',
     });
+    resetDealImage();
     setIsDealFormOpen(true);
   };
 
@@ -265,7 +462,9 @@ export function EstablishmentOwnerSection() {
     if (!editingDeal) return;
     setDealSaving(true);
     try {
-      const updated = await EstablishmentOwnerAPI.updateDeal(editingDeal.id, dealForm as any);
+      const image = dealImageFile ? await EventsBackendAPI.uploadImage(dealImageFile) : dealForm.image;
+      const updated = await EstablishmentOwnerAPI.updateDeal(editingDeal.id, { ...dealForm, image } as any);
+      resetDealImage();
       setDeals(prev => prev.map(d => d.id === updated.id ? updated : d));
       setIsDealFormOpen(false);
       setEditingDeal(null);
@@ -468,8 +667,36 @@ export function EstablishmentOwnerSection() {
                     <Input value={dealForm.contactPhone} onChange={e => setDealForm(f => ({ ...f, contactPhone: e.target.value }))} placeholder="+242 06 xxx xx xx" />
                   </div>
                   <div className="col-span-2 space-y-1">
-                    <label className="text-xs font-medium text-gray-700">Image (URL)</label>
-                    <Input value={dealForm.image} onChange={e => setDealForm(f => ({ ...f, image: e.target.value }))} placeholder="https://... (par défaut : photo de l'établissement)" />
+                    <label htmlFor="deal-image" className="text-xs font-medium text-gray-700">Image du bon plan</label>
+                    <div className="flex items-center gap-4">
+                      <div className="w-28 h-20 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center shrink-0">
+                        {(dealImagePreview || dealForm.image) ? (
+                          <img src={dealImagePreview || dealForm.image} alt="Aperçu de l'image du bon plan" className="w-full h-full object-cover" />
+                        ) : (
+                          <ImageIcon className="w-6 h-6 text-gray-300" aria-hidden="true" />
+                        )}
+                      </div>
+                      <div className="space-y-1 min-w-0">
+                        <input
+                          id="deal-image"
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={e => { handleDealImageSelected(e.target.files?.[0]); e.target.value = ''; }}
+                        />
+                        <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('deal-image')?.click()}>
+                          <Upload className="w-4 h-4 mr-1.5" />
+                          {(dealImageFile || dealForm.image) ? "Changer l'image" : 'Choisir une image'}
+                        </Button>
+                        <p className="text-xs text-gray-500 truncate">
+                          {dealImageFile
+                            ? dealImageFile.name
+                            : dealForm.image
+                              ? "Image actuelle. Sans changement, elle sera conservée."
+                              : 'JPG, PNG ou WebP, 5 Mo maximum'}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2 pt-2">
@@ -479,8 +706,8 @@ export function EstablishmentOwnerSection() {
                       {dealSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}Enregistrer
                     </Button>
                   ) : (
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={handleSubmitNewDeal}>
-                      Continuer vers le paiement
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={handleSubmitNewDeal} disabled={dealUploading}>
+                      {dealUploading ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />Envoi de l'image...</> : 'Continuer vers le paiement'}
                       {pricing && ` (${new Intl.NumberFormat('fr-FR').format(pricing.bonplanCreationFee)} ${pricing.currency})`}
                     </Button>
                   )}
@@ -596,8 +823,9 @@ export function EstablishmentOwnerSection() {
             {/* Informations principales */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2 space-y-1.5">
-                <Label>Nom de l'établissement *</Label>
+                <Label htmlFor="estab-name">Nom de l'établissement *</Label>
                 <Input
+                  id="estab-name"
                   value={createForm.name}
                   onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="Ex : Restaurant Le Jardin, Hôtel Maya Maya..."
@@ -605,8 +833,9 @@ export function EstablishmentOwnerSection() {
               </div>
 
               <div className="md:col-span-2 space-y-1.5">
-                <Label>Description *</Label>
+                <Label htmlFor="estab-description">Description *</Label>
                 <Textarea
+                  id="estab-description"
                   value={createForm.description}
                   onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
                   placeholder="Décrivez votre établissement, son ambiance, ses spécialités..."
@@ -617,9 +846,9 @@ export function EstablishmentOwnerSection() {
               <div className="space-y-1.5">
                 <Label>Catégorie *</Label>
                 <Select value={createForm.categorySlug} onValueChange={(v: string) => setCreateForm(f => ({ ...f, categorySlug: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger aria-label="Catégorie"><SelectValue placeholder="Choisir une catégorie" /></SelectTrigger>
                   <SelectContent>
-                    {LEISURE_CATEGORIES.map(c => (
+                    {leisureCategories.map(c => (
                       <SelectItem key={c.slug} value={c.slug}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -627,38 +856,70 @@ export function EstablishmentOwnerSection() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Pays</Label>
-                <Select value={createForm.countryCode ?? 'CG'} onValueChange={(v: string) => setCreateForm(f => ({ ...f, countryCode: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Label>Pays *</Label>
+                <Select
+                  value={createForm.countryCode ?? ''}
+                  onValueChange={(v: string) => {
+                    setCreateForm(f => ({ ...f, countryCode: v }));
+                    setCity(''); // la ville dépend du pays
+                  }}
+                >
+                  <SelectTrigger aria-label="Pays"><SelectValue placeholder="Choisir un pays" /></SelectTrigger>
                   <SelectContent>
-                    {COUNTRY_OPTIONS.map(c => (
-                      <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
+                    {countries.map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.flag} {c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1.5">
-                <Label><MapPin className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Localisation (ville, quartier) *</Label>
-                <Input
-                  value={createForm.location}
-                  onChange={e => setCreateForm(f => ({ ...f, location: e.target.value }))}
-                  placeholder="Ex : Brazzaville Centre, Gombe Kinshasa..."
-                />
+                <Label><MapPin className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Ville *</Label>
+                {cityOptions.length > 0 ? (
+                  <Select value={city} onValueChange={setCity}>
+                    <SelectTrigger aria-label="Ville"><SelectValue placeholder="Choisir une ville" /></SelectTrigger>
+                    <SelectContent>
+                      {cityOptions.map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    aria-label="Ville"
+                    value={city}
+                    onChange={e => setCity(e.target.value)}
+                    disabled={!createForm.countryCode}
+                    placeholder={createForm.countryCode ? 'Nom de la ville' : "Choisissez d'abord un pays"}
+                  />
+                )}
               </div>
 
               <div className="space-y-1.5">
-                <Label><MapPin className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Adresse complète</Label>
+                <Label htmlFor="estab-district">Quartier</Label>
                 <Input
+                  id="estab-district"
+                  value={district}
+                  onChange={e => setDistrict(e.target.value)}
+                  placeholder="Ex : Centre-ville, Gombe, Plateau..."
+                />
+              </div>
+
+              <div className="md:col-span-2 space-y-1.5">
+                <Label htmlFor="estab-address"><MapPin className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Adresse complète</Label>
+                <Input
+                  id="estab-address"
                   value={createForm.address ?? ''}
                   onChange={e => setCreateForm(f => ({ ...f, address: e.target.value }))}
-                  placeholder="Ex : Avenue des Nations-Unies, Brazzaville"
+                  placeholder="Ex : 12 avenue des Nations-Unies"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label><Phone className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Téléphone</Label>
+                <Label htmlFor="estab-phone"><Phone className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Téléphone</Label>
                 <Input
+                  id="estab-phone"
+                  type="tel"
                   value={createForm.phone ?? ''}
                   onChange={e => setCreateForm(f => ({ ...f, phone: e.target.value }))}
                   placeholder="+242 06 xxx xx xx"
@@ -666,8 +927,9 @@ export function EstablishmentOwnerSection() {
               </div>
 
               <div className="space-y-1.5">
-                <Label><Globe className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Site web</Label>
+                <Label htmlFor="estab-website"><Globe className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Site web</Label>
                 <Input
+                  id="estab-website"
                   value={createForm.website ?? ''}
                   onChange={e => setCreateForm(f => ({ ...f, website: e.target.value }))}
                   placeholder="www.monsite.com"
@@ -676,16 +938,39 @@ export function EstablishmentOwnerSection() {
 
               <div className="space-y-1.5">
                 <Label><DollarSign className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Fourchette de prix</Label>
-                <Input
-                  value={createForm.priceRange ?? ''}
-                  onChange={e => setCreateForm(f => ({ ...f, priceRange: e.target.value }))}
-                  placeholder="Ex : 5 000 - 25 000 FCFA"
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    aria-label="Prix minimum"
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={priceMin}
+                    onChange={e => setPriceMin(e.target.value)}
+                    placeholder="Min"
+                  />
+                  <span className="text-gray-400">-</span>
+                  <Input
+                    aria-label="Prix maximum"
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={priceMax}
+                    onChange={e => setPriceMax(e.target.value)}
+                    placeholder="Max"
+                  />
+                  <Select value={priceCurrency} onValueChange={setPriceCurrency}>
+                    <SelectTrigger aria-label="Devise" className="w-24 shrink-0"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PRICE_CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label><Clock className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Horaires d'ouverture</Label>
+                <Label htmlFor="estab-hours"><Clock className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Horaires d'ouverture</Label>
                 <Input
+                  id="estab-hours"
                   value={createForm.openingHours ?? ''}
                   onChange={e => setCreateForm(f => ({ ...f, openingHours: e.target.value }))}
                   placeholder="Ex : 10h00 - 23h00 / 24h/24"
@@ -693,29 +978,51 @@ export function EstablishmentOwnerSection() {
               </div>
 
               <div className="md:col-span-2 space-y-1.5">
-                <Label><ImageIcon className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Image (URL)</Label>
-                <Input
-                  value={createForm.image ?? ''}
-                  onChange={e => setCreateForm(f => ({ ...f, image: e.target.value }))}
-                  placeholder="https://..."
+                <Label htmlFor="estab-image"><ImageIcon className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Photo de l'établissement *</Label>
+                <div className="flex items-center gap-4">
+                  <div className="w-28 h-20 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center shrink-0">
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="Aperçu de la photo" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-gray-300" aria-hidden="true" />
+                    )}
+                  </div>
+                  <div className="space-y-1 min-w-0">
+                    <input
+                      id="estab-image"
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={e => { handleImageSelected(e.target.files?.[0]); e.target.value = ''; }}
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('estab-image')?.click()}>
+                      <Upload className="w-4 h-4 mr-1.5" />
+                      {imageFile ? 'Changer la photo' : 'Choisir une photo'}
+                    </Button>
+                    <p className="text-xs text-gray-500 truncate">
+                      {imageFile ? imageFile.name : 'JPG, PNG ou WebP, 5 Mo maximum'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <MultiChoice
+                  label="Équipements / Services"
+                  options={featureOptions}
+                  selected={createForm.features ?? []}
+                  onChange={features => setCreateForm(f => ({ ...f, features }))}
+                  addPlaceholder="Autre équipement ou service"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label>Tags (séparés par des virgules)</Label>
-                <Input
-                  value={tagsInput}
-                  onChange={e => setTagsInput(e.target.value)}
-                  placeholder="Ex : Piscine, Terrasse, Vue fleuve"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Équipements / Services</Label>
-                <Input
-                  value={featuresInput}
-                  onChange={e => setFeaturesInput(e.target.value)}
-                  placeholder="Ex : WiFi, Parking, Restaurant, Spa"
+              <div className="md:col-span-2">
+                <MultiChoice
+                  label="Tags"
+                  options={TAG_OPTIONS}
+                  selected={createForm.tags ?? []}
+                  onChange={tags => setCreateForm(f => ({ ...f, tags }))}
+                  addPlaceholder="Autre tag"
                 />
               </div>
             </div>
@@ -742,7 +1049,7 @@ export function EstablishmentOwnerSection() {
                 disabled={isCreating}
               >
                 {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Créer et payer l'abonnement
+                {createStep ?? "Créer et payer l'abonnement"}
               </Button>
             </div>
           </div>

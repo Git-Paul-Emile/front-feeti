@@ -656,7 +656,10 @@ function DealPromotionsTab({ deals, onDealUpdated }: {
 }
 
 // ── Composant gestion des promotions ─────────────────────────────────────────
-function PromotionsTab({ events }: { events: Event[] }) {
+function PromotionsTab({ events, onEventUpdated }: {
+  events: Event[];
+  onEventUpdated?: (id: string, patch: Partial<Event>) => void;
+}) {
   const [slots, setSlots] = useState<Array<{ type: string; limit: number; used: number; available: number }>>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [promoForm, setPromoForm] = useState({
@@ -687,12 +690,15 @@ function PromotionsTab({ events }: { events: Event[] }) {
     if (!selectedEvent) return;
     setSaving(true);
     try {
-      await EventsBackendAPI.updatePromotion(selectedEvent.id, {
+      const payload = {
         promotionType: promoForm.promotionType || null,
         promotionStatus: promoForm.promotionStatus,
         promotionStartDate: promoForm.promotionStartDate || null,
         promotionEndDate: promoForm.promotionEndDate || null,
-      });
+      };
+      await EventsBackendAPI.updatePromotion(selectedEvent.id, payload);
+      // Mise à jour immédiate de la liste, sans rechargement
+      onEventUpdated?.(selectedEvent.id, payload as Partial<Event>);
       toast.success('Promotion mise à jour');
       setDialogOpen(false);
       // Refresh slots
@@ -5288,7 +5294,10 @@ export function AdminDashboard({ currentUser, onBack }: AdminDashboardProps) {
 
           {/* ── Gestion des packs promotionnels événements ──────────────────── */}
           <TabsContent value="promotions" className="space-y-6">
-            <PromotionsTab events={events} />
+            <PromotionsTab
+              events={events}
+              onEventUpdated={(id, patch) => setEvents(prev => prev.map(e => (e.id === id ? { ...e, ...patch } : e)))}
+            />
           </TabsContent>
 
           {/* ── Suivi des achats self-service ────────────────────────────────── */}

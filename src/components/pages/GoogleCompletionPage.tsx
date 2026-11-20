@@ -68,7 +68,9 @@ export function GoogleCompletionPage() {
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
-  const [role, setRole] = useState<"user" | "organizer" | "establishment_owner">("user");
+  const [role, setRole] = useState<"user" | "organizer" | "establishment_owner" | "admin">("user");
+  const canChooseAdminRole = import.meta.env.VITE_ENABLE_ADMIN_SIGNUP === "true"
+    && import.meta.env.VITE_BACKEND_PROVIDER === "express";
   const [interests, setInterests] = useState<string[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
@@ -130,7 +132,9 @@ export function GoogleCompletionPage() {
         city: city.trim(),
         interests: role === "user" ? interests : [],
       });
-      const destination = role === "organizer"
+      const destination = role === "admin"
+        ? "/admin"
+        : role === "organizer"
         ? "/organizer"
         : role === "establishment_owner"
           ? "/establishment"
@@ -225,10 +229,11 @@ export function GoogleCompletionPage() {
           />
         )}
 
-        <select value={role} onChange={(e) => setRole(e.target.value as "user" | "organizer" | "establishment_owner")} className="w-full h-12 rounded-xl bg-transparent border border-[rgba(192,169,237,0.6)] px-4">
+        <select value={role} onChange={(e) => setRole(e.target.value as "user" | "organizer" | "establishment_owner" | "admin")} className="w-full h-12 rounded-xl bg-transparent border border-[rgba(192,169,237,0.6)] px-4">
           <option value="user" className="text-black">Participant</option>
           <option value="organizer" className="text-black">Organisateur</option>
           <option value="establishment_owner" className="text-black">Propriétaire d'établissement</option>
+          {canChooseAdminRole ? <option value="admin" className="text-black">Administrateur (test)</option> : null}
         </select>
 
         {role === "user" ? (
@@ -284,7 +289,9 @@ export function GoogleCompletionPage() {
               ? "Terminer et aller à l'espace organisateur"
               : role === "establishment_owner"
                 ? "Terminer et aller à l'espace établissement"
-                : "Terminer et aller au dashboard"}
+                : role === "admin"
+                  ? "Terminer et aller à l'administration"
+                  : "Terminer et aller au dashboard"}
         </button>
       </form>
     </div>

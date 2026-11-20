@@ -19,7 +19,7 @@ export interface RegisterData {
   email: string;
   phone?: string;
   password: string;                     // utilisé côté client pour Firebase Auth uniquement
-  role?: "user" | "organizer" | "establishment_owner";
+  role?: "user" | "organizer" | "establishment_owner" | "admin";
   interests?: string[];
   country?: string;
   city?: string;

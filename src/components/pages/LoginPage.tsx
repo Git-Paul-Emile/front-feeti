@@ -100,7 +100,7 @@ interface RegisterFields {
   phone?: string;
   password: string;
   confirmPassword: string;
-  role: 'user' | 'organizer' | 'establishment_owner';
+  role: 'user' | 'organizer' | 'establishment_owner' | 'admin';
   country: string;
   city: string;
   acceptTerms: boolean;
@@ -529,6 +529,14 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
   const roleValue = watch('role');
   const passwordValue = watch('password');
   const countryValue = watch('country');
+  const canChooseAdminRole = import.meta.env.VITE_ENABLE_ADMIN_SIGNUP === 'true'
+    && import.meta.env.VITE_BACKEND_PROVIDER === 'express';
+  const roleOptions: Array<{ value: RegisterFields['role']; label: string }> = [
+    { value: 'user', label: 'Participant' },
+    { value: 'organizer', label: 'Organisateur' },
+    { value: 'establishment_owner', label: 'Propriétaire établ.' },
+  ];
+  if (canChooseAdminRole) roleOptions.push({ value: 'admin', label: 'Administrateur (test)' });
   const availableCities = CITIES_BY_COUNTRY[countryValue] ?? [];
   const selectedCountry = countries.find(c => c.name === countryValue);
   const dialCode = DIAL_CODES_BY_COUNTRY[countryValue] ?? '';
@@ -769,7 +777,7 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
       <div>
         <p className="text-white/70 text-[14px] font-['Inter',sans-serif] mb-2">Je suis :</p>
         <div className="flex gap-3">
-          {(['user', 'organizer', 'establishment_owner'] as const).map((r) => {
+          {roleOptions.map(({ value: r, label }) => {
             const isSelected = roleValue === r;
             return (
               <label
@@ -792,7 +800,7 @@ function RegisterForm({ onRegister, onSwitchToLogin, onGoogleRegister }: {
                   {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#0e0434]" />}
                 </span>
                 <span className="text-[15px] font-['Inter',sans-serif]">
-                  {r === 'user' ? 'Participant' : r === 'organizer' ? 'Organisateur' : 'Propriétaire établ.'}
+                  {label}
                 </span>
               </label>
             );

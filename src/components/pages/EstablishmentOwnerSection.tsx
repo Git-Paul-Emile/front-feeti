@@ -844,46 +844,55 @@ export function EstablishmentOwnerSection() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Catégorie *</Label>
-                <Select value={createForm.categorySlug} onValueChange={(v: string) => setCreateForm(f => ({ ...f, categorySlug: v }))}>
-                  <SelectTrigger aria-label="Catégorie"><SelectValue placeholder="Choisir une catégorie" /></SelectTrigger>
-                  <SelectContent>
-                    {leisureCategories.map(c => (
-                      <SelectItem key={c.slug} value={c.slug}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="estab-category">Catégorie *</Label>
+                <select
+                  id="estab-category"
+                  aria-label="Catégorie"
+                  required
+                  value={createForm.categorySlug}
+                  onChange={e => setCreateForm(f => ({ ...f, categorySlug: e.target.value }))}
+                  className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                >
+                  <option value="" disabled>Choisir une catégorie</option>
+                  {leisureCategories.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+                </select>
               </div>
 
               <div className="space-y-1.5">
-                <Label>Pays *</Label>
-                <Select
+                <Label htmlFor="estab-country">Pays *</Label>
+                <select
+                  id="estab-country"
+                  aria-label="Pays"
+                  required
                   value={createForm.countryCode ?? ''}
-                  onValueChange={(v: string) => {
-                    setCreateForm(f => ({ ...f, countryCode: v }));
+                  onChange={e => {
+                    const countryCode = e.target.value;
+                    setCreateForm(f => ({ ...f, countryCode }));
                     setCity(''); // la ville dépend du pays
                   }}
+                  className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                 >
-                  <SelectTrigger aria-label="Pays"><SelectValue placeholder="Choisir un pays" /></SelectTrigger>
-                  <SelectContent>
-                    {countries.map(c => (
-                      <SelectItem key={c.code} value={c.code}>{c.flag} {c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <option value="" disabled>Choisir un pays</option>
+                  {countries.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+                </select>
               </div>
 
               <div className="space-y-1.5">
                 <Label><MapPin className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Ville *</Label>
                 {cityOptions.length > 0 ? (
-                  <Select value={city} onValueChange={setCity}>
-                    <SelectTrigger aria-label="Ville"><SelectValue placeholder="Choisir une ville" /></SelectTrigger>
-                    <SelectContent>
-                      {cityOptions.map(c => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    aria-label="Ville"
+                    required
+                    value={city}
+                    onChange={e => setCity(e.target.value)}
+                    disabled={!createForm.countryCode}
+                    className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+                  >
+                    <option value="" disabled>
+                      {createForm.countryCode ? 'Choisir une ville' : 'Choisissez d’abord un pays'}
+                    </option>
+                    {cityOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 ) : (
                   <Input
                     aria-label="Ville"
@@ -936,9 +945,9 @@ export function EstablishmentOwnerSection() {
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="md:col-span-2 space-y-1.5">
                 <Label><DollarSign className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Fourchette de prix</Label>
-                <div className="flex items-center gap-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_6rem] items-center gap-2">
                   <Input
                     aria-label="Prix minimum"
                     type="number"
@@ -947,6 +956,7 @@ export function EstablishmentOwnerSection() {
                     value={priceMin}
                     onChange={e => setPriceMin(e.target.value)}
                     placeholder="Min"
+                    className="min-w-0"
                   />
                   <span className="text-gray-400">-</span>
                   <Input
@@ -957,17 +967,20 @@ export function EstablishmentOwnerSection() {
                     value={priceMax}
                     onChange={e => setPriceMax(e.target.value)}
                     placeholder="Max"
+                    className="min-w-0"
                   />
-                  <Select value={priceCurrency} onValueChange={setPriceCurrency}>
-                    <SelectTrigger aria-label="Devise" className="w-24 shrink-0"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {PRICE_CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    aria-label="Devise"
+                    value={priceCurrency}
+                    onChange={e => setPriceCurrency(e.target.value)}
+                    className="h-9 w-24 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  >
+                    {PRICE_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="md:col-span-2 space-y-1.5">
                 <Label htmlFor="estab-hours"><Clock className="w-3.5 h-3.5 inline mr-1 text-gray-400" />Horaires d'ouverture</Label>
                 <Input
                   id="estab-hours"

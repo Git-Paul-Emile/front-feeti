@@ -26,11 +26,11 @@ interface FeetiNaFeetiPageProps {
 }
 
 const LEVELS = [
-  { name: 'Mobembo', min: 0,    max: 999,    color: 'bg-gray-400',     icon: Star,   benefits: ['Réductions de base', 'Points sur achats'] },
-  { name: 'Elengi',  min: 1000, max: 1999,   color: 'bg-blue-400',     icon: Award,  benefits: ['Accès prioritaire', '10% bonus points', 'Réductions partenaires'] },
-  { name: 'Momi',    min: 2000, max: 2999,   color: 'bg-purple-400', icon: Crown,  benefits: ['Files VIP', '15% bonus points', 'Invitations exclusives'] },
-  { name: 'Mwana',   min: 3000, max: 3999,   color: 'bg-orange-400', icon: Zap,    benefits: ['Accès backstage', '20% bonus points', 'Événements privés'] },
-  { name: 'Boboto',  min: 4000, max: 999999, color: 'bg-yellow-400',  icon: Trophy, benefits: ['Concierge VIP', '30% bonus points', 'Expériences sur-mesure'] },
+  { name: 'Mobembo', min: 0,     max: 499,   color: 'bg-gray-400',     icon: Star,   benefits: ['Réductions de base', 'Points sur achats'] },
+  { name: 'Elengi',  min: 500,   max: 1999,  color: 'bg-blue-400',     icon: Award,  benefits: ['Accès prioritaire', '10% bonus points', 'Réductions partenaires'] },
+  { name: 'Momi',    min: 2000,  max: 4999,  color: 'bg-purple-400',   icon: Crown,  benefits: ['Files VIP', '15% bonus points', 'Invitations exclusives'] },
+  { name: 'Mwana',   min: 5000,  max: 9999,  color: 'bg-orange-400',   icon: Zap,    benefits: ['Accès backstage', '20% bonus points', 'Événements privés'] },
+  { name: 'Boboto',  min: 10000, max: 999999, color: 'bg-yellow-400',  icon: Trophy, benefits: ['Concierge VIP', '30% bonus points', 'Expériences sur-mesure'] },
 ];
 
 export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps) {
@@ -108,7 +108,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
   const handleRedeem = async (reward: LoyaltyReward) => {
     try {
       await loyaltyApi.redeemReward(reward.id);
-      toast.success(`Récompense "${reward.title}" réclamée !`);
+      toast.success(`Demande pour « ${reward.title} » enregistrée. L'équipe Feeti la traitera.`);
       loadAll();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Erreur lors de l\'échange');
@@ -148,7 +148,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
     setPostSaving(true);
     try {
       await loyaltyApi.createCommunityPost(postForm);
-      toast.success('Publication soumise — en attente de modération (+50 pts)');
+      toast.success('Publication soumise à modération. Les 50 points seront crédités après approbation.');
       setShowPostForm(false);
       setPostForm({ title: '', content: '' });
     } catch (err: any) {
@@ -628,7 +628,7 @@ export function FeetiNaFeetiPage({ onBack, currentUser }: FeetiNaFeetiPageProps)
                 onClick={() => setShowPostForm(!showPostForm)}
                 className="bg-indigo-600"
               >
-                <Plus className="w-4 h-4 mr-2" />Publier (+50 pts)
+                <Plus className="w-4 h-4 mr-2" />Publier
               </Button>
             </div>
 

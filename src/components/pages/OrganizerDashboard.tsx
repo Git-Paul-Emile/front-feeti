@@ -451,7 +451,14 @@ export function OrganizerDashboard({
                   Créer un événement
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+              <DialogContent
+                className="max-w-2xl"
+                style={{
+                  top: 'calc(50% + 3rem)',
+                  maxHeight: 'calc(100dvh - 7rem)',
+                  overflowY: 'auto',
+                }}
+              >
                 <DialogHeader>
                   <DialogTitle>
                     {createMode === 'wizard' && 'Que souhaitez-vous faire ?'}

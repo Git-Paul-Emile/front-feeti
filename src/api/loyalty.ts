@@ -95,6 +95,17 @@ export interface PartnerSpending {
   createdAt: string;
 }
 
+export interface LoyaltyRedemption {
+  id: string;
+  profileId: string;
+  rewardId: string;
+  points: number;
+  status: "pending" | "confirmed" | "cancelled";
+  createdAt: string;
+  reward?: LoyaltyReward;
+  profile?: { user?: { id: string; name: string; email: string } };
+}
+
 export interface CommunityPost {
   id: string;
   authorId: string;
@@ -332,6 +343,16 @@ export const loyaltyApi = {
   getAdminStats: async (): Promise<AdminStats> => {
     const res = await api.get("/api/loyalty/admin/stats");
     return res.data.data;
+  },
+
+  getAdminRedemptions: async (params: { page?: number; limit?: number; status?: string } = {}) => {
+    const res = await api.get("/api/loyalty/admin/redemptions", { params });
+    return res.data.data as PaginatedResult<LoyaltyRedemption>;
+  },
+
+  updateAdminRedemptionStatus: async (id: string, status: "confirmed" | "cancelled") => {
+    const res = await api.patch(`/api/loyalty/admin/redemptions/${id}`, { status });
+    return res.data.data as LoyaltyRedemption;
   },
 
   getFraudAlerts: async (): Promise<FraudAlerts> => {

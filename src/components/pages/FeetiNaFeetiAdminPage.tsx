@@ -14,12 +14,12 @@ import { toast } from 'sonner@2.0.3';
 import {
   loyaltyApi,
   type LoyaltyReward, type LoyaltyPartner, type LoyaltyMission,
-  type AdminStats, type LoyaltyBonus, type CommunityPost, type FraudAlerts,
+  type AdminStats, type LoyaltyBonus, type CommunityPost, type FraudAlerts, type LoyaltyRedemption,
 } from '../../api/loyalty';
 
 interface Props { onBack: () => void; currentUser: any; }
 
-type Tab = 'dashboard' | 'users' | 'points' | 'rewards' | 'partners' | 'missions' | 'community' | 'bonuses' | 'vip' | 'fraud' | 'settings';
+type Tab = 'dashboard' | 'users' | 'points' | 'rewards' | 'redemptions' | 'partners' | 'missions' | 'community' | 'bonuses' | 'vip' | 'fraud' | 'settings';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -445,6 +445,11 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
   const [ledgerTotal, setLedgerTotal] = useState(0);
   const [ledgerTotalPages, setLedgerTotalPages] = useState(1);
   const [rewards, setRewards] = useState<LoyaltyReward[]>([]);
+  const [redemptions, setRedemptions] = useState<LoyaltyRedemption[]>([]);
+  const [redemptionTotalPages, setRedemptionTotalPages] = useState(1);
+  const [redemptionPage, setRedemptionPage] = useState(1);
+  const [redemptionPendingTotal, setRedemptionPendingTotal] = useState(0);
+  const [redemptionBusyId, setRedemptionBusyId] = useState<string | null>(null);
   const [partners, setPartners] = useState<LoyaltyPartner[]>([]);
   const [missions, setMissions] = useState<LoyaltyMission[]>([]);
   const [bonuses, setBonuses] = useState<LoyaltyBonus[]>([]);
@@ -482,6 +487,14 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
     setLedgerTotalPages(res.totalPages ?? 1);
   }, []);
 
+  const loadRedemptions = useCallback(async (p = 1) => {
+    const res = await loyaltyApi.getAdminRedemptions({ page: p, limit: 20, status: 'pending' });
+    setRedemptions(res.items ?? []);
+    setRedemptionPage(p);
+    setRedemptionPendingTotal(res.total ?? 0);
+    setRedemptionTotalPages(res.totalPages ?? 1);
+  }, []);
+
   const loadCommunity = useCallback(async (p: number, status?: string) => {
     const res = await loyaltyApi.getAdminCommunityPosts({ page: p, limit: 20, status: status || undefined });
     setCommunityPosts(res.items ?? []);
@@ -504,13 +517,13 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
       setMissions(m);
       setBonuses(b);
       setVipLogs(vip.items ?? []);
-      await Promise.all([loadStats(), loadUsers(1), loadLedger(1), loadCommunity(1)]);
+      await Promise.all([loadStats(), loadUsers(1), loadLedger(1), loadCommunity(1), loadRedemptions(1)]);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Erreur de chargement');
     } finally {
       setLoading(false);
     }
-  }, [loadStats, loadUsers, loadLedger, loadCommunity]);
+  }, [loadStats, loadUsers, loadLedger, loadCommunity, loadRedemptions]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { if (!loading) loadUsers(page); }, [page, searchQuery, filterLevel]);
@@ -603,6 +616,21 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
     } catch { toast.error('Erreur'); }
   };
 
+  const handleRedemptionStatus = async (id: string, status: 'confirmed' | 'cancelled') => {
+    setRedemptionBusyId(id);
+    try {
+      await loyaltyApi.updateAdminRedemptionStatus(id, status);
+      toast.success(status === 'confirmed'
+        ? 'Récompense marquée comme remise'
+        : 'Demande annulée : points remboursés et stock restauré');
+      await Promise.all([loadRedemptions(1), loadStats(), loadLedger(1)]);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Impossible de traiter cette demande');
+    } finally {
+      setRedemptionBusyId(null);
+    }
+  };
+
   const handleDeletePost = async (id: string) => {
     if (!confirm('Supprimer cette publication ?')) return;
     try { await loyaltyApi.adminDeleteCommunityPost(id); toast.success('Publication supprimée'); loadCommunity(communityPage, communityFilter); }
@@ -643,6 +671,7 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
     { key: 'users',      label: 'Utilisateurs',   Icon: Users          },
     { key: 'points',     label: 'Points',         Icon: TrendingUp     },
     { key: 'rewards',    label: 'Récompenses',    Icon: Gift           },
+    { key: 'redemptions', label: 'Demandes',      Icon: Gift, badge: redemptionPendingTotal },
     { key: 'partners',   label: 'Partenaires',    Icon: Store          },
     { key: 'missions',   label: 'Missions',       Icon: Target         },
     { key: 'community',  label: 'Communauté',     Icon: MessageSquare  },
@@ -966,6 +995,52 @@ export function FeetiNaFeetiAdminPage({ onBack }: Props) {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Demandes de récompenses ── */}
+        {activeTab === 'redemptions' && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Demandes de récompenses</h2>
+              <p className="mt-1 text-sm text-gray-600">Confirmez la remise au membre ou annulez la demande pour lui rendre ses points.</p>
+            </div>
+            {redemptions.length === 0 ? (
+              <Card><CardContent className="p-12 text-center text-gray-500">Aucune demande en attente.</CardContent></Card>
+            ) : (
+              <div className="space-y-3">
+                {redemptions.map(redemption => (
+                  <Card key={redemption.id}>
+                    <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900">{redemption.reward?.title ?? 'Récompense'}</p>
+                        <p className="text-sm text-gray-600">{redemption.profile?.user?.name ?? 'Membre'} · {redemption.profile?.user?.email ?? ''}</p>
+                        <p className="mt-1 text-xs text-gray-500">{redemption.points.toLocaleString('fr-FR')} points · {new Date(redemption.createdAt).toLocaleString('fr-FR')}</p>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <Button
+                          disabled={redemptionBusyId === redemption.id}
+                          onClick={() => handleRedemptionStatus(redemption.id, 'confirmed')}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          {redemptionBusyId === redemption.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                          Marquer remise
+                        </Button>
+                        <Button
+                          variant="outline"
+                          disabled={redemptionBusyId === redemption.id}
+                          onClick={() => handleRedemptionStatus(redemption.id, 'cancelled')}
+                          className="border-red-300 text-red-700 hover:bg-red-50"
+                        >
+                          Annuler et rembourser
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+            <Pagination page={redemptionPage} totalPages={redemptionTotalPages} onChange={page => loadRedemptions(page)} />
           </div>
         )}
 
